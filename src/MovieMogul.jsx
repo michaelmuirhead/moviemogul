@@ -448,43 +448,49 @@ const ANNUAL_AWARD_CATEGORIES = [
   { name: 'Critics Choice', weight: 'critics', icon: '🎭' },
 ];
 
-const generateNominees = (films, category, studioName, rivals) => {
-  if (films.length === 0) return [];
-  let sorted;
-  switch (category.weight) {
-    case 'quality': sorted = [...films].sort((a, b) => (b.quality || 0) - (a.quality || 0)); break;
-    case 'directorSkill': sorted = [...films].sort((a, b) => (b.director?.skill || 0) - (a.director?.skill || 0)); break;
-    case 'actorSkill': sorted = [...films].sort((a, b) => (b.actor?.skill || 0) - (a.actor?.skill || 0)); break;
-    case 'writerSkill': sorted = [...films].sort((a, b) => (b.writer?.skill || 0) - (a.writer?.skill || 0)); break;
-    case 'visual': sorted = [...films].sort((a, b) => ((b.quality || 0) + (b.budget || 0) / 1e7) - ((a.quality || 0) + (a.budget || 0) / 1e7)); break;
-    case 'artistry': sorted = [...films].sort((a, b) => ((b.quality || 0) + (b.criticScore || 0)) - ((a.quality || 0) + (a.criticScore || 0))); break;
-    case 'vfx': sorted = [...films].sort((a, b) => {
-      const vfxGenres = ['Sci-Fi', 'Fantasy', 'Animation', 'Action'];
-      const aVfx = vfxGenres.includes(a.genre) ? 20 : 0;
-      const bVfx = vfxGenres.includes(b.genre) ? 20 : 0;
-      return ((b.quality || 0) + bVfx + (b.budget || 0) / 1e7) - ((a.quality || 0) + aVfx + (a.budget || 0) / 1e7);
-    }); break;
-    case 'gross': sorted = [...films].sort((a, b) => (b.totalGross || 0) - (a.totalGross || 0)); break;
-    case 'audience': sorted = [...films].sort((a, b) => (b.audienceScore || 0) - (a.audienceScore || 0)); break;
-    case 'critics': sorted = [...films].sort((a, b) => (b.criticScore || 0) - (a.criticScore || 0)); break;
-    default: sorted = films;
-  }
+const generateNominees = (allFilms, category) => {
+  if (allFilms.length === 0) return [];
+  // Score each film for this category
+  const scored = allFilms.map(f => {
+    let score = 0;
+    switch (category.weight) {
+      case 'quality': score = (f.quality || 0); break;
+      case 'directorSkill': score = (f.director?.skill || 0) + (f.quality || 0) * 0.3; break;
+      case 'actorSkill': score = (f.actor?.skill || 0) + (f.quality || 0) * 0.2 + (f.audienceScore || 0) * 0.1; break;
+      case 'writerSkill': score = (f.writer?.skill || 0) + (f.criticScore || 0) * 0.2; break;
+      case 'visual': score = (f.quality || 0) + (f.budget || 0) / 1e7; break;
+      case 'artistry': score = (f.quality || 0) * 0.6 + (f.criticScore || 0) * 0.4; break;
+      case 'vfx': {
+        const vfxGenres = ['Sci-Fi', 'Fantasy', 'Animation', 'Action'];
+        score = (f.quality || 0) + (vfxGenres.includes(f.genre) ? 20 : 0) + (f.budget || 0) / 1e7;
+      } break;
+      case 'gross': score = (f.totalGross || 0) / 1e6; break;
+      case 'audience': score = (f.audienceScore || 0); break;
+      case 'critics': score = (f.criticScore || 0); break;
+      default: score = (f.quality || 0);
+    }
+    // Add slight randomness so results aren't perfectly deterministic
+    score += (Math.random() - 0.5) * 8;
+    return { film: f, score };
+  });
+  scored.sort((a, b) => b.score - a.score);
   // Take top 5 nominees
-  const nominees = sorted.slice(0, 5).map((f, i) => ({
-    title: f.title,
-    studio: studioName,
-    quality: f.quality,
-    gross: f.totalGross,
-    criticScore: f.criticScore,
-    audienceScore: f.audienceScore,
-    director: f.director?.name,
-    actor: f.actor?.name,
-    writer: f.writer?.name,
-    genre: f.genre,
-    genre2: f.genre2,
+  return scored.slice(0, 5).map((entry, i) => ({
+    title: entry.film.title,
+    studio: entry.film.studio || entry.film.isRival ? entry.film.studio : '(player)',
+    quality: entry.film.quality,
+    gross: entry.film.totalGross,
+    criticScore: entry.film.criticScore,
+    audienceScore: entry.film.audienceScore,
+    director: entry.film.director?.name,
+    actor: entry.film.actor?.name,
+    writer: entry.film.writer?.name,
+    genre: entry.film.genre,
+    genre2: entry.film.genre2,
+    isRival: !!entry.film.isRival,
     isWinner: i === 0,
+    score: Math.round(entry.score),
   }));
-  return nominees;
 };
 
 // ==================== RELEASE CALENDAR ====================
@@ -690,6 +696,24 @@ const RIVAL_FILM_TITLES = [
   'The Glass Tower', 'Midnight Run', 'Final Frontier', 'Deep Impact', 'Golden Gate',
   'Silver Lining', 'Dark Waters', 'Blue Thunder', 'Iron Will', 'Crystal Palace',
   'The Long Road', 'Northern Lights', 'Rising Sun', 'Pacific Rim', 'Desert Storm',
+];
+
+const RIVAL_DIRECTOR_NAMES = [
+  'James Cameron', 'Sofia Coppola', 'Denis Villeneuve', 'Greta Gerwig', 'Christopher Nolan',
+  'Ava DuVernay', 'Martin Scorsese', 'Kathryn Bigelow', 'Bong Joon-ho', 'Chloe Zhao',
+  'Ridley Scott', 'Wes Anderson', 'Jordan Peele', 'Taika Waititi', 'Spike Lee',
+  'David Fincher', 'Alfonso Cuaron', 'Patty Jenkins', 'Barry Jenkins', 'Guillermo del Toro',
+];
+const RIVAL_ACTOR_NAMES = [
+  'Meryl Streep', 'Leonardo DiCaprio', 'Viola Davis', 'Denzel Washington', 'Cate Blanchett',
+  'Brad Pitt', 'Saoirse Ronan', 'Joaquin Phoenix', 'Florence Pugh', 'Tom Hanks',
+  'Lupita Nyongo', 'Ryan Gosling', 'Margot Robbie', 'Daniel Kaluuya', 'Scarlett Johansson',
+  'Oscar Isaac', 'Emma Stone', 'Timothee Chalamet', 'Sandra Oh', 'Robert Downey Jr',
+];
+const RIVAL_WRITER_NAMES = [
+  'Aaron Sorkin', 'Emerald Fennell', 'Charlie Kaufman', 'Diablo Cody', 'Taylor Sheridan',
+  'Greta Gerwig', 'Tony Kushner', 'Taika Waititi', 'Jordan Peele', 'Celine Sciamma',
+  'Paul Thomas Anderson', 'Noah Baumbach', 'Quentin Tarantino', 'Nora Ephron', 'Joel Coen',
 ];
 
 // ==================== RIVAL PERSONALITIES ====================
@@ -1244,6 +1268,7 @@ const INIT = {
   distributionDeal: null,       // active distribution deal
   distributionTurnsLeft: 0,
   rivalFilms: [],               // recent rival releases for display
+  rivalFilmsThisYear: [],     // accumulated rival films for annual awards
   // dev UI
   devScriptIdx: -1,
   devBudgetM: 10,
@@ -2388,8 +2413,8 @@ function reducer(state, action) {
         if (box.totalGross > 100000000) rep += 3;
         if (box.totalGross > 500000000) rep += 5;
         if (box.criticScore > 80) pres += 3;
-        if (box.criticScore > 90) { pres += 5; tAwards += 1; awards.push({ year: state.year, film: f.title, type: 'Critics Choice' }); }
-        if (f.quality >= 85) { tAwards += 1; awards.push({ year: state.year, film: f.title, type: 'Best Picture Nom' }); }
+        if (box.criticScore > 90) { pres += 5; }
+        if (f.quality >= 85) { pres += 3; }
         // Window prestige bonus (awards season releases)
         if (window && window.prestigeBonus) pres += window.prestigeBonus;
         // Trait prestige
@@ -2564,16 +2589,20 @@ function reducer(state, action) {
         log.push({ text: `Achievement Unlocked: ${a.name} — ${a.desc}`, type: 'award' });
       });
 
-      // 8c. Annual Awards Ceremony (Q1 = awards for previous year's films)
+      // 8c. Annual Awards Ceremony (January = awards for previous year's films)
       let annualAwards = [...state.annualAwards];
       let pendingCeremony = null;
       if (state.month === 1 && state.turn > 0) {
         const prevYear = state.year - 1;
-        const yearFilms = films.filter(f => f.status === 'released' && f.releasedYear === prevYear);
-        if (yearFilms.length > 0) {
+        // Gather ALL films from previous year: player + rival
+        const playerYearFilms = films.filter(f => f.status === 'released' && f.releasedYear === prevYear)
+          .map(f => ({ ...f, studio: state.studioName, isRival: false }));
+        const rivalYearFilms = (state.rivalFilmsThisYear || []).filter(f => f.releasedYear === prevYear);
+        const allYearFilms = [...playerYearFilms, ...rivalYearFilms];
+        if (allYearFilms.length > 0) {
           const ceremonyData = { year: prevYear, categories: [] };
           ANNUAL_AWARD_CATEGORIES.forEach(cat => {
-            const nominees = generateNominees(yearFilms, cat, state.studioName, state.competitors);
+            const nominees = generateNominees(allYearFilms, cat);
             if (nominees.length > 0) {
               const winner = nominees[0];
               ceremonyData.categories.push({
@@ -2582,15 +2611,25 @@ function reducer(state, action) {
                 nominees,
                 winner: winner.title,
                 winnerStudio: winner.studio,
+                isRivalWin: winner.isRival,
               });
-              tAwards += 1;
-              pres += 3;
-              awards.push({ year: prevYear, film: winner.title, type: cat.name });
+              // Only count player wins
+              if (!winner.isRival) {
+                tAwards += 1;
+                pres += 3;
+                awards.push({ year: prevYear, film: winner.title, type: cat.name });
+              }
             }
           });
-          annualAwards.push({ year: prevYear, awards: ceremonyData.categories.map(c => ({ category: c.name, film: c.winner, studio: c.winnerStudio })) });
+          const playerWins = ceremonyData.categories.filter(c => !c.isRivalWin).length;
+          const totalCats = ceremonyData.categories.length;
+          annualAwards.push({ year: prevYear, awards: ceremonyData.categories.map(c => ({ category: c.name, film: c.winner, studio: c.winnerStudio, isRivalWin: c.isRivalWin })) });
           pendingCeremony = ceremonyData;
-          log.push({ text: `The ${prevYear} Annual Awards Ceremony is ready! View it from the Dashboard.`, type: 'award' });
+          if (playerWins > 0) {
+            log.push({ text: `The ${prevYear} Awards Ceremony! Your studio won ${playerWins}/${totalCats} awards!`, type: 'award' });
+          } else {
+            log.push({ text: `The ${prevYear} Awards Ceremony concluded. Your studio didn't win any awards this year.`, type: 'warning' });
+          }
         }
       }
 
@@ -2742,8 +2781,8 @@ function reducer(state, action) {
       let competitors = state.competitors.map(c => ({ ...c, releasesThisQ: 0 }));
       const rivalFilmsThisQ = [];
       competitors.forEach(comp => {
-        // Personality-driven release chance
-        const releaseChance = comp.personality ? 0.10 + comp.personality.aggression * 0.12 : 0.15;
+        // Personality-driven release chance — rivals release 1-3 films per year on average
+        const releaseChance = comp.personality ? 0.08 + comp.personality.aggression * 0.10 : 0.12;
         if (Math.random() < releaseChance) {
           // Personality-driven genre selection
           let genre;
@@ -2755,22 +2794,45 @@ function reducer(state, action) {
             for (const [g, w] of weights) { r -= w; if (r <= 0) { genre = g; break; } }
           } else { genre = pick(GENRES); }
           const pBonus = comp.personality ? comp.personality.qualityBonus : 0;
-          const quality = clamp(randInt(30, 85) + Math.round(comp.reputation * 0.1) + pBonus, 20, 95);
+          const quality = clamp(randInt(35, 88) + Math.round(comp.reputation * 0.1) + pBonus, 25, 96);
           const bMult = comp.personality ? comp.personality.budgetMult : 1;
           const budget = Math.round(randInt(10, 100) * 1e6 * bMult);
-          const gross = Math.round(budget * (quality >= 75 ? 3.0 : quality >= 55 ? 1.5 : 0.5) * (1 + Math.random()) * (comp.personality ? comp.personality.marketingMult : 1));
+          const mMult = comp.personality ? comp.personality.marketingMult : 1;
+          const gross = Math.round(budget * (quality >= 75 ? 3.0 : quality >= 55 ? 1.5 : 0.5) * (1 + Math.random()) * mMult);
           const title = pick(RIVAL_FILM_TITLES);
+          const directorName = pick(RIVAL_DIRECTOR_NAMES);
+          const actorName = pick(RIVAL_ACTOR_NAMES);
+          const writerName = pick(RIVAL_WRITER_NAMES);
+          const directorSkill = clamp(quality + randInt(-15, 10), 30, 98);
+          const actorSkill = clamp(quality + randInt(-10, 15), 30, 98);
+          const writerSkill = clamp(quality + randInt(-12, 12), 30, 98);
+          const criticScore = clamp(Math.round(quality + (Math.random() - 0.5) * 20), 10, 100);
+          const audienceScore = clamp(Math.round(quality * 0.8 + Math.random() * 25), 15, 100);
           comp.filmsReleased += 1;
           comp.totalGross += gross;
           comp.releasesThisQ += 1;
           comp.reputation = clamp(comp.reputation + (quality > 70 ? 2 : -1), 10, 95);
           comp.cash += Math.round(gross * 0.45 - budget);
           if (quality >= 85) comp.awards = (comp.awards || 0) + 1;
-          rivalFilmsThisQ.push({ studio: comp.name, title, genre, quality, gross, personality: comp.personality?.name });
+          rivalFilmsThisQ.push({
+            studio: comp.name, title, genre, quality, budget, totalGross: gross, gross,
+            criticScore, audienceScore,
+            director: { name: directorName, skill: directorSkill },
+            actor: { name: actorName, skill: actorSkill },
+            writer: { name: writerName, skill: writerSkill },
+            releasedYear: state.year, releasedMonth: state.month,
+            personality: comp.personality?.name,
+            isRival: true,
+          });
         }
         // Rival reputation natural drift
         comp.reputation = clamp(comp.reputation + randInt(-2, 2), 10, 95);
       });
+      // Accumulate rival films for annual awards
+      let rivalFilmsThisYear = [...(state.rivalFilmsThisYear || []), ...rivalFilmsThisQ];
+      // Reset at start of new year
+      if (newMonth === 1 && state.month === 12) rivalFilmsThisYear = [];
+
       // Market saturation: if rivals release many films, your films get a slight penalty
       const totalRivalReleases = competitors.reduce((s, c) => s + c.releasesThisQ, 0);
       if (totalRivalReleases >= 3) {
@@ -2982,6 +3044,7 @@ function reducer(state, action) {
         distributionTurnsLeft: distTurns,
         competitors,
         rivalFilms: rivalFilmsThisQ,
+        rivalFilmsThisYear,
         annualAwards,
         boxOfficeChart,
         legacyScore,
@@ -3341,7 +3404,7 @@ export default function MovieMogul() {
                 {state.annualAwards.slice().reverse().map((yr, i) => (
                   <div key={i} className="text-xs">
                     <span className="text-amber-400 font-bold">{yr.year}:</span>
-                    {yr.awards.map((a, j) => <span key={j} className="text-gray-300 ml-2">{a.category} — "{a.film}"</span>)}
+                    {yr.awards.map((a, j) => <span key={j} className={`ml-2 ${a.isRivalWin ? 'text-gray-500' : 'text-gray-300'}`}>{a.isRivalWin ? '🎬' : '🏆'} {a.category} — "{a.film}"</span>)}
                   </div>
                 ))}
               </div>
@@ -3557,7 +3620,7 @@ export default function MovieMogul() {
                 <div className="text-amber-400 font-bold text-xs mb-1">{yr.year} Awards Ceremony</div>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-1">
                   {yr.awards.map((a, j) => (
-                    <div key={j} className="text-xs text-gray-300">🏆 <span className="text-white font-bold">{a.category}</span>: "{a.film}"</div>
+                    <div key={j} className={`text-xs ${a.isRivalWin ? 'text-gray-500' : 'text-gray-300'}`}>{a.isRivalWin ? '🎬' : '🏆'} <span className={`font-bold ${a.isRivalWin ? 'text-gray-400' : 'text-white'}`}>{a.category}</span>: "{a.film}" <span className="text-xs text-gray-500">({a.studio})</span></div>
                   ))}
                 </div>
               </div>
@@ -4992,11 +5055,11 @@ export default function MovieMogul() {
 
                 <div className="space-y-1.5 mb-3">
                   {cat.nominees.map((nom, ni) => (
-                    <div key={ni} className={`flex justify-between items-center px-3 py-2 rounded-lg ${nom.isWinner ? 'bg-amber-500/20 border border-amber-500' : 'bg-gray-700/50'}`}>
+                    <div key={ni} className={`flex justify-between items-center px-3 py-2 rounded-lg ${nom.isWinner ? (nom.isRival ? 'bg-blue-900/20 border border-blue-500' : 'bg-amber-500/20 border border-amber-500') : 'bg-gray-700/50'}`}>
                       <div className="flex items-center gap-2">
-                        {nom.isWinner && <span className="text-amber-400 font-bold text-sm">WINNER</span>}
+                        {nom.isWinner && <span className={`font-bold text-sm ${nom.isRival ? 'text-blue-400' : 'text-amber-400'}`}>{nom.isRival ? 'RIVAL WINNER' : 'WINNER'}</span>}
                         <div>
-                          <div className={`font-bold text-sm ${nom.isWinner ? 'text-amber-300' : 'text-white'}`}>"{nom.title}"</div>
+                          <div className={`font-bold text-sm ${nom.isWinner ? (nom.isRival ? 'text-blue-300' : 'text-amber-300') : 'text-white'}`}>"{nom.title}"</div>
                           <div className="text-xs text-gray-400">
                             {nom.genre}{nom.genre2 ? ` / ${nom.genre2}` : ''} · {nom.studio}
                             {nom.director && ` · Dir: ${nom.director}`}
@@ -5017,7 +5080,7 @@ export default function MovieMogul() {
           </div>
 
           <div className="text-center mt-6">
-            <div className="text-gray-400 text-sm mb-3">Your studio won {c.categories.filter(cat => cat.winnerStudio === state.studioName).length} of {c.categories.length} awards!</div>
+            <div className="text-gray-400 text-sm mb-3">Your studio won {c.categories.filter(cat => !cat.isRivalWin).length} of {c.categories.length} awards!</div>
             <button onClick={() => dispatch({ type: 'DISMISS_CEREMONY' })}
               className={`${studioColor.bg} hover:opacity-90 text-gray-900 font-bold px-8 py-3 rounded-lg text-lg transition`}>
               Continue
