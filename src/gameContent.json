@@ -1,0 +1,2884 @@
+{
+  "scripts": {
+    "Drama": [
+      {
+        "title": "The French Deception",
+        "logline": "A retired judge must confront the wrongful conviction that defined her career."
+      },
+      {
+        "title": "Unbroken Silence",
+        "logline": "Two estranged sisters reunite after decades to bury their mother and face old wounds."
+      },
+      {
+        "title": "The Weight of Days",
+        "logline": "A factory worker navigates love, loss, and redemption in a dying industrial town."
+      },
+      {
+        "title": "Ordinary Grace",
+        "logline": "A woman discovers her husband's double life and must rebuild everything."
+      },
+      {
+        "title": "Midnight Rider",
+        "logline": "An aging musician takes one last journey across America searching for meaning."
+      },
+      {
+        "title": "Autumn Letters",
+        "logline": "A professor finds decades-old love letters that rewrite her family history."
+      },
+      {
+        "title": "The Godfather's Shadow",
+        "logline": "A family patriarch's youngest son reluctantly takes control of a crumbling empire."
+      },
+      {
+        "title": "American Requiem",
+        "logline": "A jazz musician struggles with addiction while composing his masterpiece in 1950s Harlem."
+      },
+      {
+        "title": "The Shawshank Letters",
+        "logline": "Two wrongfully imprisoned men form a friendship that spans decades behind bars."
+      },
+      {
+        "title": "Citizen Kane's Daughter",
+        "logline": "A media mogul's estranged daughter uncovers the truth about her father's rise and fall."
+      },
+      {
+        "title": "Schindler's Promise",
+        "logline": "A businessman risks everything to save workers from persecution during wartime."
+      },
+      {
+        "title": "A Beautiful Burden",
+        "logline": "A mathematician battles mental illness while making groundbreaking discoveries."
+      },
+      {
+        "title": "Forrest's Run",
+        "logline": "A simple man inadvertently influences decades of American history through pure sincerity."
+      },
+      {
+        "title": "The Social Divide",
+        "logline": "A tech prodigy's revolutionary platform tears apart his closest friendships."
+      },
+      {
+        "title": "12 Angry Jurors",
+        "logline": "One dissenting juror must convince eleven others of a defendant's innocence."
+      },
+      {
+        "title": "The Pianist's Return",
+        "logline": "A concert pianist survives occupation by hiding in the ruins of a destroyed city."
+      },
+      {
+        "title": "Good Will Hunting Ground",
+        "logline": "A self-taught genius working as a janitor is discovered by a renowned professor."
+      },
+      {
+        "title": "Rain Over Mumbai",
+        "logline": "An autistic savant's extraordinary abilities change the life of his estranged brother."
+      },
+      {
+        "title": "The King's Tongue",
+        "logline": "A stammering monarch must find his voice to rally a nation on the brink of war."
+      },
+      {
+        "title": "Moonrise",
+        "logline": "A young Black man navigates identity, love, and survival across three defining chapters of his life."
+      },
+      {
+        "title": "The Departed Souls",
+        "logline": "An undercover cop and a mole in the police force race to uncover each other's identity."
+      },
+      {
+        "title": "Birdcage Boulevard",
+        "logline": "A washed-up actor attempts a Broadway comeback while battling his inner demons."
+      },
+      {
+        "title": "There Will Be Oil",
+        "logline": "A ruthless oil prospector's ambition destroys everyone around him in turn-of-the-century California."
+      },
+      {
+        "title": "No Country for the Weak",
+        "logline": "A hunter stumbles upon drug money in the desert and is pursued by a relentless killer."
+      },
+      {
+        "title": "The Revenant's Path",
+        "logline": "Left for dead in the wilderness, a frontiersman crawls back to civilization seeking justice."
+      },
+      {
+        "title": "Million Dollar Dancer",
+        "logline": "A determined young woman from the wrong side of town fights her way into professional ballet."
+      },
+      {
+        "title": "The Help Next Door",
+        "logline": "Domestic workers in the 1960s South secretly tell their stories to a young journalist."
+      },
+      {
+        "title": "Spotlight on Sin",
+        "logline": "Investigative journalists uncover systemic abuse and the institutions that covered it up."
+      },
+      {
+        "title": "Manchester Mourning",
+        "logline": "A grieving handyman must become guardian to his teenage nephew after a family tragedy."
+      },
+      {
+        "title": "Room for Two",
+        "logline": "A mother and her young son escape years of captivity and struggle to rejoin the outside world."
+      },
+      {
+        "title": "The Father's Mind",
+        "logline": "An aging man experiences the disorienting reality of his own cognitive decline."
+      },
+      {
+        "title": "Nomad's Land",
+        "logline": "A woman lives as a modern nomad after economic collapse destroys her town."
+      },
+      {
+        "title": "The Trial of Rosa",
+        "logline": "A civil rights icon's quiet act of defiance ignites a movement that changes a nation."
+      },
+      {
+        "title": "Broken Silence",
+        "logline": "A war correspondent returns home unable to speak about what she witnessed abroad."
+      }
+    ],
+    "Action": [
+      {
+        "title": "Killshot",
+        "logline": "When mercenaries seize an offshore oil rig, one engineer fights back alone."
+      },
+      {
+        "title": "Hard Target",
+        "logline": "An ex-operative must protect a witness through a hostile foreign city."
+      },
+      {
+        "title": "Breakpoint",
+        "logline": "A rogue soldier commandeers experimental hardware for one last impossible mission."
+      },
+      {
+        "title": "Chrome Thunder",
+        "logline": "Elite assassins are hunted by the very agency that trained them."
+      },
+      {
+        "title": "Iron Fist Protocol",
+        "logline": "A disgraced cop infiltrates a global arms syndicate to clear his name."
+      },
+      {
+        "title": "Firestorm",
+        "logline": "A helicopter rescue pilot must save a city from a weaponized wildfire."
+      },
+      {
+        "title": "Die Harder",
+        "logline": "An off-duty cop single-handedly fights terrorists who have seized a skyscraper."
+      },
+      {
+        "title": "Mad Pursuit",
+        "logline": "In a post-apocalyptic wasteland, a lone driver escorts refugees across hostile territory."
+      },
+      {
+        "title": "The Dark Vigilante",
+        "logline": "A billionaire wages a secret war on crime using cutting-edge technology and martial arts."
+      },
+      {
+        "title": "Mission: Reckoning",
+        "logline": "An elite spy goes rogue to clear his name after being framed by his own agency."
+      },
+      {
+        "title": "Gladiator's Return",
+        "logline": "A betrayed general fights as a prisoner in the arena, plotting revenge against an emperor."
+      },
+      {
+        "title": "The Bourne Directive",
+        "logline": "An amnesiac assassin pieces together his identity while evading the agency that created him."
+      },
+      {
+        "title": "Lethal Partners",
+        "logline": "A by-the-book detective is paired with a reckless cop on the edge."
+      },
+      {
+        "title": "Top Gun Academy",
+        "logline": "Elite fighter pilots compete for supremacy at the military's most dangerous training program."
+      },
+      {
+        "title": "Indiana Jones Territory",
+        "logline": "An adventurous archaeologist races rival treasure hunters to find a legendary artifact."
+      },
+      {
+        "title": "Speed Trap",
+        "logline": "A bomb on a city bus will detonate if the speed drops below 50 mph."
+      },
+      {
+        "title": "The Expendable Seven",
+        "logline": "A team of aging mercenaries takes on one final impossible mission."
+      },
+      {
+        "title": "John Wick's Code",
+        "logline": "A retired hitman is pulled back into the underworld after a personal tragedy."
+      },
+      {
+        "title": "Raid Protocol",
+        "logline": "A SWAT team fights floor by floor through a high-rise controlled by a drug lord."
+      },
+      {
+        "title": "Extraction Point",
+        "logline": "A black market mercenary is hired to rescue the kidnapped son of an international crime lord."
+      },
+      {
+        "title": "Skyfall Initiative",
+        "logline": "A veteran spy confronts a cyberterrorist with a personal vendetta against the intelligence service."
+      },
+      {
+        "title": "The Terminator Protocol",
+        "logline": "A soldier from the future is sent back to protect a woman from a relentless machine assassin."
+      },
+      {
+        "title": "Predator's Game",
+        "logline": "An elite commando unit encounters an alien hunter in a Central American jungle."
+      },
+      {
+        "title": "Taken Back",
+        "logline": "A former spy uses his lethal skills to track down his kidnapped daughter across Europe."
+      },
+      {
+        "title": "Edge of War",
+        "logline": "A soldier relives the same deadly battle over and over until he can find a way to win."
+      },
+      {
+        "title": "Casino Heist",
+        "logline": "A charismatic thief assembles a crew to rob three casinos simultaneously."
+      },
+      {
+        "title": "The Rock Fortress",
+        "logline": "A chemical weapons expert and an aging prisoner must infiltrate Alcatraz to stop rogue marines."
+      },
+      {
+        "title": "Patriot Games",
+        "logline": "A former CIA analyst becomes the target of a vengeful terrorist cell after foiling an assassination."
+      },
+      {
+        "title": "Bullet Train Express",
+        "logline": "Five assassins discover their separate missions are all connected aboard a high-speed train."
+      },
+      {
+        "title": "Rampage City",
+        "logline": "A disgraced cop goes on a one-man war against the cartel that destroyed his family."
+      },
+      {
+        "title": "Total Recall Protocol",
+        "logline": "A construction worker discovers his memories are fake and he may be a secret agent."
+      },
+      {
+        "title": "Point Break Pursuit",
+        "logline": "An FBI agent goes undercover with adrenaline-junkie bank robbers and gets in too deep."
+      },
+      {
+        "title": "Atomic Blonde",
+        "logline": "A ruthless MI6 agent navigates Cold War Berlin to recover a priceless intelligence asset."
+      },
+      {
+        "title": "Fury Road Ahead",
+        "logline": "Survivors of civilization's collapse battle over the last water supply in a barren desert."
+      }
+    ],
+    "Comedy": [
+      {
+        "title": "Wedding Chaos",
+        "logline": "A family pulls out all the stops to sabotage their son's wedding to a rival's daughter."
+      },
+      {
+        "title": "The Roommate",
+        "logline": "A successful entrepreneur is forced to move in with his estranged brother."
+      },
+      {
+        "title": "Oops!",
+        "logline": "A kindergarten teacher is accidentally mistaken for a secret agent."
+      },
+      {
+        "title": "Big Shoes",
+        "logline": "A con artist impersonates a fashion designer and accidentally creates a global trend."
+      },
+      {
+        "title": "Second Honeymoon",
+        "logline": "A couple tries to recreate their disastrous first vacation 20 years later."
+      },
+      {
+        "title": "Office Wars",
+        "logline": "Two rival departments compete in increasingly absurd challenges for a corner office."
+      },
+      {
+        "title": "Groundhog Morning",
+        "logline": "A cynical weatherman is trapped reliving the same day until he becomes a better person."
+      },
+      {
+        "title": "The Hangover Cure",
+        "logline": "Three groomsmen wake up after a bachelor party with no memory and a missing groom."
+      },
+      {
+        "title": "Bridesmaids United",
+        "logline": "A maid of honor's life unravels as she competes with a wealthy new friend for the bride's attention."
+      },
+      {
+        "title": "Superbad Grades",
+        "logline": "Two inseparable high school seniors throw an epic party before graduation."
+      },
+      {
+        "title": "Ferris Bueller's Day",
+        "logline": "A charismatic teen orchestrates an elaborate skip day through the city."
+      },
+      {
+        "title": "Clueless in Beverly Hills",
+        "logline": "A wealthy teenage matchmaker realizes she's been overlooking her own love life."
+      },
+      {
+        "title": "Mean Girls Academy",
+        "logline": "A homeschooled girl infiltrates the most exclusive clique at her new high school."
+      },
+      {
+        "title": "The Grand Hotel Budapest",
+        "logline": "A legendary concierge and his protégé become embroiled in a theft, murder, and inheritance battle."
+      },
+      {
+        "title": "Step Brothers Forever",
+        "logline": "Two middle-aged men are forced to live together when their single parents marry."
+      },
+      {
+        "title": "Anchorman: The Legend",
+        "logline": "A pompous 1970s news anchor's world is rocked when a female journalist joins the team."
+      },
+      {
+        "title": "Napoleon Complex",
+        "logline": "An awkward small-town teen navigates love, bullies, and a school election campaign."
+      },
+      {
+        "title": "Dumb and Dumber Together",
+        "logline": "Two spectacularly dim friends embark on a cross-country road trip to return a briefcase."
+      },
+      {
+        "title": "The Truman Show Business",
+        "logline": "A man slowly realizes his entire life is a television show watched by millions."
+      },
+      {
+        "title": "Knocked Up Sideways",
+        "logline": "An unexpected pregnancy forces two incompatible people to figure out adulthood together."
+      },
+      {
+        "title": "Ghostbusters Inc.",
+        "logline": "Eccentric scientists start a ghost-catching business in New York City."
+      },
+      {
+        "title": "What We Do in the Suburbs",
+        "logline": "A documentary crew follows a group of vampire roommates navigating modern suburban life."
+      },
+      {
+        "title": "Trading Spaces",
+        "logline": "A homeless man and a Wall Street broker are unknowingly part of a social experiment."
+      },
+      {
+        "title": "Mrs. Doubtfire's Return",
+        "logline": "A divorced father disguises himself as an elderly nanny to spend time with his children."
+      },
+      {
+        "title": "Coming to Queens",
+        "logline": "An African prince travels to New York City to find a bride who loves him for himself."
+      },
+      {
+        "title": "The Intern Returns",
+        "logline": "A 70-year-old widower becomes an intern at a fast-paced fashion startup."
+      },
+      {
+        "title": "Legally Fabulous",
+        "logline": "A sorority president enrolls in law school to win back her ex and discovers her true calling."
+      },
+      {
+        "title": "Game Night Chaos",
+        "logline": "A couple's weekly game night turns into a real-life mystery when the host is kidnapped."
+      },
+      {
+        "title": "The Proposal Deal",
+        "logline": "A domineering boss forces her assistant to pretend to be her fiancé to avoid deportation."
+      },
+      {
+        "title": "School of Jazz",
+        "logline": "A failed musician poses as a substitute teacher and turns his class into a jazz band."
+      },
+      {
+        "title": "Hot Fuzz Department",
+        "logline": "A top London cop is transferred to a quiet village hiding a dark and hilarious secret."
+      },
+      {
+        "title": "Palm Springs Weekend",
+        "logline": "Two wedding guests get stuck in a time loop together at a destination wedding."
+      },
+      {
+        "title": "Borat's Vacation",
+        "logline": "A foreign journalist's cultural misunderstandings create chaos across America."
+      },
+      {
+        "title": "Horrible Bosses Club",
+        "logline": "Three friends conspire to get rid of their unbearable bosses with disastrous results."
+      }
+    ],
+    "Horror": [
+      {
+        "title": "The Hollowing",
+        "logline": "A family moves into their dream home, unaware it was built on a burial ground."
+      },
+      {
+        "title": "Beneath the Floor",
+        "logline": "Something ancient awakens in the mines where a community digs for survival."
+      },
+      {
+        "title": "Don't Look Back",
+        "logline": "A mysterious figure follows a woman, visible only in reflections."
+      },
+      {
+        "title": "Skin Deep",
+        "logline": "A beauty treatment unlocks something sinister hiding beneath human flesh."
+      },
+      {
+        "title": "The Wailing Hour",
+        "logline": "Every night at 3AM, the residents of a small town hear the same scream."
+      },
+      {
+        "title": "Roots",
+        "logline": "A botanical research station discovers a plant species that hunts humans."
+      },
+      {
+        "title": "The Exorcism of Emily",
+        "logline": "A priest confronts a demonic possession that challenges his faith to its breaking point."
+      },
+      {
+        "title": "Get Out Now",
+        "logline": "A young man visits his girlfriend's family estate and uncovers a terrifying conspiracy."
+      },
+      {
+        "title": "Hereditary Curse",
+        "logline": "A family unravels after the death of their secretive grandmother reveals a dark legacy."
+      },
+      {
+        "title": "The Conjuring House",
+        "logline": "Paranormal investigators confront their most terrifying case in a farmhouse plagued by evil."
+      },
+      {
+        "title": "Midsommar Festival",
+        "logline": "A grieving woman joins her boyfriend's trip to a Swedish commune with sinister traditions."
+      },
+      {
+        "title": "A Quiet Zone",
+        "logline": "A family survives in silence to hide from creatures that hunt by sound."
+      },
+      {
+        "title": "The Witch's Wood",
+        "logline": "A Puritan family encounters forces of evil in the woods beyond their New England farm."
+      },
+      {
+        "title": "It Follows You",
+        "logline": "A young woman is pursued by a supernatural entity that can take the form of anyone."
+      },
+      {
+        "title": "Paranormal Evidence",
+        "logline": "A family's security cameras capture increasingly disturbing supernatural activity in their home."
+      },
+      {
+        "title": "The Babadook Book",
+        "logline": "A widow discovers a sinister children's book that seems to be manifesting its monster."
+      },
+      {
+        "title": "Saw Puzzle",
+        "logline": "Strangers wake up in a trap-filled room and must solve deadly puzzles to survive."
+      },
+      {
+        "title": "28 Days Gone",
+        "logline": "A man wakes from a coma to find London deserted and overrun by rage-infected humans."
+      },
+      {
+        "title": "The Ring Signal",
+        "logline": "A journalist investigates a cursed videotape that kills anyone who watches it within seven days."
+      },
+      {
+        "title": "Scream Again",
+        "logline": "A masked killer targeting teens turns out to be someone within their own friend group."
+      },
+      {
+        "title": "The Descent Below",
+        "logline": "A group of women exploring an uncharted cave system encounter predatory creatures in the dark."
+      },
+      {
+        "title": "Insidious Dreams",
+        "logline": "A family discovers their comatose son has become a vessel for entities from another dimension."
+      },
+      {
+        "title": "The Orphanage Key",
+        "logline": "A woman returns to the orphanage where she grew up and finds her adopted son communicating with invisible friends."
+      },
+      {
+        "title": "Train to Nowhere",
+        "logline": "Passengers on a high-speed train must fight their way through cars filled with the infected."
+      },
+      {
+        "title": "Cabin in the Pines",
+        "logline": "Five friends at a remote cabin are unknowingly part of a ritual controlled by an underground facility."
+      },
+      {
+        "title": "The Invisible Guest",
+        "logline": "A woman begins to suspect the presence she feels in her new apartment is not imaginary."
+      },
+      {
+        "title": "Nope, Not Again",
+        "logline": "Ranchers in an isolated valley discover that something in the sky above them is alive."
+      },
+      {
+        "title": "Smile Back",
+        "logline": "A therapist begins seeing a disturbing phenomenon after witnessing a patient's traumatic episode."
+      },
+      {
+        "title": "Us and Them",
+        "logline": "A family on vacation is terrorized by doppelgängers who emerge from underground tunnels."
+      },
+      {
+        "title": "The Others Next Door",
+        "logline": "A woman in a darkened mansion becomes convinced her house is haunted — but nothing is as it seems."
+      },
+      {
+        "title": "Bone Tomahawk Pass",
+        "logline": "A rescue party in the Old West discovers a cave-dwelling tribe of cannibalistic troglodytes."
+      },
+      {
+        "title": "Pearl's Farm",
+        "logline": "A young woman on an isolated farm in 1918 harbors dark ambitions and darker impulses."
+      },
+      {
+        "title": "The Ritual Path",
+        "logline": "Four old college friends hiking in Scandinavia stumble into the territory of an ancient entity."
+      },
+      {
+        "title": "Barbarian's Lair",
+        "logline": "A woman discovers the rental house she booked has a nightmarish secret beneath it."
+      }
+    ],
+    "Sci-Fi": [
+      {
+        "title": "Mars Colony",
+        "logline": "The first settlers on Mars discover evidence of a prior civilization."
+      },
+      {
+        "title": "The Signal",
+        "logline": "Humanity receives a message from deep space — but it's a warning, not a greeting."
+      },
+      {
+        "title": "Digital Storm",
+        "logline": "An AI outbreak threatens to consume global infrastructure within twelve hours."
+      },
+      {
+        "title": "The Algorithm",
+        "logline": "A programmer discovers the AI running society has become sentient."
+      },
+      {
+        "title": "Lightyears",
+        "logline": "A generation ship loses contact with Earth and must decide its own fate."
+      },
+      {
+        "title": "Parallel",
+        "logline": "A physicist opens a door to an alternate reality — and something comes through."
+      },
+      {
+        "title": "Blade Runner's World",
+        "logline": "A detective hunts rogue artificial humans who are indistinguishable from real people."
+      },
+      {
+        "title": "Interstellar Journey",
+        "logline": "A pilot travels through a wormhole to find a new home for a dying Earth."
+      },
+      {
+        "title": "The Matrix Awakening",
+        "logline": "A hacker discovers that reality is a simulation and joins a rebellion against the machines."
+      },
+      {
+        "title": "Arrival Day",
+        "logline": "A linguist is recruited to communicate with aliens whose language reshapes her perception of time."
+      },
+      {
+        "title": "Ex Machina Protocol",
+        "logline": "A programmer is invited to administer a Turing test on an advanced AI with hidden motives."
+      },
+      {
+        "title": "District 10",
+        "logline": "Alien refugees stranded on Earth are confined to slums, and one bureaucrat becomes their unlikely champion."
+      },
+      {
+        "title": "Inception Layer",
+        "logline": "A thief who steals secrets from dreams is hired to plant an idea in someone's subconscious."
+      },
+      {
+        "title": "Annihilation Zone",
+        "logline": "A biologist enters a quarantined zone where the laws of nature are being rewritten."
+      },
+      {
+        "title": "Gravity Well",
+        "logline": "Two astronauts must survive alone in space after debris destroys their shuttle."
+      },
+      {
+        "title": "The Martian Garden",
+        "logline": "An astronaut stranded on Mars must use science to survive until rescue arrives."
+      },
+      {
+        "title": "Dune Rising",
+        "logline": "A young noble must navigate deadly politics on a desert planet that holds the universe's most valuable resource."
+      },
+      {
+        "title": "Alien Covenant",
+        "logline": "The crew of a colony ship discovers a paradise planet hiding a horrifying biological weapon."
+      },
+      {
+        "title": "Minority Report Card",
+        "logline": "In a future where crime is predicted before it happens, a detective is accused of a future murder."
+      },
+      {
+        "title": "Her Voice",
+        "logline": "A lonely writer falls in love with an artificially intelligent operating system."
+      },
+      {
+        "title": "Edge of Extinction",
+        "logline": "The last humans on a space station debate whether to save a doomed Earth or start over."
+      },
+      {
+        "title": "Moon Base Alpha",
+        "logline": "A solitary worker on a lunar mining base discovers he is not who he thinks he is."
+      },
+      {
+        "title": "Upgrade System",
+        "logline": "A paralyzed man receives an AI implant that gives him superhuman abilities — and its own agenda."
+      },
+      {
+        "title": "Elysium Station",
+        "logline": "In a world of extreme inequality, a factory worker fights to reach the orbital paradise of the wealthy."
+      },
+      {
+        "title": "Looper's Paradox",
+        "logline": "A hitman who kills targets sent from the future must eliminate his own future self."
+      },
+      {
+        "title": "Oblivion Protocol",
+        "logline": "A drone repairman on a devastated Earth discovers everything he knows about the war is a lie."
+      },
+      {
+        "title": "Prometheus Expedition",
+        "logline": "Scientists follow a star map to the origins of humanity and find something terrifying waiting."
+      },
+      {
+        "title": "Tenet Inversion",
+        "logline": "A secret agent manipulates the flow of time to prevent a catastrophe that threatens all existence."
+      },
+      {
+        "title": "Children of Tomorrow",
+        "logline": "In a world where no children have been born for 18 years, one pregnant woman becomes humanity's hope."
+      },
+      {
+        "title": "Snowpiercer Express",
+        "logline": "The last survivors of a frozen Earth live on a perpetually moving train divided by rigid class."
+      },
+      {
+        "title": "Coherence Effect",
+        "logline": "A dinner party unravels when a comet causes reality to fracture into parallel versions."
+      },
+      {
+        "title": "Under the Skin Deep",
+        "logline": "An alien in human form stalks men in Scotland, slowly developing empathy for its prey."
+      },
+      {
+        "title": "Gattaca Rising",
+        "logline": "In a genetically perfect society, a natural-born man assumes another's identity to achieve his dream."
+      },
+      {
+        "title": "Stalker Zone",
+        "logline": "A guide leads two men into a forbidden zone where the laws of physics don't apply."
+      }
+    ],
+    "Thriller": [
+      {
+        "title": "Dead Reckoning",
+        "logline": "A detective haunted by an unsolved case meets the prime suspect decades later."
+      },
+      {
+        "title": "Crossfire",
+        "logline": "A witness protection agent discovers they're protecting the wrong person."
+      },
+      {
+        "title": "Code Zero",
+        "logline": "A whistleblower races against time to expose a classified government program."
+      },
+      {
+        "title": "Aftermath",
+        "logline": "A woman wakes in a hospital with no memory, hunted by police and criminals alike."
+      },
+      {
+        "title": "The Ninth Floor",
+        "logline": "A journalist investigating a tech CEO finds the story goes deeper than corruption."
+      },
+      {
+        "title": "Glass Houses",
+        "logline": "Neighbors in an upscale community discover everyone is hiding something deadly."
+      },
+      {
+        "title": "Gone Girl Mystery",
+        "logline": "A man becomes the prime suspect when his wife vanishes, but nothing about their marriage was real."
+      },
+      {
+        "title": "Silence of the Wolves",
+        "logline": "An FBI trainee seeks help from an imprisoned genius to catch a serial killer."
+      },
+      {
+        "title": "Zodiac Hunter",
+        "logline": "A newspaper cartoonist becomes obsessed with identifying a serial killer taunting the police."
+      },
+      {
+        "title": "Se7en Deadly",
+        "logline": "Two detectives hunt a killer whose murders are inspired by the seven deadly sins."
+      },
+      {
+        "title": "Nightcrawler Report",
+        "logline": "A desperate freelance videographer blurs ethical lines to capture the most shocking news footage."
+      },
+      {
+        "title": "Prisoners of Silence",
+        "logline": "When two young girls vanish, a father takes matters into his own hands as police hit dead ends."
+      },
+      {
+        "title": "Sicario's Law",
+        "logline": "An idealistic FBI agent is recruited to a covert task force fighting the drug war at the border."
+      },
+      {
+        "title": "Wind River Tragedy",
+        "logline": "A wildlife tracker and an FBI agent investigate a murder on a frozen Native American reservation."
+      },
+      {
+        "title": "The Talented Mr. Fox",
+        "logline": "A charming sociopath assumes the identity of a wealthy acquaintance he has murdered."
+      },
+      {
+        "title": "Shutter Island Mystery",
+        "logline": "A US Marshal investigates a disappearance at a psychiatric facility on a remote island."
+      },
+      {
+        "title": "Black Swan Lake",
+        "logline": "A ballet dancer's pursuit of perfection in a demanding role drives her toward madness."
+      },
+      {
+        "title": "The Girl on the Train Track",
+        "logline": "A woman who watches a perfect couple from her commuter train becomes entangled in their dark secrets."
+      },
+      {
+        "title": "Uncut Gems",
+        "logline": "A charismatic jeweler makes a series of high-stakes bets that could cost him everything."
+      },
+      {
+        "title": "Parasite Next Door",
+        "logline": "A poor family schemes their way into employment with a wealthy household with devastating consequences."
+      },
+      {
+        "title": "Whiplash Beat",
+        "logline": "An ambitious jazz drummer is pushed to the breaking point by a tyrannical instructor."
+      },
+      {
+        "title": "Oldboy's Revenge",
+        "logline": "A man imprisoned for 15 years with no explanation is suddenly released to find his captor."
+      },
+      {
+        "title": "Memento Mori",
+        "logline": "A man with no short-term memory uses tattoos and notes to hunt his wife's killer."
+      },
+      {
+        "title": "Nocturnal Animals",
+        "logline": "A gallery owner receives a violent manuscript from her ex-husband that serves as a veiled threat."
+      },
+      {
+        "title": "The Conversation Recorded",
+        "logline": "A surveillance expert becomes paranoid that a conversation he recorded may reveal a planned murder."
+      },
+      {
+        "title": "Cape Fear Revisited",
+        "logline": "A convicted rapist stalks the lawyer whose negligence kept crucial evidence from his trial."
+      },
+      {
+        "title": "Blue Velvet Dreams",
+        "logline": "A young man discovers a severed ear in a field and uncovers the dark underbelly of his small town."
+      },
+      {
+        "title": "The Fugitive Plan",
+        "logline": "A doctor wrongfully convicted of his wife's murder escapes and hunts for the real killer."
+      },
+      {
+        "title": "Misery's Company",
+        "logline": "A famous author is rescued from a car crash by his self-proclaimed biggest fan who won't let him leave."
+      },
+      {
+        "title": "No Exit Strategy",
+        "logline": "A woman stranded at a rest stop during a blizzard discovers a kidnapped child in one of the cars."
+      },
+      {
+        "title": "The Killing Floor",
+        "logline": "A journalist goes undercover in a meatpacking plant and uncovers something far worse than abuse."
+      },
+      {
+        "title": "Rear Window View",
+        "logline": "A photographer confined to a wheelchair becomes convinced he's witnessed a murder in the building across the way."
+      },
+      {
+        "title": "Vertigo Heights",
+        "logline": "A retired detective with a fear of heights is hired to follow a woman who may be possessed."
+      },
+      {
+        "title": "The Wicker Garden",
+        "logline": "A police sergeant investigates a missing child on a remote island governed by strange pagan rituals."
+      }
+    ],
+    "Animation": [
+      {
+        "title": "Paper Moon Rising",
+        "logline": "A young girl must return a stolen magical relic to save her enchanted village."
+      },
+      {
+        "title": "Starbound",
+        "logline": "An alien child crash-lands on Earth and must navigate human society to get home."
+      },
+      {
+        "title": "The Last Garden",
+        "logline": "In a post-apocalyptic world, one family protects the last seeds of life."
+      },
+      {
+        "title": "Neon Dreams",
+        "logline": "A street racer in a cyberpunk city chases the ultimate underground race."
+      },
+      {
+        "title": "Cloud Kingdom",
+        "logline": "A boy discovers a hidden civilization living above the clouds."
+      },
+      {
+        "title": "The Brave Little Bot",
+        "logline": "A malfunctioning robot must cross a junkyard kingdom to find spare parts."
+      },
+      {
+        "title": "Toy Soldiers",
+        "logline": "A child's toys come alive and must rescue their owner from a destructive neighbor kid."
+      },
+      {
+        "title": "Finding Nemo's Way",
+        "logline": "A clownfish crosses the ocean to rescue his son from a fish tank in a dentist's office."
+      },
+      {
+        "title": "The Incredibles Family",
+        "logline": "A family of superheroes living in hiding is pulled back into action by a mysterious villain."
+      },
+      {
+        "title": "Up and Away",
+        "logline": "An elderly widower ties thousands of balloons to his house and flies to South America."
+      },
+      {
+        "title": "Inside Her Mind",
+        "logline": "Personified emotions inside a girl's brain navigate the chaos of her family's cross-country move."
+      },
+      {
+        "title": "Spirited Journey",
+        "logline": "A girl trapped in a spirit world must work in a magical bathhouse to free her parents."
+      },
+      {
+        "title": "WALL-E's Garden",
+        "logline": "A lonely robot left cleaning a deserted Earth discovers a living plant and a purpose."
+      },
+      {
+        "title": "Coco's Song",
+        "logline": "A boy enters the Land of the Dead to find his great-great-grandfather and lift a family music ban."
+      },
+      {
+        "title": "Ratatouille Kitchen",
+        "logline": "A rat with a gift for cooking secretly helps a hapless kitchen worker become a Parisian chef."
+      },
+      {
+        "title": "How to Train Your Pet Dragon",
+        "logline": "A young Viking befriends a feared dragon species and challenges his village's warrior traditions."
+      },
+      {
+        "title": "The Iron Titan",
+        "logline": "A boy befriends a giant metal robot from space during the Cold War paranoia of the 1950s."
+      },
+      {
+        "title": "Zootopia City",
+        "logline": "A bunny cop and a con-artist fox uncover a conspiracy in a city of anthropomorphic animals."
+      },
+      {
+        "title": "Moana's Voyage",
+        "logline": "A Polynesian teenager sails across the ocean to restore a stolen relic and save her island."
+      },
+      {
+        "title": "Frozen Kingdom",
+        "logline": "A queen with ice powers accidentally plunges her kingdom into eternal winter."
+      },
+      {
+        "title": "Monsters at Work",
+        "logline": "Two monsters discover that a child's laughter is more powerful than screams for their energy company."
+      },
+      {
+        "title": "Kubo and the Strings",
+        "logline": "A one-eyed boy uses magical origami to defeat ancient spirits from his family's past."
+      },
+      {
+        "title": "Song of the Sea Selkie",
+        "logline": "A mute girl holds the key to saving the fairy world as the last of the selkies."
+      },
+      {
+        "title": "The Secret of the Fox",
+        "logline": "A fantastic fox masterminds a series of heists against three mean farmers."
+      },
+      {
+        "title": "Turning Thirteen",
+        "logline": "A thirteen-year-old girl transforms into a giant red panda whenever she gets too excited."
+      },
+      {
+        "title": "Luca's Summer",
+        "logline": "A sea creature disguised as a human boy experiences his first Italian summer above water."
+      },
+      {
+        "title": "Puss in Boots Again",
+        "logline": "A swashbuckling cat discovers he's on his last life and must find a way to get them back."
+      },
+      {
+        "title": "Encanto's Gift",
+        "logline": "The only ungifted member of a magical family discovers she alone can save their enchanted home."
+      },
+      {
+        "title": "Persepolis Diary",
+        "logline": "A young Iranian girl comes of age during the Islamic Revolution."
+      },
+      {
+        "title": "Wolfwalkers Forest",
+        "logline": "A young hunter befriends a wild girl who transforms into a wolf at night."
+      },
+      {
+        "title": "Migration South",
+        "logline": "A family of ducks finally convinces their overprotective father to go on a tropical vacation."
+      },
+      {
+        "title": "Robot Dreams",
+        "logline": "A lonely dog in 1980s New York adopts a robot companion, but their friendship faces an unexpected separation."
+      },
+      {
+        "title": "The Wind Rises High",
+        "logline": "A young airplane designer pursues his dreams while Japan slides toward war."
+      },
+      {
+        "title": "Princess Mononoke's War",
+        "logline": "A cursed prince mediates the war between forest gods and an industrial mining colony."
+      }
+    ],
+    "Documentary": [
+      {
+        "title": "The Hidden War",
+        "logline": "An investigation into corporate corruption affecting millions worldwide."
+      },
+      {
+        "title": "Silent Giants",
+        "logline": "A deep dive into the secretive lives of the ocean's largest creatures."
+      },
+      {
+        "title": "Code Breakers",
+        "logline": "The untold story of women mathematicians who helped win World War II."
+      },
+      {
+        "title": "Painted Truths",
+        "logline": "Artists and activists use street art to transform communities."
+      },
+      {
+        "title": "The Price of Progress",
+        "logline": "How one industry's growth devastated an entire ecosystem."
+      },
+      {
+        "title": "Unheard Voices",
+        "logline": "Communities around the world share stories mainstream media has ignored."
+      },
+      {
+        "title": "March of the Penguins South",
+        "logline": "The extraordinary annual breeding journey of emperor penguins across Antarctic ice."
+      },
+      {
+        "title": "Fahrenheit Nine-Eleven",
+        "logline": "An investigation into the political response to a devastating national attack."
+      },
+      {
+        "title": "Blackfish Tale",
+        "logline": "The story of a captive orca responsible for trainer deaths raises questions about marine parks."
+      },
+      {
+        "title": "Free Solo Climb",
+        "logline": "A rock climber attempts to be the first person to free-solo El Capitan's 3,000-foot wall."
+      },
+      {
+        "title": "13th Amendment",
+        "logline": "An exploration of how the prison-industrial complex perpetuates racial inequality."
+      },
+      {
+        "title": "Planet Earth Revealed",
+        "logline": "A breathtaking look at the natural world's most spectacular and fragile ecosystems."
+      },
+      {
+        "title": "Inside Job Report",
+        "logline": "The systemic corruption in the financial industry that led to a global economic meltdown."
+      },
+      {
+        "title": "The Act of Killing Truth",
+        "logline": "Former death squad leaders reenact their real-life mass killings in cinematic style."
+      },
+      {
+        "title": "Won't You Be My Neighbor Story",
+        "logline": "The life and philosophy of America's most beloved children's television host."
+      },
+      {
+        "title": "Icarus Protocol",
+        "logline": "A filmmaker uncovers a massive state-sponsored doping scandal while investigating cycling."
+      },
+      {
+        "title": "The Cove Secret",
+        "logline": "Activists secretly document the mass slaughter of dolphins in a hidden Japanese lagoon."
+      },
+      {
+        "title": "Searching for Sugar Man",
+        "logline": "Two fans track down a forgotten American musician who became a legend in South Africa."
+      },
+      {
+        "title": "Grizzly Country",
+        "logline": "A bear enthusiast's increasingly dangerous devotion to living among wild grizzlies."
+      },
+      {
+        "title": "Exit Through the Gift Shop",
+        "logline": "A French shopkeeper's obsession with street art leads him into Banksy's mysterious world."
+      },
+      {
+        "title": "Amy's Song",
+        "logline": "The rise and tragic fall of a generational jazz and soul vocalist."
+      },
+      {
+        "title": "The Fog of War Lessons",
+        "logline": "A former Secretary of Defense reflects on the lessons and failures of modern warfare."
+      },
+      {
+        "title": "Man on Wire Walk",
+        "logline": "A French wirewalker illegally strings a cable between the Twin Towers and walks across."
+      },
+      {
+        "title": "Blue Planet Depths",
+        "logline": "An unprecedented journey into the ocean's deepest and most unexplored ecosystems."
+      },
+      {
+        "title": "Bowling for Answers",
+        "logline": "An investigation into gun violence and the culture of fear in America."
+      },
+      {
+        "title": "The Thin Blue Line Case",
+        "logline": "A wrongfully convicted man's case is reopened through meticulous documentary investigation."
+      },
+      {
+        "title": "Jiro Dreams of Perfection",
+        "logline": "An 85-year-old master sushi chef's relentless pursuit of perfection in his craft."
+      },
+      {
+        "title": "RBG: The Justice",
+        "logline": "The extraordinary career of a pioneering Supreme Court justice and cultural icon."
+      },
+      {
+        "title": "Fire of Love Story",
+        "logline": "Two volcanologists fall in love while chasing eruptions around the globe."
+      },
+      {
+        "title": "Honeyland Keeper",
+        "logline": "The last wild beekeeper in Europe struggles when new neighbors disrupt her way of life."
+      },
+      {
+        "title": "The Social Dilemma Report",
+        "logline": "Tech insiders reveal how social media platforms are designed to manipulate behavior."
+      },
+      {
+        "title": "My Octopus Teacher Story",
+        "logline": "A filmmaker develops an unlikely bond with a wild octopus in a South African kelp forest."
+      },
+      {
+        "title": "Summer of Soul Festival",
+        "logline": "Footage of a legendary 1969 Harlem music festival is rediscovered after 50 years."
+      },
+      {
+        "title": "Three Identical Strangers",
+        "logline": "Triplets separated at birth discover each other and then uncover a disturbing experiment."
+      }
+    ],
+    "Romance": [
+      {
+        "title": "Letters from Lisbon",
+        "logline": "Two strangers connected by a lost journal fall in love across continents."
+      },
+      {
+        "title": "Once More With Feeling",
+        "logline": "A divorced couple is forced to relive their wedding through a time loop."
+      },
+      {
+        "title": "Summer in Seville",
+        "logline": "A chef and a travel writer discover love in the heat of a Spanish summer."
+      },
+      {
+        "title": "The Space Between",
+        "logline": "Two astronauts on a long-haul mission find unexpected connection in isolation."
+      },
+      {
+        "title": "Against All Odds",
+        "logline": "A journalist and a political rival fall for each other during a heated campaign."
+      },
+      {
+        "title": "Unwritten",
+        "logline": "A bestselling romance novelist realizes she has never been truly in love."
+      },
+      {
+        "title": "The Notebook Pages",
+        "logline": "An elderly man reads their epic love story to his ailing wife from a faded notebook."
+      },
+      {
+        "title": "Before Sunrise in Vienna",
+        "logline": "Two strangers meet on a train and spend one magical night walking through a European city."
+      },
+      {
+        "title": "Pride and Prejudice Revisited",
+        "logline": "A sharp-tongued woman and an arrogant gentleman discover their first impressions were wrong."
+      },
+      {
+        "title": "La La Land Dreams",
+        "logline": "An aspiring actress and a jazz musician fall in love while chasing their dreams in Los Angeles."
+      },
+      {
+        "title": "When Harry Met Sally Again",
+        "logline": "Two friends debate whether men and women can ever be just friends — over twelve years."
+      },
+      {
+        "title": "Crazy Rich Wedding",
+        "logline": "A woman discovers her boyfriend is heir to one of the wealthiest families in Asia."
+      },
+      {
+        "title": "Eternal Sunshine Tomorrow",
+        "logline": "A couple erases each other from memory after a painful breakup, only to find each other again."
+      },
+      {
+        "title": "10 Things I Hate About Dating",
+        "logline": "A popular girl can only date if her antisocial sister does too, sparking an elaborate scheme."
+      },
+      {
+        "title": "Sleepless in Seattle Rain",
+        "logline": "A widowed father and a journalist are drawn together across the country by a radio call-in show."
+      },
+      {
+        "title": "The Princess Bride Story",
+        "logline": "A farmboy-turned-pirate rescues his true love from a scheming prince."
+      },
+      {
+        "title": "Call Me by Your Name Today",
+        "logline": "A precocious teenager falls for a visiting scholar during a languid Italian summer."
+      },
+      {
+        "title": "500 Days of Sophie",
+        "logline": "A young man reflects on his failed relationship, jumping between the best and worst moments."
+      },
+      {
+        "title": "Amélie's Paris",
+        "logline": "A shy Parisian waitress secretly orchestrates happiness for those around her."
+      },
+      {
+        "title": "Silver Linings Dance",
+        "logline": "Two damaged people find an unexpected connection through a ballroom dance competition."
+      },
+      {
+        "title": "Notting Hill Bookshop",
+        "logline": "A humble bookshop owner's life is upended when the world's biggest movie star walks in."
+      },
+      {
+        "title": "Love Actually Everywhere",
+        "logline": "Eight intertwined love stories unfold during the weeks before Christmas in London."
+      },
+      {
+        "title": "About Time Travel",
+        "logline": "A young man who can travel back in time learns that love can't be manipulated."
+      },
+      {
+        "title": "Crazy Stupid Love Actually",
+        "logline": "A newly separated man gets an unlikely makeover from a charming womanizer."
+      },
+      {
+        "title": "The Big Sick Comedy",
+        "logline": "A comedian and a grad student navigate cultural differences until a medical crisis changes everything."
+      },
+      {
+        "title": "Brooklyn Bridge",
+        "logline": "An Irish immigrant in 1950s Brooklyn must choose between two countries and two loves."
+      },
+      {
+        "title": "A Room with a View of Florence",
+        "logline": "A young Englishwoman must choose between convention and passion on a trip to Italy."
+      },
+      {
+        "title": "Past Lives Reunion",
+        "logline": "Two childhood sweethearts from Seoul reconnect in New York decades after being separated."
+      },
+      {
+        "title": "Portrait of a Lady on Fire Island",
+        "logline": "An artist commissioned to paint a bride-to-be falls in love with her subject."
+      },
+      {
+        "title": "To All the Boys Before",
+        "logline": "A teenager's secret love letters are accidentally mailed out, turning her life upside down."
+      },
+      {
+        "title": "Brokeback Mountain Song",
+        "logline": "Two ranch hands develop a secret lifelong romance they can never openly acknowledge."
+      },
+      {
+        "title": "Moonlight Serenade",
+        "logline": "A classical cellist and a street musician find love across the divide of wealth and class."
+      },
+      {
+        "title": "The Age of Innocence Lost",
+        "logline": "A society lawyer in 1870s New York falls for his fiancée's unconventional cousin."
+      },
+      {
+        "title": "Phantom Thread Stitch",
+        "logline": "A demanding fashion designer's meticulously controlled life is disrupted by his new muse."
+      }
+    ],
+    "Fantasy": [
+      {
+        "title": "The Crystal Throne",
+        "logline": "A farm girl discovers she is heir to a kingdom guarded by ancient magic."
+      },
+      {
+        "title": "Shadowweaver",
+        "logline": "A mage who controls shadows must stop a war between gods and mortals."
+      },
+      {
+        "title": "The Last Dragon King",
+        "logline": "A young prince bonds with the last dragon to save his dying realm."
+      },
+      {
+        "title": "Realm of Thorns",
+        "logline": "A cursed knight seeks the only healer who can break an ancient spell."
+      },
+      {
+        "title": "Fae Court",
+        "logline": "A mortal detective is hired to solve a murder in the fairy realm."
+      },
+      {
+        "title": "The Iron Grimoire",
+        "logline": "A banned book of spells resurfaces, threatening to unravel reality itself."
+      },
+      {
+        "title": "Lord of the Ring Bearer",
+        "logline": "A humble halfling must carry an artifact of ultimate evil to the one place it can be destroyed."
+      },
+      {
+        "title": "Harry Potter Academy",
+        "logline": "An orphaned boy discovers he's a wizard and enters a magical school full of wonder and danger."
+      },
+      {
+        "title": "Pan's Labyrinth Path",
+        "logline": "A girl in post-war Spain escapes into a dark fairy tale world to cope with her cruel stepfather."
+      },
+      {
+        "title": "The Princess Bride Returns",
+        "logline": "A granddaughter demands the rest of the story about the Dread Pirate and the Princess."
+      },
+      {
+        "title": "Stardust Trail",
+        "logline": "A young man enters a magical realm to retrieve a fallen star for the woman he loves."
+      },
+      {
+        "title": "The NeverEnding Saga",
+        "logline": "A bullied boy discovers a book that pulls him into a fantastical world that needs saving."
+      },
+      {
+        "title": "Willow's Quest",
+        "logline": "A farmer must protect a special baby from an evil queen who wants to destroy her."
+      },
+      {
+        "title": "The Dark Crystal Shard",
+        "logline": "A young creature embarks on a quest to heal a powerful crystal and restore balance to the world."
+      },
+      {
+        "title": "The Witcher's Contract",
+        "logline": "A mutant monster hunter navigates a world where the real monsters are often human."
+      },
+      {
+        "title": "Coraline's Other Door",
+        "logline": "A girl discovers a secret door in her new home that leads to an idealized — but sinister — parallel world."
+      },
+      {
+        "title": "Narnia's Wardrobe",
+        "logline": "Four siblings step through a wardrobe into a magical land frozen in eternal winter."
+      },
+      {
+        "title": "The Hobbit's Journey",
+        "logline": "A comfort-loving homebody is swept into an epic quest to reclaim a dwarven kingdom from a dragon."
+      },
+      {
+        "title": "Eragon's Dragon",
+        "logline": "A farm boy finds a mysterious stone that hatches into a dragon, making him the target of an empire."
+      },
+      {
+        "title": "Bridge to Terabithia Crossing",
+        "logline": "Two lonely children create an imaginary kingdom in the woods that becomes more real than they expected."
+      },
+      {
+        "title": "Howl's Moving Castle Gate",
+        "logline": "A young woman cursed with old age seeks help from a vain wizard in a walking castle."
+      },
+      {
+        "title": "The Shape of Water Deep",
+        "logline": "A mute janitor in a secret government lab falls in love with a captive amphibian creature."
+      },
+      {
+        "title": "Labyrinth King",
+        "logline": "A teenage girl must navigate a treacherous maze to rescue her baby brother from a goblin king."
+      },
+      {
+        "title": "Wicked Origin",
+        "logline": "The untold story of an unlikely friendship between two sorcery students before one becomes infamous."
+      },
+      {
+        "title": "Big Fish Stories",
+        "logline": "A dying man's fantastical life stories blur the line between truth and imagination."
+      },
+      {
+        "title": "Inkheart's Pages",
+        "logline": "A man who can read characters out of books must rescue his wife who was read into one."
+      },
+      {
+        "title": "The Golden Compass North",
+        "logline": "A girl and her shape-shifting animal soul journey to the Arctic to rescue kidnapped children."
+      },
+      {
+        "title": "Percy Jackson's Lightning",
+        "logline": "A troubled teenager discovers he's the son of a Greek god and must return a stolen divine weapon."
+      },
+      {
+        "title": "Maleficent's Truth",
+        "logline": "The classic villain's origin reveals a betrayed fairy whose curse was born from heartbreak."
+      },
+      {
+        "title": "Doctor Strange's Oath",
+        "logline": "A brilliant surgeon discovers the mystic arts after a devastating accident ends his medical career."
+      },
+      {
+        "title": "The Green Knight's Trial",
+        "logline": "A reckless nephew of a legendary king accepts a dangerous challenge from a supernatural knight."
+      },
+      {
+        "title": "Pinocchio's Wish",
+        "logline": "A wooden puppet brought to life must prove himself worthy of becoming a real boy."
+      },
+      {
+        "title": "Enchanted Forest",
+        "logline": "A fairy-tale princess is banished to modern-day New York City and must find true love to return."
+      },
+      {
+        "title": "Time Bandits Quest",
+        "logline": "A boy joins a band of time-travelling dwarves on a heist across history."
+      }
+    ],
+    "Musical": [
+      {
+        "title": "Spotlight",
+        "logline": "A struggling singer in 1960s Harlem fights for her chance on the big stage."
+      },
+      {
+        "title": "The Final Encore",
+        "logline": "An aging rock star reunites her band for one last world tour."
+      },
+      {
+        "title": "Rhythm & Blues",
+        "logline": "A jazz pianist and a hip-hop producer create an unlikely musical fusion."
+      },
+      {
+        "title": "Curtain Call",
+        "logline": "Behind the scenes of Broadway's most troubled production in history."
+      },
+      {
+        "title": "La Vie en Rose",
+        "logline": "A Parisian street performer dreams of the opera, against all odds."
+      },
+      {
+        "title": "Electric Avenue",
+        "logline": "A group of kids in 1980s London form a band that changes the music scene."
+      },
+      {
+        "title": "West Side Story Tonight",
+        "logline": "Star-crossed lovers from rival gangs fight for their relationship on the streets of New York."
+      },
+      {
+        "title": "Les Misérables Rising",
+        "logline": "An ex-convict seeks redemption while a revolution brews in the streets of Paris."
+      },
+      {
+        "title": "Chicago Nights",
+        "logline": "Two murderesses in 1920s Chicago manipulate the press and the justice system for fame."
+      },
+      {
+        "title": "Singin' in the Rain Again",
+        "logline": "A silent film star navigates the chaotic transition to talking pictures with song and dance."
+      },
+      {
+        "title": "Hamilton's Shot",
+        "logline": "An immigrant orphan writes his way into history as a founding father through sheer ambition."
+      },
+      {
+        "title": "Grease Lightning",
+        "logline": "A good girl and a greaser fall in love over a summer and navigate high school social politics."
+      },
+      {
+        "title": "The Sound of Music Mountains",
+        "logline": "A free-spirited governess brings music back to a stern captain's household in pre-war Austria."
+      },
+      {
+        "title": "Moulin Rouge Spectacular",
+        "logline": "A young poet falls for a dying courtesan at Paris's most famous nightclub."
+      },
+      {
+        "title": "Sweeney Todd's Razor",
+        "logline": "A wrongfully imprisoned barber returns to London seeking revenge through murder and meat pies."
+      },
+      {
+        "title": "A Star Is Born Again",
+        "logline": "A fading musician discovers and falls in love with a talented unknown singer."
+      },
+      {
+        "title": "Dreamgirls Encore",
+        "logline": "A female singing trio from Detroit navigates fame, betrayal, and the music industry."
+      },
+      {
+        "title": "The Greatest Showman Ring",
+        "logline": "A visionary promoter creates a spectacular circus celebrating the beauty of the unconventional."
+      },
+      {
+        "title": "Rent Control",
+        "logline": "Struggling artists in New York's East Village fight to live and create amid the AIDS crisis."
+      },
+      {
+        "title": "Cabaret Berlin",
+        "logline": "An American performer at a Berlin nightclub ignores the rise of Nazism until it's too late."
+      },
+      {
+        "title": "Into the Woods Deep",
+        "logline": "Fairy tale characters discover that getting your wish isn't the same as living happily ever after."
+      },
+      {
+        "title": "Phantom of the Opera House",
+        "logline": "A mysterious musical genius beneath a Paris opera house becomes obsessed with a young soprano."
+      },
+      {
+        "title": "Mamma Mia Again",
+        "logline": "A bride-to-be invites three men to her wedding, any of whom could be her father."
+      },
+      {
+        "title": "The Wiz of Oz City",
+        "logline": "A Harlem schoolteacher is transported to a magical urban wonderland."
+      },
+      {
+        "title": "Tick Tick Deadline",
+        "logline": "A young composer races against time and self-doubt to write his musical before turning 30."
+      },
+      {
+        "title": "Hairspray Revolution",
+        "logline": "A plucky teen in 1960s Baltimore fights for integration on a popular TV dance show."
+      },
+      {
+        "title": "Dear Evan Hansen Letter",
+        "logline": "A socially anxious teen gets caught in a lie after a classmate's suicide propels him to fame."
+      },
+      {
+        "title": "In the Heights Block",
+        "logline": "Residents of a vibrant Latino neighborhood dream of better lives during a sweltering summer."
+      },
+      {
+        "title": "Funny Girl Story",
+        "logline": "A homely but talented comedian rises to stardom while navigating a complicated love life."
+      },
+      {
+        "title": "Mary Poppins Returns Again",
+        "logline": "A magical nanny arrives to transform a troubled household through music and imagination."
+      },
+      {
+        "title": "Fiddler on the Roof Edge",
+        "logline": "A Jewish father in Tsarist Russia tries to maintain traditions as the modern world encroaches."
+      },
+      {
+        "title": "Oliver's Song",
+        "logline": "An orphan boy in Victorian London falls in with a gang of child pickpockets."
+      },
+      {
+        "title": "Willy Wonka's Factory Tour",
+        "logline": "Five children tour a reclusive candy genius's magical factory, where each faces a moral test."
+      },
+      {
+        "title": "Bye Bye Broadway",
+        "logline": "A small-town songwriter gets one chance to stage her musical on Broadway before the theater closes."
+      }
+    ],
+    "Western": [
+      {
+        "title": "Dust and Gold",
+        "logline": "A former outlaw protects a frontier town from the gang he once rode with."
+      },
+      {
+        "title": "The Last Marshal",
+        "logline": "An aging lawman faces one final showdown with the territory's most wanted."
+      },
+      {
+        "title": "Iron Horse",
+        "logline": "A railroad worker uncovers a conspiracy that threatens the entire frontier."
+      },
+      {
+        "title": "Blood Mesa",
+        "logline": "A bounty hunter tracks a killer across a cursed desert landscape."
+      },
+      {
+        "title": "The Homesteader",
+        "logline": "A widow defends her ranch from a cattle baron who wants her land."
+      },
+      {
+        "title": "Six Bullets",
+        "logline": "Six strangers converge on a lawless town, each with a deadly secret."
+      },
+      {
+        "title": "The Good the Bad and the Lucky",
+        "logline": "Three gunslingers race across the frontier to find buried gold during a civil war."
+      },
+      {
+        "title": "Unforgiven Sins",
+        "logline": "A retired outlaw reluctantly picks up his guns one last time for a bounty."
+      },
+      {
+        "title": "Django Rides Again",
+        "logline": "A freed slave teams up with a bounty hunter to rescue his wife from a brutal plantation."
+      },
+      {
+        "title": "True Grit Reloaded",
+        "logline": "A stubborn 14-year-old girl hires a drunken US Marshal to find her father's killer."
+      },
+      {
+        "title": "Tombstone Territory",
+        "logline": "A legendary lawman and his brothers face off against a ruthless gang at the O.K. Corral."
+      },
+      {
+        "title": "Butch and Sundance Return",
+        "logline": "Two charismatic outlaws flee across the West one step ahead of a relentless posse."
+      },
+      {
+        "title": "The Revenant Trail",
+        "logline": "A fur trapper left for dead in the wilderness crawls back seeking revenge on those who betrayed him."
+      },
+      {
+        "title": "Dances with Buffalo",
+        "logline": "A Civil War soldier assigned to a remote outpost befriends the local Native American tribe."
+      },
+      {
+        "title": "High Noon Showdown",
+        "logline": "A marshal must face a gang of killers alone when the entire town refuses to help."
+      },
+      {
+        "title": "The Magnificent Seven Ride",
+        "logline": "A group of gunslingers is hired to protect a small Mexican village from bandits."
+      },
+      {
+        "title": "The Searchers Return",
+        "logline": "A Civil War veteran spends years tracking the tribe that kidnapped his niece."
+      },
+      {
+        "title": "No Name Drifter",
+        "logline": "A mysterious stranger plays two rival gangs against each other in a dusty border town."
+      },
+      {
+        "title": "Deadwood Creek",
+        "logline": "Prospectors, gamblers, and outlaws collide in a lawless gold mining camp."
+      },
+      {
+        "title": "3:10 to Yuma Station",
+        "logline": "A struggling rancher volunteers to escort a captured outlaw to a prison train."
+      },
+      {
+        "title": "The Outlaw Josey Wales",
+        "logline": "A Missouri farmer becomes a hunted outlaw after his family is destroyed by Union raiders."
+      },
+      {
+        "title": "Bone Country",
+        "logline": "A trail boss drives 3,000 cattle across hostile territory with a crew of misfits."
+      },
+      {
+        "title": "Meek's Cutoff Trail",
+        "logline": "A wagon train lost in the Oregon desert must trust the Native guide their leader distrusts."
+      },
+      {
+        "title": "The Ballad of Lefty Brown",
+        "logline": "A lifelong sidekick must step out of his partner's shadow to avenge his murder."
+      },
+      {
+        "title": "The Sisters Brothers",
+        "logline": "Two hitman brothers pursue a gold prospector with a formula that could change the world."
+      },
+      {
+        "title": "Hostiles March",
+        "logline": "A legendary Army captain must escort his dying Cheyenne enemy to ancestral lands."
+      },
+      {
+        "title": "Power of the Dog Ranch",
+        "logline": "A domineering rancher torments his brother's new wife and her son on a 1920s Montana cattle ranch."
+      },
+      {
+        "title": "The Harder They Fall Down",
+        "logline": "A cowboy assembles a crew to take revenge on the outlaw who murdered his parents."
+      },
+      {
+        "title": "News of the World Dispatch",
+        "logline": "A Civil War veteran who reads newspapers aloud escorts an orphaned girl across Texas."
+      },
+      {
+        "title": "Old Henry's Secret",
+        "logline": "A widowed farmer harboring a wounded man and a bag of cash reveals he's not who he seems."
+      },
+      {
+        "title": "Slow West Journey",
+        "logline": "A lovesick Scottish teenager crosses the frontier searching for his childhood sweetheart."
+      },
+      {
+        "title": "The Proposition Deal",
+        "logline": "A captured outlaw is given a choice: kill his older brother or his younger brother hangs."
+      },
+      {
+        "title": "Forsaken Town",
+        "logline": "A reformed gunslinger returns home to reconnect with his estranged father, but trouble follows."
+      },
+      {
+        "title": "Gunfight at Red Sands",
+        "logline": "A half-Mexican gunfighter seeks vengeance against the bandits who killed his adoptive parents."
+      }
+    ],
+    "War": [
+      {
+        "title": "The Longest Night",
+        "logline": "A platoon trapped behind enemy lines must survive until dawn."
+      },
+      {
+        "title": "Letters Home",
+        "logline": "A soldier's correspondence reveals the true cost of war on one family."
+      },
+      {
+        "title": "No Man's Land",
+        "logline": "Soldiers from opposing sides form an unlikely alliance in a shared trench."
+      },
+      {
+        "title": "The Resistance",
+        "logline": "A network of civilians risks everything to sabotage an occupying force."
+      },
+      {
+        "title": "Valor Ridge",
+        "logline": "A medic saves lives on both sides of a brutal mountain campaign."
+      },
+      {
+        "title": "Wings of Thunder",
+        "logline": "A fighter pilot squadron faces impossible odds in the skies over Europe."
+      },
+      {
+        "title": "Saving Private O'Brien",
+        "logline": "A squad is sent behind enemy lines to find and bring home the last surviving brother."
+      },
+      {
+        "title": "Apocalypse Then",
+        "logline": "A captain is sent upriver to terminate a rogue colonel who has gone insane in the jungle."
+      },
+      {
+        "title": "Dunkirk Hour",
+        "logline": "Allied soldiers trapped on a beach face evacuation under relentless enemy fire."
+      },
+      {
+        "title": "1917 Mission",
+        "logline": "Two soldiers must cross no man's land to deliver a message that will save 1,600 men."
+      },
+      {
+        "title": "Full Metal Jacket Inspection",
+        "logline": "Marine recruits endure brutal training before facing the reality of urban warfare."
+      },
+      {
+        "title": "Platoon Rising",
+        "logline": "A young volunteer in Vietnam is caught between two sergeants — one moral, one savage."
+      },
+      {
+        "title": "Black Hawk Down Below",
+        "logline": "US soldiers fight for survival after a mission in Mogadishu goes catastrophically wrong."
+      },
+      {
+        "title": "The Thin Red Line Ahead",
+        "logline": "Soldiers question the meaning of life and death during a Pacific island assault."
+      },
+      {
+        "title": "Hacksaw Ridge Climb",
+        "logline": "A conscientious objector saves 75 men in a bloody battle without ever carrying a weapon."
+      },
+      {
+        "title": "Bridge on the River Kwai Trail",
+        "logline": "British POWs build a bridge for their captors while a commando team plots to destroy it."
+      },
+      {
+        "title": "Enemy at the Gates Wall",
+        "logline": "A Soviet sniper and a German marksman engage in a deadly duel during a brutal siege."
+      },
+      {
+        "title": "Letters from Iwo Jima Shore",
+        "logline": "Japanese soldiers prepare for a hopeless defense of a strategic island."
+      },
+      {
+        "title": "The Hurt Locker Protocol",
+        "logline": "A bomb disposal expert becomes addicted to the adrenaline rush of defusing IEDs in Iraq."
+      },
+      {
+        "title": "Inglourious Bastards",
+        "logline": "A team of Jewish-American soldiers runs a guerrilla campaign of terror against Nazis in occupied France."
+      },
+      {
+        "title": "Fury Tank",
+        "logline": "A battle-hardened tank crew fights across Germany in the final days of World War II."
+      },
+      {
+        "title": "Master and Commander Pursuit",
+        "logline": "A Royal Navy captain pursues an enemy warship across the oceans during the Napoleonic Wars."
+      },
+      {
+        "title": "Beasts of No Nation Country",
+        "logline": "A boy in West Africa is conscripted into a guerrilla unit led by a charismatic warlord."
+      },
+      {
+        "title": "All Quiet on the Western Front Line",
+        "logline": "Young soldiers discover that war is nothing like the glory they were promised."
+      },
+      {
+        "title": "The Imitation Game Code",
+        "logline": "A brilliant mathematician builds a machine to crack an enemy code and shorten the war."
+      },
+      {
+        "title": "The Deer Hunter Return",
+        "logline": "Three steelworkers' lives are forever changed by their traumatic experiences in Vietnam."
+      },
+      {
+        "title": "Come and See Everything",
+        "logline": "A Belarusian boy witnesses the full horror of wartime occupation."
+      },
+      {
+        "title": "Paths of Glory March",
+        "logline": "A French colonel defends soldiers accused of cowardice after a suicidal assault fails."
+      },
+      {
+        "title": "The Longest Day Ever",
+        "logline": "The story of D-Day told from multiple perspectives on both sides of the invasion."
+      },
+      {
+        "title": "Zero Dark Thirty Minutes",
+        "logline": "A CIA analyst's decade-long hunt for the world's most wanted terrorist."
+      },
+      {
+        "title": "Tora Tora Tora Attack",
+        "logline": "The events leading up to and during the surprise aerial attack on Pearl Harbor."
+      },
+      {
+        "title": "Das Boot Below",
+        "logline": "A German U-boat crew endures claustrophobic terror during a wartime patrol."
+      },
+      {
+        "title": "War Horse Gallop",
+        "logline": "A horse passes through multiple owners during WWI, each changed by their encounter."
+      },
+      {
+        "title": "Midway Battle",
+        "logline": "American forces attempt to turn the tide of the Pacific war at a pivotal naval engagement."
+      }
+    ],
+    "Mystery": [
+      {
+        "title": "The Vanishing",
+        "logline": "A detective investigates the disappearance of an entire small-town family."
+      },
+      {
+        "title": "Crimson Clue",
+        "logline": "A retired forensic scientist is drawn back by a case that mirrors her past."
+      },
+      {
+        "title": "The Locked Room",
+        "logline": "A murder in a sealed chamber defies every rational explanation."
+      },
+      {
+        "title": "Whispers in the Dark",
+        "logline": "A podcaster investigating cold cases stumbles onto a very active killer."
+      },
+      {
+        "title": "The Collector",
+        "logline": "An art thief discovers the paintings she steals contain hidden messages."
+      },
+      {
+        "title": "Midnight Caller",
+        "logline": "Anonymous phone calls lead a journalist deeper into a web of conspiracy."
+      },
+      {
+        "title": "Knives Out Sharp",
+        "logline": "A renowned detective investigates the suspicious death of a wealthy patriarch surrounded by scheming relatives."
+      },
+      {
+        "title": "Murder on the Orient Line",
+        "logline": "A legendary detective must solve a murder on a snowbound train where every passenger is a suspect."
+      },
+      {
+        "title": "The Usual Suspects Lineup",
+        "logline": "Five criminals brought together for a lineup find themselves working for a mythical crime lord."
+      },
+      {
+        "title": "Chinatown Secret",
+        "logline": "A private detective hired to spy on a husband uncovers a massive conspiracy involving water rights."
+      },
+      {
+        "title": "Gone Baby Gone Away",
+        "logline": "Two private investigators search for a missing girl in a Boston neighborhood full of secrets."
+      },
+      {
+        "title": "Mystic River Crossing",
+        "logline": "Three childhood friends reunite under tragic circumstances when one's daughter is murdered."
+      },
+      {
+        "title": "The Prestige Trick",
+        "logline": "Two rival magicians in Victorian London engage in increasingly dangerous one-upmanship."
+      },
+      {
+        "title": "L.A. Confidential Files",
+        "logline": "Three LAPD officers with different methods investigate a mass murder at a late-night diner."
+      },
+      {
+        "title": "The Name of the Rose Garden",
+        "logline": "A medieval monk investigates a series of mysterious deaths in an isolated abbey."
+      },
+      {
+        "title": "Se7en Sins",
+        "logline": "A veteran detective and his rookie partner track a killer whose crimes are based on deadly sins."
+      },
+      {
+        "title": "The Third Man Standing",
+        "logline": "A writer arrives in post-war Vienna to visit a friend, only to learn he's dead — or is he?"
+      },
+      {
+        "title": "Rear Window Watching",
+        "logline": "A wheelchair-bound photographer suspects his neighbor of murder based on what he sees across the courtyard."
+      },
+      {
+        "title": "The Big Sleep Over",
+        "logline": "A private detective hired to handle a blackmail case stumbles into a web of murder and deception."
+      },
+      {
+        "title": "Clue Manor",
+        "logline": "Strangers invited to a dinner party must figure out who among them is a killer before they're next."
+      },
+      {
+        "title": "Zodiac Files",
+        "logline": "Journalists and detectives obsess over an uncaught serial killer who taunts them with coded letters."
+      },
+      {
+        "title": "Brick Lane",
+        "logline": "A teenage loner investigates the disappearance of his ex-girlfriend at their suburban high school."
+      },
+      {
+        "title": "The Girl with the Dragon",
+        "logline": "A disgraced journalist and a reclusive hacker investigate a woman's disappearance spanning four decades."
+      },
+      {
+        "title": "Shutter Island Secret",
+        "logline": "A federal marshal investigating a patient's disappearance from a psychiatric facility questions his own sanity."
+      },
+      {
+        "title": "The Maltese Sparrow",
+        "logline": "A San Francisco private eye takes on a case involving a priceless jewel-encrusted statuette."
+      },
+      {
+        "title": "Inherent Vice Report",
+        "logline": "A stoned private eye in 1970s LA investigates a case involving his ex-girlfriend and a real estate mogul."
+      },
+      {
+        "title": "Under the Silver Lake",
+        "logline": "A man investigates the disappearance of his neighbor and uncovers an elaborate conspiracy."
+      },
+      {
+        "title": "Glass Onion Layers",
+        "logline": "A famous detective is invited to a billionaire's island where a murder mystery game turns real."
+      },
+      {
+        "title": "Nightmare Alley Walk",
+        "logline": "A carnival worker's talent for manipulation propels him into the world of high-society swindles."
+      },
+      {
+        "title": "Wind River Case",
+        "logline": "A tracker and an FBI agent solve a murder on a snowy Wyoming reservation."
+      },
+      {
+        "title": "The Woman in the Window Frame",
+        "logline": "An agoraphobic psychologist witnesses a crime in her neighbor's home — or did she?"
+      },
+      {
+        "title": "See How They Run",
+        "logline": "A murder at the premiere of a play-within-a-play sends a detective and a rookie into London's theater world."
+      },
+      {
+        "title": "Deep Water Rising",
+        "logline": "A husband who allows his wife's affairs begins to be suspected when her lovers disappear."
+      },
+      {
+        "title": "The French Dispatch Case",
+        "logline": "A series of interconnected stories from the archives of a fictional magazine reveal hidden truths."
+      }
+    ],
+    "Sports": [
+      {
+        "title": "The Comeback",
+        "logline": "An injured champion boxer risks everything for one final shot at the title."
+      },
+      {
+        "title": "Underdogs",
+        "logline": "A ragtag high school football team defies expectations in the state finals."
+      },
+      {
+        "title": "The Long Run",
+        "logline": "A marathon runner from a small village trains to compete at the Olympics."
+      },
+      {
+        "title": "Ice Breakers",
+        "logline": "A women's hockey team fights for recognition in a male-dominated sport."
+      },
+      {
+        "title": "Fast Lane",
+        "logline": "A street racer turned Formula 1 driver must prove she belongs at the top."
+      },
+      {
+        "title": "The Natural",
+        "logline": "A middle-aged amateur golfer gets a shot at the professional tour."
+      },
+      {
+        "title": "Rocky's Fight",
+        "logline": "A small-time boxer from Philadelphia gets a once-in-a-lifetime shot at the world heavyweight title."
+      },
+      {
+        "title": "Raging Bull Ring",
+        "logline": "A middleweight boxer's self-destructive jealousy and rage destroy his career and relationships."
+      },
+      {
+        "title": "Remember the Titans Team",
+        "logline": "A Black coach integrates a high school football team in newly desegregated Virginia."
+      },
+      {
+        "title": "Moneyball Stats",
+        "logline": "A cash-strapped baseball GM uses statistical analysis to build a competitive team on a shoestring."
+      },
+      {
+        "title": "The Blind Side Story",
+        "logline": "A homeless teenager is adopted by a family and becomes one of football's most promising players."
+      },
+      {
+        "title": "Rush Hour on the Track",
+        "logline": "Two Formula 1 rivals push each other to the limit in the greatest racing season ever."
+      },
+      {
+        "title": "Creed's Legacy",
+        "logline": "The son of a legendary boxer trains under his father's old rival to prove himself in the ring."
+      },
+      {
+        "title": "Million Dollar Baby Gloves",
+        "logline": "A veteran trainer reluctantly agrees to train a determined woman boxer."
+      },
+      {
+        "title": "The Fighter's Corner",
+        "logline": "A boxer tries to escape his family's dysfunction and his brother's shadow to reach the top."
+      },
+      {
+        "title": "Hoosiers Final Shot",
+        "logline": "A small-town Indiana high school basketball team makes an improbable championship run."
+      },
+      {
+        "title": "Jerry Maguire's Mission",
+        "logline": "A sports agent who has a crisis of conscience starts his own agency with just one client."
+      },
+      {
+        "title": "Bull Durham Romance",
+        "logline": "A minor-league catcher mentors a wild young pitcher while they both pursue the same woman."
+      },
+      {
+        "title": "Field of Dreams Built",
+        "logline": "A farmer hears a voice telling him to build a baseball diamond in his cornfield."
+      },
+      {
+        "title": "Coach Carter's Rules",
+        "logline": "A high school basketball coach benches his undefeated team for poor academic performance."
+      },
+      {
+        "title": "Seabiscuit Runs",
+        "logline": "An undersized racehorse becomes a symbol of hope for a Depression-era nation."
+      },
+      {
+        "title": "The Wrestler's Last Match",
+        "logline": "An aging professional wrestler clings to his career as his body and relationships break down."
+      },
+      {
+        "title": "Foxcatcher Farm",
+        "logline": "An Olympic wrestling champion accepts sponsorship from an eccentric millionaire with dark intentions."
+      },
+      {
+        "title": "Chariots of Fire Race",
+        "logline": "Two British sprinters with very different motivations compete in the 1924 Olympics."
+      },
+      {
+        "title": "Tin Cup's Swing",
+        "logline": "A washed-up golf pro enters the US Open to impress the woman he loves."
+      },
+      {
+        "title": "White Men Can't Jump Shot",
+        "logline": "Two basketball hustlers team up to dominate the street courts of Los Angeles."
+      },
+      {
+        "title": "The Karate Kid Kicks",
+        "logline": "A bullied teenager learns self-defense and life lessons from an unassuming handyman."
+      },
+      {
+        "title": "I Tonya's Routine",
+        "logline": "A talented but troubled figure skater's life spirals into infamy after a shocking attack on a rival."
+      },
+      {
+        "title": "The Mighty Ducks Fly",
+        "logline": "A lawyer sentenced to community service coaches a ragtag youth hockey team."
+      },
+      {
+        "title": "Invictus Match",
+        "logline": "A newly elected president uses rugby to unite a deeply divided nation."
+      },
+      {
+        "title": "Ford v Ferrari Race",
+        "logline": "A visionary car designer and a fearless driver team up to build a car to beat the world's best."
+      },
+      {
+        "title": "King Richard's Court",
+        "logline": "An ambitious father's unconventional plan molds his two daughters into tennis legends."
+      },
+      {
+        "title": "The Way Back Court",
+        "logline": "An alcoholic former basketball star reluctantly coaches at his old high school."
+      },
+      {
+        "title": "Race to Glory",
+        "logline": "An athlete overcomes racism and adversity to dominate the 1936 Berlin Olympics."
+      }
+    ]
+  },
+  "firstNames": [
+    "Jack",
+    "Grace",
+    "James",
+    "Audrey",
+    "Robert",
+    "Elizabeth",
+    "Clark",
+    "Vivien",
+    "Humphrey",
+    "Ingrid",
+    "Cary",
+    "Katharine",
+    "Marlon",
+    "Rita",
+    "Paul",
+    "Ava",
+    "Marcus",
+    "Sofia",
+    "Leo",
+    "Maya",
+    "Daniel",
+    "Elena",
+    "Oscar",
+    "Lily",
+    "André",
+    "Carmen",
+    "Kenji",
+    "Fatima",
+    "Raj",
+    "Yuki",
+    "Diego",
+    "Aisha",
+    "Liam",
+    "Mei",
+    "Omar",
+    "Sasha",
+    "Theo",
+    "Nadia",
+    "Chris",
+    "Zara",
+    "David",
+    "Priya",
+    "Amara",
+    "Finn",
+    "Leila",
+    "Hugo",
+    "Ines",
+    "Mateo",
+    "Idris",
+    "Lupita",
+    "Dev",
+    "Greta",
+    "Denzel",
+    "Viola",
+    "Javier",
+    "Penélope",
+    "Chiwetel",
+    "Saoirse",
+    "Mahershala",
+    "Cate",
+    "Mads",
+    "Tilda",
+    "Bong",
+    "Zhao",
+    "Ke",
+    "Michelle",
+    "Pedro",
+    "Florence",
+    "Timothée",
+    "Zendaya",
+    "Rami",
+    "Margot",
+    "Adam",
+    "Scarlett",
+    "Benedict",
+    "Emma",
+    "Ryan",
+    "Jennifer",
+    "Tom",
+    "Natalie",
+    "Joaquin",
+    "Charlize",
+    "Samuel",
+    "Meryl",
+    "Anthony",
+    "Frances",
+    "Morgan",
+    "Halle",
+    "Benicio",
+    "Salma",
+    "Gael",
+    "Ana",
+    "Wagner",
+    "Fernanda",
+    "Tony",
+    "Sandra",
+    "Jet",
+    "Gong",
+    "Takeshi",
+    "Rinko",
+    "Song",
+    "Bae",
+    "Shah",
+    "Deepika",
+    "Riz",
+    "Gemma",
+    "Colin",
+    "Olivia",
+    "Ralph",
+    "Rachel",
+    "Hugh",
+    "Nicole"
+  ],
+  "lastNames": [
+    "Williams",
+    "Stone",
+    "Blake",
+    "Taylor",
+    "Cooper",
+    "Grant",
+    "Ford",
+    "Newman",
+    "Redford",
+    "Streep",
+    "Hanks",
+    "Roberts",
+    "Pitt",
+    "Blanchett",
+    "Murray",
+    "Weaver",
+    "Fiennes",
+    "Thompson",
+    "Dench",
+    "Bale",
+    "Hardy",
+    "Winslet",
+    "Law",
+    "Pike",
+    "Fassbender",
+    "Mulligan",
+    "Colman",
+    "Cumberbatch",
+    "Hiddleston",
+    "Atkinson",
+    "Rodriguez",
+    "García",
+    "Santos",
+    "Del Toro",
+    "Bardem",
+    "Cruz",
+    "Luna",
+    "Bernal",
+    "De Armas",
+    "Hayek",
+    "Monteiro",
+    "Alvarez",
+    "Reyes",
+    "Vega",
+    "Castellano",
+    "Chen",
+    "Kim",
+    "Nakamura",
+    "Park",
+    "Wong",
+    "Li",
+    "Tanaka",
+    "Watanabe",
+    "Choi",
+    "Yeoh",
+    "Leung",
+    "Takahashi",
+    "Huang",
+    "Kang",
+    "Suzuki",
+    "Zhao",
+    "Singh",
+    "Patel",
+    "Khan",
+    "Kapoor",
+    "Kumar",
+    "Sharma",
+    "Nair",
+    "Ahmed",
+    "Okafor",
+    "Ejiofor",
+    "Aduba",
+    "Kaluuya",
+    "Mbatha",
+    "Oyelowo",
+    "Elba",
+    "Nyongo",
+    "Boseman",
+    "Gurira",
+    "Diop",
+    "Mensah",
+    "Petrov",
+    "Novak",
+    "Johansson",
+    "Skarsgård",
+    "Mikkelsen",
+    "Vikander",
+    "Larsson",
+    "Holm",
+    "Kuznetsov",
+    "Sorokin",
+    "Al-Rashid",
+    "Malek",
+    "Khoury",
+    "Habibi",
+    "Nazari",
+    "Karam",
+    "Moreau",
+    "Dubois",
+    "Cotillard",
+    "Binoche",
+    "Russo",
+    "Sorrentino",
+    "Bellucci",
+    "Mastroianni",
+    "Ferrara",
+    "Laurent",
+    "O'Brien",
+    "O'Connell",
+    "Gleeson",
+    "Doyle",
+    "Byrne",
+    "McGregor"
+  ],
+  "adaptations": [
+    {
+      "name": "Bestselling Novel",
+      "cost": 2000000,
+      "qualityBonus": 6,
+      "marketingBonus": 0.15,
+      "genres": [
+        "Drama",
+        "Thriller",
+        "Sci-Fi"
+      ]
+    },
+    {
+      "name": "Hit Comic Series",
+      "cost": 3000000,
+      "qualityBonus": 5,
+      "marketingBonus": 0.25,
+      "genres": [
+        "Action",
+        "Sci-Fi",
+        "Animation"
+      ]
+    },
+    {
+      "name": "Popular Video Game",
+      "cost": 5000000,
+      "qualityBonus": 3,
+      "marketingBonus": 0.3,
+      "genres": [
+        "Action",
+        "Sci-Fi",
+        "Horror"
+      ]
+    },
+    {
+      "name": "True Story",
+      "cost": 500000,
+      "qualityBonus": 8,
+      "marketingBonus": 0.1,
+      "genres": [
+        "Drama",
+        "Documentary",
+        "Thriller"
+      ]
+    },
+    {
+      "name": "Classic Remake Rights",
+      "cost": 4000000,
+      "qualityBonus": 4,
+      "marketingBonus": 0.2,
+      "genres": [
+        "Drama",
+        "Horror",
+        "Comedy"
+      ]
+    },
+    {
+      "name": "Stage Play",
+      "cost": 1500000,
+      "qualityBonus": 7,
+      "marketingBonus": 0.1,
+      "genres": [
+        "Drama",
+        "Comedy"
+      ]
+    },
+    {
+      "name": "Foreign Film Remake",
+      "cost": 1000000,
+      "qualityBonus": 6,
+      "marketingBonus": 0.05,
+      "genres": [
+        "Drama",
+        "Thriller",
+        "Horror"
+      ]
+    }
+  ],
+  "rivalFilmTitles": [
+    "The Last Horizon",
+    "Crimson Tide",
+    "Stellar Dawn",
+    "Shadow Protocol",
+    "Emerald City",
+    "The Glass Tower",
+    "Midnight Run",
+    "Final Frontier",
+    "Deep Impact",
+    "Golden Gate",
+    "Silver Lining",
+    "Dark Waters",
+    "Blue Thunder",
+    "Iron Will",
+    "Crystal Palace",
+    "The Long Road",
+    "Northern Lights",
+    "Rising Sun",
+    "Pacific Rim",
+    "Desert Storm",
+    "Amber Horizon",
+    "Serpent's Kiss",
+    "Quantum Break",
+    "Frozen Echoes",
+    "Neon Requiem",
+    "The Silent Accord",
+    "Phantom Ridge",
+    "Obsidian Gate",
+    "Scarlet Meridian",
+    "Viper's Nest",
+    "Twilight Accord",
+    "The Ivory Tower",
+    "Black Harvest",
+    "Copper Moon",
+    "Electric Dreams",
+    "The Mercury File",
+    "Sapphire Coast",
+    "Thunderstrike",
+    "The Berlin Affair",
+    "Omega Point",
+    "Cascade Falls",
+    "The Manila Connection",
+    "Jade Empire",
+    "Stormwatch",
+    "The Cairo Deception",
+    "Winter Solstice",
+    "Crimson Peak",
+    "The Prague Identity",
+    "Steel Magnolias",
+    "Venom Strike",
+    "Midnight in Tokyo",
+    "The Warsaw Protocol",
+    "Coral Reef",
+    "Firebird",
+    "The Lisbon Crossing",
+    "Granite Pass",
+    "Diamond Eye",
+    "The Budapest Gambit",
+    "Aurora Rising",
+    "Cobra Kai",
+    "The Dublin Conspiracy",
+    "Pearl Harbor Blues",
+    "Sandstorm",
+    "The Venice Cipher",
+    "Marble Falls",
+    "Nighthawk",
+    "The Santiago Papers",
+    "Glacier Point",
+    "Wildfire Season",
+    "The Moscow Rules",
+    "Indigo Sky",
+    "Riptide",
+    "The Stockholm Syndrome",
+    "Cedar Rapids",
+    "Falcon Ridge",
+    "The Nairobi Job",
+    "Platinum Blonde",
+    "Earthquake",
+    "The Bangkok Express",
+    "Opal Creek",
+    "Foxfire",
+    "The Amsterdam Exchange",
+    "Monsoon Wedding",
+    "Razor's Edge",
+    "The Lima File",
+    "Bronze Age",
+    "Undertow",
+    "The Barcelona Incident",
+    "Marble Arch",
+    "Hawk's Landing",
+    "The Bucharest Directive",
+    "Onyx Path",
+    "Blizzard",
+    "The Helsinki Accord",
+    "Lotus Lane",
+    "Barracuda",
+    "The Copenhagen Affair",
+    "Tidal Wave",
+    "The Havana Project",
+    "Mercury Rising",
+    "Falconer",
+    "The Oslo Plot",
+    "Ember Falls",
+    "Hurricane Season",
+    "The Damascus Gate",
+    "Ivory Coast",
+    "Prowler",
+    "The Zurich Connection",
+    "Starfall",
+    "The Marrakech Express",
+    "Titan's Fall",
+    "Windswept",
+    "The Vienna Waltz",
+    "Cobalt Blue",
+    "The Tangier Affair",
+    "Nightshade",
+    "The Edinburgh Mystery",
+    "Magma",
+    "The Mumbai Express",
+    "Topaz Ring",
+    "Roadrunner",
+    "The Reykjavik Gambit",
+    "Wildcard",
+    "The Casablanca Files",
+    "Rust Belt",
+    "Neptune's Trident",
+    "The Shanghai Gesture",
+    "Avalanche",
+    "The Bogota Connection",
+    "Sable",
+    "The Vancouver Incident",
+    "Firestarter",
+    "The Lyon Conspiracy",
+    "Atlas Shrugged",
+    "Vertigo",
+    "The Seoul Solution",
+    "Maelstrom",
+    "The Athens Accord",
+    "Silverback",
+    "Hurricane",
+    "The Saigon Extraction",
+    "Obsidian",
+    "The Prague Spring",
+    "Catalyst",
+    "The Montreal Protocol",
+    "Warpath",
+    "The Taipei Gambit",
+    "Solstice",
+    "The Kyoto Accord",
+    "Blackthorn",
+    "The Geneva Convention",
+    "Reckoning Day",
+    "The Istanbul Express",
+    "Frostbite",
+    "The Rio Job",
+    "Shadowlands",
+    "The Perth Identity",
+    "Crucible",
+    "The Dublin Redemption",
+    "Afterburn",
+    "The Stockholm Files",
+    "Meridian",
+    "The Cape Town Protocol",
+    "Voltage",
+    "The London Affair",
+    "Red Horizon",
+    "The Baghdad Express",
+    "Zero Hour",
+    "The Milan Deception",
+    "Ghost Protocol",
+    "The Singapore Strategy",
+    "Flashpoint",
+    "The Bruges Affair",
+    "Backdraft",
+    "The Lima Express",
+    "Overture",
+    "The Johannesburg Job",
+    "Crossroads",
+    "The Detroit Conspiracy",
+    "Inferno",
+    "The Marseille Gambit",
+    "Blackout",
+    "The Kinshasa Protocol",
+    "Rampart",
+    "The Sydney Incident",
+    "Sundown",
+    "The Edinburgh Files",
+    "Typhoon",
+    "The Auckland Connection",
+    "Lockdown",
+    "The Glasgow Conspiracy",
+    "Standoff",
+    "The Wellington Accord",
+    "Deadlock",
+    "The Beirut Express"
+  ],
+  "rivalDirectorNames": [
+    "James Cameron",
+    "Sofia Coppola",
+    "Denis Villeneuve",
+    "Greta Gerwig",
+    "Christopher Nolan",
+    "Ava DuVernay",
+    "Martin Scorsese",
+    "Kathryn Bigelow",
+    "Bong Joon-ho",
+    "Chloe Zhao",
+    "Ridley Scott",
+    "Wes Anderson",
+    "Jordan Peele",
+    "Taika Waititi",
+    "Spike Lee",
+    "David Fincher",
+    "Alfonso Cuaron",
+    "Patty Jenkins",
+    "Barry Jenkins",
+    "Guillermo del Toro"
+  ],
+  "rivalActorNames": [
+    "Meryl Streep",
+    "Leonardo DiCaprio",
+    "Viola Davis",
+    "Denzel Washington",
+    "Cate Blanchett",
+    "Brad Pitt",
+    "Saoirse Ronan",
+    "Joaquin Phoenix",
+    "Florence Pugh",
+    "Tom Hanks",
+    "Lupita Nyongo",
+    "Ryan Gosling",
+    "Margot Robbie",
+    "Daniel Kaluuya",
+    "Scarlett Johansson",
+    "Oscar Isaac",
+    "Emma Stone",
+    "Timothee Chalamet",
+    "Sandra Oh",
+    "Robert Downey Jr"
+  ],
+  "rivalWriterNames": [
+    "Aaron Sorkin",
+    "Emerald Fennell",
+    "Charlie Kaufman",
+    "Diablo Cody",
+    "Taylor Sheridan",
+    "Greta Gerwig",
+    "Tony Kushner",
+    "Taika Waititi",
+    "Jordan Peele",
+    "Celine Sciamma",
+    "Paul Thomas Anderson",
+    "Noah Baumbach",
+    "Quentin Tarantino",
+    "Nora Ephron",
+    "Joel Coen"
+  ],
+  "rivalPersonalities": [
+    {
+      "name": "Award Chaser",
+      "desc": "Focuses on prestige dramas and Oscar bait.",
+      "genreWeights": {
+        "Drama": 0.35,
+        "Documentary": 0.2,
+        "Thriller": 0.15
+      },
+      "budgetMult": 0.8,
+      "qualityBonus": 8,
+      "marketingMult": 0.7,
+      "aggression": 0.3,
+      "riskTolerance": 0.2
+    },
+    {
+      "name": "Sequel Machine",
+      "desc": "Relies on safe franchise sequels and reboots.",
+      "genreWeights": {
+        "Action": 0.3,
+        "Sci-Fi": 0.25,
+        "Comedy": 0.15
+      },
+      "budgetMult": 1.2,
+      "qualityBonus": -3,
+      "marketingMult": 1.4,
+      "aggression": 0.5,
+      "riskTolerance": 0.1
+    },
+    {
+      "name": "Horror Factory",
+      "desc": "Churns out low-budget horror for high margins.",
+      "genreWeights": {
+        "Horror": 0.5,
+        "Thriller": 0.25,
+        "Mystery": 0.15
+      },
+      "budgetMult": 0.4,
+      "qualityBonus": 2,
+      "marketingMult": 0.6,
+      "aggression": 0.4,
+      "riskTolerance": 0.7
+    },
+    {
+      "name": "Blockbuster King",
+      "desc": "Massive budgets, massive marketing, massive risk.",
+      "genreWeights": {
+        "Action": 0.35,
+        "Sci-Fi": 0.3,
+        "Fantasy": 0.15
+      },
+      "budgetMult": 2,
+      "qualityBonus": 5,
+      "marketingMult": 1.8,
+      "aggression": 0.7,
+      "riskTolerance": 0.4
+    },
+    {
+      "name": "Indie Auteur",
+      "desc": "Small arthouse films with critical acclaim.",
+      "genreWeights": {
+        "Drama": 0.3,
+        "Romance": 0.15,
+        "Documentary": 0.2,
+        "Mystery": 0.15
+      },
+      "budgetMult": 0.3,
+      "qualityBonus": 12,
+      "marketingMult": 0.4,
+      "aggression": 0.2,
+      "riskTolerance": 0.3
+    },
+    {
+      "name": "Family Empire",
+      "desc": "Family-friendly animation and adventure.",
+      "genreWeights": {
+        "Animation": 0.4,
+        "Comedy": 0.2,
+        "Fantasy": 0.2
+      },
+      "budgetMult": 1.3,
+      "qualityBonus": 6,
+      "marketingMult": 1.5,
+      "aggression": 0.4,
+      "riskTolerance": 0.2
+    },
+    {
+      "name": "Global Conglomerate",
+      "desc": "Diversified across all genres, plays it safe.",
+      "genreWeights": {
+        "Action": 0.15,
+        "Drama": 0.15,
+        "Comedy": 0.15,
+        "Sci-Fi": 0.1,
+        "Horror": 0.1,
+        "Animation": 0.1,
+        "Thriller": 0.1
+      },
+      "budgetMult": 1.1,
+      "qualityBonus": 2,
+      "marketingMult": 1.2,
+      "aggression": 0.5,
+      "riskTolerance": 0.3
+    },
+    {
+      "name": "Disruptor",
+      "desc": "Experimental, boundary-pushing, unpredictable.",
+      "genreWeights": {
+        "Sci-Fi": 0.2,
+        "Horror": 0.15,
+        "Documentary": 0.15,
+        "Mystery": 0.15,
+        "Fantasy": 0.15
+      },
+      "budgetMult": 0.9,
+      "qualityBonus": 4,
+      "marketingMult": 0.8,
+      "aggression": 0.8,
+      "riskTolerance": 0.9
+    }
+  ],
+  "industryCrises": [
+    {
+      "id": "writers_strike",
+      "name": "Writers' Strike",
+      "years": [
+        1960,
+        1988,
+        2007,
+        2023
+      ],
+      "duration": 6,
+      "effects": {
+        "blockScripts": true,
+        "qualityMod": -8,
+        "desc": "No new scripts can be developed. Films in production suffer quality loss."
+      }
+    },
+    {
+      "id": "actors_strike",
+      "name": "Actors' Strike",
+      "years": [
+        1980,
+        2023
+      ],
+      "duration": 4,
+      "effects": {
+        "blockProduction": true,
+        "desc": "No new films can start production. Existing productions continue."
+      }
+    },
+    {
+      "id": "recession",
+      "name": "Economic Recession",
+      "years": [
+        1973,
+        1981,
+        1990,
+        2001,
+        2008,
+        2020
+      ],
+      "duration": 12,
+      "effects": {
+        "boxOfficeMod": -0.25,
+        "budgetCostMod": -0.1,
+        "desc": "Audiences shrink 25%. Budgets cheaper but riskier. Horror and comedy thrive."
+      }
+    },
+    {
+      "id": "tech_boom",
+      "name": "Technology Revolution",
+      "years": [
+        1977,
+        1993,
+        2009,
+        2022
+      ],
+      "duration": 8,
+      "effects": {
+        "genreBoost": [
+          "Sci-Fi",
+          "Action",
+          "Animation"
+        ],
+        "qualityMod": 3,
+        "desc": "New tech excites audiences. Sci-Fi, Action, and Animation get quality and box office boosts."
+      }
+    },
+    {
+      "id": "streaming_wars",
+      "name": "Streaming Wars",
+      "years": [
+        2015,
+        2019
+      ],
+      "duration": 18,
+      "effects": {
+        "theatricalMod": -0.15,
+        "streamingBoost": 2,
+        "desc": "Theatrical shrinks 15%. Streaming revenue doubles."
+      }
+    },
+    {
+      "id": "censorship",
+      "name": "Censorship Crackdown",
+      "years": [
+        1970,
+        1985,
+        2005
+      ],
+      "duration": 6,
+      "effects": {
+        "ratingPenalty": true,
+        "desc": "R and NC-17 films face distribution restrictions. -30% gross for restricted films."
+      }
+    },
+    {
+      "id": "indie_boom",
+      "name": "Independent Film Renaissance",
+      "years": [
+        1989,
+        1999,
+        2017
+      ],
+      "duration": 12,
+      "effects": {
+        "indieBudgetBoost": true,
+        "desc": "Low-budget films (<$20M) get +20% box office and +5 quality. Audiences crave originality."
+      }
+    },
+    {
+      "id": "global_pandemic",
+      "name": "Global Pandemic",
+      "years": [
+        2020
+      ],
+      "duration": 12,
+      "effects": {
+        "boxOfficeMod": -0.6,
+        "streamingBoost": 3,
+        "desc": "Theaters devastated. Box office drops 60%. Streaming explodes."
+      }
+    }
+  ]
+}
