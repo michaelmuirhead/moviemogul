@@ -810,6 +810,87 @@ const NAMED_CRITICS = [
   { id: 'auteur', name: 'Claudette Moreau', outlet: 'Cahiers du Cinema', taste: { genres: ['Drama', 'Fantasy', 'Romance'], tones: ['experimental', 'dark', 'satirical'], minBudget: 0, maxBudget: 60e6 }, weight: 1.4, contrarian: true, desc: 'French new wave devotee. Rewards directorial vision, punishes formula.' },
 ];
 
+// ==================== FEATURE 2: NAMED FILM CRITICS ====================
+const FILM_CRITICS = [
+  { id: 'stone', name: 'Margaret Stone', publication: 'The Hollywood Chronicle', style: 'Traditional', genreLove: ['Drama', 'War', 'Western'], genreHate: ['Horror', 'Animation'], qualityThreshold: 60, harshness: 0.3, desc: 'The grand dame of film criticism — 40 years of razor-sharp reviews.' },
+  { id: 'chen', name: 'David Chen', publication: 'CineScope Magazine', style: 'Analytical', genreLove: ['Sci-Fi', 'Thriller', 'Mystery'], genreHate: ['Musical', 'Romance'], qualityThreshold: 55, harshness: 0.2, desc: 'Methodical and fair — audiences trust his scores.' },
+  { id: 'okafor', name: 'Amara Okafor', publication: 'Global Film Review', style: 'International', genreLove: ['Drama', 'Documentary', 'Fantasy'], genreHate: ['Action'], qualityThreshold: 65, harshness: 0.4, desc: 'Champions world cinema and auteur vision.' },
+  { id: 'brooks', name: 'Jake Brooks', publication: 'PopScreen Daily', style: 'Populist', genreLove: ['Action', 'Comedy', 'Animation'], genreHate: ['Documentary'], qualityThreshold: 40, harshness: 0.1, desc: 'If audiences love it, Jake loves it.' },
+  { id: 'winters', name: 'Elena Winters', publication: 'Arthouse Quarterly', style: 'Elitist', genreLove: ['Drama', 'Documentary', 'Mystery'], genreHate: ['Action', 'Comedy', 'Animation'], qualityThreshold: 75, harshness: 0.6, desc: 'Notoriously picky — a positive review from her is gold.' },
+  { id: 'tanaka', name: 'Kenji Tanaka', publication: 'Midnight Movies', style: 'Genre Champion', genreLove: ['Horror', 'Sci-Fi', 'Fantasy', 'Thriller'], genreHate: ['Romance', 'Musical'], qualityThreshold: 45, harshness: 0.15, desc: 'The genre film defender — horror and sci-fi deserve respect.' },
+  { id: 'dupont', name: 'Claire Dupont', publication: 'Le Film Moderne', style: 'Auteurist', genreLove: ['Drama', 'Romance', 'War'], genreHate: ['Action', 'Horror'], qualityThreshold: 70, harshness: 0.5, desc: 'European sensibility meets Hollywood scrutiny.' },
+  { id: 'martinez', name: 'Rico Martinez', publication: 'Box Office Insider', style: 'Commercial', genreLove: ['Action', 'Sci-Fi', 'Comedy', 'Animation'], genreHate: ['Documentary'], qualityThreshold: 35, harshness: 0.05, desc: 'Cares about spectacle and entertainment value.' },
+];
+
+const generateCriticReviews = (film) => {
+  return FILM_CRITICS.map(critic => {
+    let score = film.quality || 50;
+    if (critic.genreLove.includes(film.genre)) score += 12;
+    if (critic.genreHate.includes(film.genre)) score -= 15;
+    if (film.genre2 && critic.genreLove.includes(film.genre2)) score += 6;
+    if (film.genre2 && critic.genreHate.includes(film.genre2)) score -= 8;
+    score -= critic.harshness * 15;
+    if (critic.style === 'Elitist' && film.budget > 80e6) score -= 8;
+    if (critic.style === 'Populist' && film.budget > 50e6) score += 5;
+    if (critic.style === 'Commercial' && film.budget > 80e6) score += 8;
+    score += (Math.random() - 0.5) * 10;
+    score = Math.round(clamp(score, 5, 100));
+    let verdict;
+    if (score >= 85) verdict = pick(['Masterpiece', 'Extraordinary', 'A triumph', 'Essential viewing', 'Instant classic']);
+    else if (score >= 70) verdict = pick(['Impressive', 'Strong work', 'Well-crafted', 'Engaging', 'Recommended']);
+    else if (score >= 55) verdict = pick(['Decent', 'Mixed bag', 'Has moments', 'Uneven but watchable', 'Middle of the road']);
+    else if (score >= 40) verdict = pick(['Disappointing', 'Below expectations', 'Misses the mark', 'Forgettable', 'Underdeveloped']);
+    else verdict = pick(['Terrible', 'Avoid at all costs', 'A disaster', 'Painful to sit through', 'Career low']);
+    return { criticId: critic.id, name: critic.name, publication: critic.publication, score, verdict };
+  });
+};
+
+// ==================== FEATURE 5: PRODUCTION SCANDALS ====================
+const PRODUCTION_SCANDALS = [
+  { id: 'actor_arrest', name: 'Lead Actor Arrested', chance: 0.02, qualityHit: -8, buzzChange: 15, repChange: -5, costIncrease: 0.1, desc: 'Your lead actor made headlines for all the wrong reasons.' },
+  { id: 'director_walkout', name: 'Director Walks Off Set', chance: 0.015, qualityHit: -12, buzzChange: 5, repChange: -3, costIncrease: 0.2, desc: 'Creative differences led to an explosive departure.' },
+  { id: 'leaked_footage', name: 'Footage Leaked Online', chance: 0.03, qualityHit: 0, buzzChange: 20, repChange: -2, costIncrease: 0, desc: 'Raw footage hit the internet — buzz is up but you lost the surprise.' },
+  { id: 'onset_accident', name: 'On-Set Accident', chance: 0.01, qualityHit: -5, buzzChange: -5, repChange: -8, costIncrease: 0.15, desc: 'A serious accident halted production and drew scrutiny.' },
+  { id: 'plagiarism_claim', name: 'Plagiarism Accusation', chance: 0.02, qualityHit: 0, buzzChange: 10, repChange: -6, costIncrease: 0.05, desc: 'Another writer claims your script was stolen from them.' },
+  { id: 'budget_scandal', name: 'Financial Mismanagement', chance: 0.015, qualityHit: -3, buzzChange: 0, repChange: -4, costIncrease: 0.25, desc: 'Accounting irregularities surfaced — costs spiral.' },
+  { id: 'star_feud', name: 'Cast Feud Goes Public', chance: 0.025, qualityHit: -5, buzzChange: 25, repChange: -2, costIncrease: 0.05, desc: 'Your stars are at war — tabloids are loving it.' },
+  { id: 'test_disaster', name: 'Test Screening Disaster', chance: 0.02, qualityHit: -6, buzzChange: -10, repChange: -3, costIncrease: 0.1, desc: 'Audiences hated the cut. Major reshoots needed.' },
+];
+
+// ==================== FEATURE 6: INTERNATIONAL BOX OFFICE ====================
+const INTERNATIONAL_MARKETS = [
+  { id: 'china', name: 'China', sharePct: 0.25, genreBonus: { Action: 0.3, 'Sci-Fi': 0.2, Fantasy: 0.15, Animation: 0.1 }, genrePenalty: { Horror: -0.3, Western: -0.2, War: -0.15 }, censorship: true },
+  { id: 'europe', name: 'Europe', sharePct: 0.20, genreBonus: { Drama: 0.2, Thriller: 0.15, Comedy: 0.1, Romance: 0.1 }, genrePenalty: {}, censorship: false },
+  { id: 'japan', name: 'Japan', sharePct: 0.08, genreBonus: { Animation: 0.3, Horror: 0.15, 'Sci-Fi': 0.1 }, genrePenalty: { Western: -0.2 }, censorship: false },
+  { id: 'uk', name: 'United Kingdom', sharePct: 0.10, genreBonus: { Drama: 0.15, Comedy: 0.15, War: 0.1 }, genrePenalty: {}, censorship: false },
+  { id: 'latam', name: 'Latin America', sharePct: 0.08, genreBonus: { Action: 0.15, Comedy: 0.2, Horror: 0.1, Romance: 0.15 }, genrePenalty: {}, censorship: false },
+  { id: 'korea', name: 'South Korea', sharePct: 0.05, genreBonus: { Thriller: 0.2, Horror: 0.15, Action: 0.1, Drama: 0.1 }, genrePenalty: {}, censorship: false },
+  { id: 'india', name: 'India', sharePct: 0.06, genreBonus: { Musical: 0.3, Drama: 0.2, Action: 0.15, Romance: 0.2 }, genrePenalty: {}, censorship: false },
+  { id: 'oceania', name: 'Australia/NZ', sharePct: 0.04, genreBonus: { Action: 0.1, Comedy: 0.1, Horror: 0.1 }, genrePenalty: {}, censorship: false },
+  { id: 'mena', name: 'Middle East/Africa', sharePct: 0.04, genreBonus: { Action: 0.15, Drama: 0.1 }, genrePenalty: { Horror: -0.1 }, censorship: true },
+  { id: 'sea', name: 'Southeast Asia', sharePct: 0.05, genreBonus: { Action: 0.2, Horror: 0.15, Comedy: 0.1 }, genrePenalty: {}, censorship: false },
+];
+
+const calcInternationalGross = (domesticGross, genre, quality, film) => {
+  let intlTotal = 0;
+  const breakdown = [];
+  INTERNATIONAL_MARKETS.forEach(market => {
+    let base = domesticGross * market.sharePct;
+    const genreBonus = market.genreBonus[genre] || 0;
+    const genrePenalty = market.genrePenalty[genre] || 0;
+    base *= (1 + genreBonus + genrePenalty);
+    if (quality >= 80) base *= 1.3;
+    else if (quality >= 60) base *= 1.1;
+    else if (quality < 40) base *= 0.6;
+    if (market.censorship && (genre === 'Horror' || quality < 30)) base *= 0.5;
+    if (film && film.actor && film.actor.traitEffect?.intlBonus) base *= (1 + film.actor.traitEffect.intlBonus);
+    base = Math.round(base);
+    intlTotal += base;
+    breakdown.push({ market: market.name, gross: base });
+  });
+  return { total: intlTotal, breakdown };
+};
+
 // ==================== AUDIENCE DEMOGRAPHICS ====================
 const DEMOGRAPHICS = [
   { name: 'Teen', ages: '13-17', share: 0.15, genrePrefs: { Horror: 1.4, Comedy: 1.3, Action: 1.2, Romance: 1.1, Animation: 1.0 }, ratingPrefs: { G: 0.5, PG: 0.8, 'PG-13': 1.4, R: 0.7, 'NC-17': 0.1 }, marketingSensitivity: 1.3 },
@@ -1399,7 +1480,7 @@ const calcQuality = (film, facilitiesLevel, genreTrend, specialization) => {
   if (film.producer) {
     base += film.producer.skill * 0.10; // producers add stability
     if (film.producer.traitEffect?.qualityFlat) base += film.producer.traitEffect.qualityFlat;
-    if (film.producer.traitEffect?.qualityVariance) base += randInt(-film.producer.traitEffect.qualityVariance, film.producer.traitEffect.qualityVariance);
+    if (film.producer.traitEffect?.qualityVariance && !film._preview) base += randInt(-film.producer.traitEffect.qualityVariance, film.producer.traitEffect.qualityVariance);
   }
 
   // Theme bonuses
@@ -1416,7 +1497,7 @@ const calcQuality = (film, facilitiesLevel, genreTrend, specialization) => {
     if (film.themes.length === 2) base += 2; // thematic depth bonus
   }
 
-  base += (Math.random() - 0.5) * 12;
+  if (!film._preview) base += (Math.random() - 0.5) * 12; // randomness only at greenlight, not during preview
   return Math.round(clamp(base, 5, 98));
 };
 
@@ -1708,6 +1789,16 @@ const INIT = {
   cinematicUniverses: [],     // [{id, name, franchiseIds: [], tier: 'shared', brandHealth: 100}]
   // ---- SYSTEM 6: RELEASE STRATEGY ----
   devReleaseStrategy: 'wide_theatrical',
+  devReleaseMonth: null,      // null = auto, 1-12 = target month
+  // ---- FEATURE 2: NAMED FILM CRITICS ----
+  // Critics and reviews auto-generated on release
+  // ---- FEATURE 3: END-OF-YEAR SUMMARY ----
+  pendingYearSummary: null,
+  showYearSummary: false,
+  // ---- FEATURE 6: INTERNATIONAL BOX OFFICE ----
+  // intlBreakdown calculated per film on release
+  // ---- FEATURE 7: STUDIO GENRE IDENTITY ----
+  genreIdentity: {},          // genre -> {films: count, reputation: 0-100}
   // ---- SYSTEM 7: STUDIO FACILITIES ----
   studioFacilities: [],       // [{id, facilityId, built: turn}]
   // ---- SYSTEM 8: ZEITGEIST EVENTS ----
@@ -1992,6 +2083,9 @@ function reducer(state, action) {
 
     case 'SET_DEV': return { ...state, [action.key]: action.value, errorMsg: '' };
 
+    case 'DISMISS_YEAR_SUMMARY':
+      return { ...state, showYearSummary: false, pendingYearSummary: null };
+
     case 'GREENLIGHT': {
       const script = state.scripts[state.devScriptIdx];
       if (!script) return state;
@@ -2148,6 +2242,7 @@ function reducer(state, action) {
         soldRights: false, // if rights were sold
         investor: investorId, // investor type id or null
         insured: isInsured, // whether insurance was purchased
+        targetReleaseMonth: state.devReleaseMonth, // Feature 1: target month for release
       };
 
       let updatedFranchises = state.franchises;
@@ -2665,6 +2760,22 @@ function reducer(state, action) {
       eventText = eventText.replace('{genre}', eventGenre);
       log.push({ text: `EVENT: ${eventText}`, type: eventTemplate.type === 'bust' || eventTemplate.type === 'budgetOverrun' ? 'warning' : 'info' });
 
+      // FEATURE 5: Production Scandals
+      films.forEach(f => {
+        if (f.status === 'production' || f.status === 'postproduction') {
+          PRODUCTION_SCANDALS.forEach(scandal => {
+            if (Math.random() < scandal.chance) {
+              f.events.push(`SCANDAL: ${scandal.name}`);
+              f._qualityBoost = (f._qualityBoost || 0) + scandal.qualityHit;
+              f.budget = Math.round(f.budget * (1 + scandal.costIncrease));
+              cash -= Math.round(f.budget * scandal.costIncrease);
+              rep += scandal.repChange;
+              log.push({ text: `SCANDAL on "${f.title}": ${scandal.desc}`, type: 'warning' });
+            }
+          });
+        }
+      });
+
       // Apply pre-release event effects
       if (eventTemplate.type === 'qualityBoost') {
         const inProd = films.filter(f => ['development', 'production', 'postproduction'].includes(f.status));
@@ -2826,6 +2937,13 @@ function reducer(state, action) {
         // Apply window multiplier
         box.domestic = Math.round(box.domestic * windowMult);
         box.international = Math.round(box.international * windowMult);
+
+        // FEATURE 6: International Box Office breakdown by market
+        const intlResult = calcInternationalGross(box.domestic, f.genre, f.quality, f);
+        f.internationalGross = intlResult.total;
+        f.intlBreakdown = intlResult.breakdown;
+        box.international = intlResult.total;
+
         box.totalGross = box.domestic + box.international;
         box.profit = Math.round(box.domestic * 0.50 + box.international * 0.25 - f.budget - f.marketing);
 
@@ -2856,7 +2974,7 @@ function reducer(state, action) {
           }
         }
 
-        // Named critic reviews
+        // Named critic reviews (original system)
         const criticReviews = [];
         NAMED_CRITICS.forEach(critic => {
           let liking = 0;
@@ -2870,6 +2988,9 @@ function reducer(state, action) {
           box.criticScore = Math.round(box.criticScore * 0.85 + criticRating * critic.weight * 0.15 / NAMED_CRITICS.length * NAMED_CRITICS.length);
         });
         f.criticReviews = criticReviews;
+
+        // FEATURE 2: Named film critics (new system with unique personalities)
+        f.filmCriticReviews = generateCriticReviews(f);
 
         // Star power opening weekend boost
         const starPow = calcStarPower(f.actor);
@@ -3979,6 +4100,45 @@ function reducer(state, action) {
         theaterRelationship = Math.max(0, theaterRelationship - 1); // slow decay for indie
       }
 
+      // FEATURE 3: Year-End Summary (when month transitions to 1 of next year)
+      let pendingYearSummary = null;
+      if (newMonth === 1 && newYear > state.year) {
+        const yearFilms = films.filter(f => f.status === 'released' && f.releasedYear === state.year);
+        const yearGross = yearFilms.reduce((s, f) => s + (f.totalGross || 0), 0);
+        const bestFilm = yearFilms.sort((a, b) => (b.totalGross || 0) - (a.totalGross || 0))[0];
+        const worstFilm = yearFilms.sort((a, b) => (a.quality || 0) - (b.quality || 0))[0];
+        const yearAwards = awards.filter(a => a.year === state.year).length;
+        pendingYearSummary = {
+          year: state.year,
+          filmsReleased: yearFilms.length,
+          totalGross: yearGross,
+          bestFilm: bestFilm ? { title: bestFilm.title, gross: bestFilm.totalGross, quality: bestFilm.quality } : null,
+          worstFilm: worstFilm && yearFilms.length > 1 ? { title: worstFilm.title, gross: worstFilm.totalGross, quality: worstFilm.quality } : null,
+          awardsWon: yearAwards,
+          reputation: Math.round(rep),
+          prestige: Math.round(pres),
+          competitorCount: competitors.length,
+          cashChange: cash - state.cash,
+        };
+      }
+
+      // FEATURE 7: Studio Genre Identity (update when films are released)
+      let genreIdentity = { ...(state.genreIdentity || {}) };
+      films.forEach(f => {
+        if (f.status === 'released' && f.releasedYear === state.year && f.releasedMonth === state.month) {
+          const gi = genreIdentity[f.genre] || { films: 0, reputation: 0 };
+          gi.films += 1;
+          gi.reputation = clamp(gi.reputation + (f.quality >= 70 ? 5 : f.quality >= 50 ? 2 : -3), 0, 100);
+          genreIdentity[f.genre] = gi;
+          if (f.genre2) {
+            const gi2 = genreIdentity[f.genre2] || { films: 0, reputation: 0 };
+            gi2.films += 1;
+            gi2.reputation = clamp(gi2.reputation + (f.quality >= 70 ? 3 : f.quality >= 50 ? 1 : -2), 0, 100);
+            genreIdentity[f.genre2] = gi2;
+          }
+        }
+      });
+
       return {
         ...state,
         phase,
@@ -4049,6 +4209,9 @@ function reducer(state, action) {
         theaterRelationship,
         studioFacilities: state.studioFacilities,
         awardsCampaignsDetailed: state.awardsCampaignsDetailed,
+        pendingYearSummary,
+        showYearSummary: pendingYearSummary !== null,
+        genreIdentity,
       };
     }
 
@@ -4848,6 +5011,20 @@ export default function MovieMogul() {
         </div>
       )}
 
+      {/* FEATURE 7: STUDIO GENRE IDENTITY */}
+      {Object.keys(state.genreIdentity || {}).length > 0 && (
+        <div>
+          <div className="text-white font-bold text-sm mb-2">Studio Genre Identity</div>
+          <div className="flex flex-wrap gap-2">
+            {Object.entries(state.genreIdentity || {}).sort((a, b) => b[1].films - a[1].films).slice(0, 8).map(([genre, data]) => (
+              <div key={genre} className={`text-xs px-3 py-1.5 rounded-full border ${data.reputation >= 70 ? 'border-amber-500 text-amber-400 bg-amber-900/20' : data.reputation >= 40 ? 'border-gray-500 text-gray-300 bg-gray-800/40' : 'border-gray-700 text-gray-500 bg-gray-900/40'}`}>
+                {genre} ({data.films} {data.films === 1 ? 'film' : 'films'}, {data.reputation} rep)
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
       {state.scenarioGoal && !state.scenarioWon && state.scenario !== 'sandbox' && (
         <div className={`rounded-lg p-4 border ${state.scenarioWon ? 'bg-amber-500 border-amber-400 text-gray-900' : 'bg-blue-900 border-blue-600 text-white'}`}>
           <div className="text-sm font-bold mb-2">Scenario Goal: {state.scenarioGoal.type === 'cash' ? `$${(state.scenarioGoal.target/1e6).toFixed(0)}M Cash` : state.scenarioGoal.type === 'awards' ? `${state.scenarioGoal.target} Awards` : state.scenarioGoal.type === 'franchises' ? `${state.scenarioGoal.target} Franchises` : 'All Genres Profitable'}</div>
@@ -5111,7 +5288,7 @@ export default function MovieMogul() {
 
     let projectedQuality = null;
     if (hasTeam) {
-      const fakeFilm = { director: dir, actor: act, writer: wri, producer: prod || null, budget: state.devBudgetM * 1e6, genre: script.genre, genre2: state.devGenre2 };
+      const fakeFilm = { _preview: true, director: dir, actor: act, writer: wri, producer: prod || null, budget: state.devBudgetM * 1e6, genre: script.genre, genre2: state.devGenre2 };
       projectedQuality = calcQuality(fakeFilm, state.facilitiesLevel, state.genreTrends[script.genre] || 0, state.specialization);
     }
 
@@ -5464,6 +5641,24 @@ export default function MovieMogul() {
             <div className="text-xs text-gray-500 mt-1">(Actual quality may vary ±6 from projection)</div>
           </div>
         )}
+
+        {/* FEATURE 1: RELEASE MONTH TARGETING */}
+        <div className="bg-gray-800 border border-gray-700 rounded-lg p-4">
+          <div className="text-white font-bold text-sm mb-2">Target Release Month <span className="text-gray-500 font-normal">(optional)</span></div>
+          <div className="text-gray-400 text-xs mb-2">Summer (Jun-Aug) is best for blockbusters. Dec-Feb is awards season. Oct is horror month.</div>
+          <div className="flex flex-wrap gap-1.5">
+            <button onClick={() => dispatch({ type: 'SET_DEV', key: 'devReleaseMonth', value: null })}
+              className={`px-2.5 py-1 rounded text-xs font-bold transition ${!state.devReleaseMonth ? 'bg-gray-600 text-white' : 'bg-gray-800 text-gray-400 hover:bg-gray-700'}`}>
+              Auto
+            </button>
+            {['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'].map((m, i) => (
+              <button key={i} onClick={() => dispatch({ type: 'SET_DEV', key: 'devReleaseMonth', value: i + 1 })}
+                className={`px-2.5 py-1 rounded text-xs font-bold transition ${state.devReleaseMonth === i + 1 ? 'bg-amber-600 text-white' : 'bg-gray-800 text-gray-400 hover:bg-gray-700'}`}>
+                {m}
+              </button>
+            ))}
+          </div>
+        </div>
 
         <div className="bg-gray-800 border border-gray-700 rounded-lg p-4">
           <div className="flex justify-between text-sm mb-2">
@@ -6735,6 +6930,24 @@ export default function MovieMogul() {
           </div>
         )}
 
+        {/* FEATURE 2: FILM CRITICS */}
+        <div>
+          <div className="text-white font-bold text-lg mb-3">Industry Film Critics</div>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
+            {FILM_CRITICS.map(critic => (
+              <div key={critic.id} className="bg-gray-800 border border-gray-700 rounded-lg p-3">
+                <div className="text-white font-bold text-sm">{critic.name}</div>
+                <div className="text-xs text-gray-400">{critic.publication} · {critic.style}</div>
+                <div className="text-xs text-gray-500 mt-1">{critic.desc}</div>
+                <div className="text-xs mt-2 space-y-0.5">
+                  <div><span className="text-green-400">Loves: {critic.genreLove.join(', ')}</span></div>
+                  <div><span className="text-red-400">Hates: {critic.genreHate.join(', ')}</span></div>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           <div className="bg-gray-800 border border-gray-700 rounded-lg p-4">
             <div className="text-white font-bold text-sm mb-2">Economy</div>
@@ -7452,9 +7665,67 @@ export default function MovieMogul() {
     );
   };
 
+  // FEATURE 3: Year-End Summary Modal
+  const renderYearSummary = () => {
+    if (!state.showYearSummary || !state.pendingYearSummary) return null;
+    const s = state.pendingYearSummary;
+    return (
+      <div className="fixed inset-0 bg-black/80 z-50 flex items-center justify-center p-4">
+        <div className="bg-gray-900 border-2 border-blue-500 rounded-2xl max-w-2xl w-full max-h-[90vh] overflow-y-auto p-6">
+          <div className="text-center mb-6">
+            <div className="text-blue-400 text-4xl font-bold mb-1">{s.year} Year in Review</div>
+            <div className="text-gray-400">Your studio's annual performance report</div>
+          </div>
+          <div className="grid grid-cols-2 gap-4 mb-6">
+            <div className="bg-gray-800 rounded-lg p-4 text-center">
+              <div className="text-3xl font-bold text-white">{s.filmsReleased}</div>
+              <div className="text-xs text-gray-400">Films Released</div>
+            </div>
+            <div className="bg-gray-800 rounded-lg p-4 text-center">
+              <div className="text-3xl font-bold text-green-400">{fmt(s.totalGross)}</div>
+              <div className="text-xs text-gray-400">Total Gross</div>
+            </div>
+            <div className="bg-gray-800 rounded-lg p-4 text-center">
+              <div className="text-3xl font-bold text-amber-400">{s.awardsWon}</div>
+              <div className="text-xs text-gray-400">Awards Won</div>
+            </div>
+            <div className="bg-gray-800 rounded-lg p-4 text-center">
+              <div className={`text-3xl font-bold ${s.cashChange >= 0 ? 'text-green-400' : 'text-red-400'}`}>{s.cashChange >= 0 ? '+' : ''}{fmt(s.cashChange)}</div>
+              <div className="text-xs text-gray-400">Net Cash Change</div>
+            </div>
+          </div>
+          {s.bestFilm && (
+            <div className="bg-green-900/20 border border-green-700 rounded-lg p-3 mb-3">
+              <div className="text-green-400 font-bold text-sm">Biggest Hit</div>
+              <div className="text-white">"{s.bestFilm.title}" — {fmt(s.bestFilm.gross)} gross, Q:{s.bestFilm.quality}</div>
+            </div>
+          )}
+          {s.worstFilm && s.worstFilm.quality < 50 && (
+            <div className="bg-red-900/20 border border-red-700 rounded-lg p-3 mb-3">
+              <div className="text-red-400 font-bold text-sm">Biggest Flop</div>
+              <div className="text-gray-300">"{s.worstFilm.title}" — {fmt(s.worstFilm.gross)} gross, Q:{s.worstFilm.quality}</div>
+            </div>
+          )}
+          <div className="grid grid-cols-3 gap-3 mb-4">
+            <div className="text-center"><div className="text-white font-bold">{s.reputation}</div><div className="text-xs text-gray-500">Reputation</div></div>
+            <div className="text-center"><div className="text-purple-400 font-bold">{s.prestige}</div><div className="text-xs text-gray-500">Prestige</div></div>
+            <div className="text-center"><div className="text-gray-300 font-bold">{s.competitorCount}</div><div className="text-xs text-gray-500">Rival Studios</div></div>
+          </div>
+          <div className="text-center">
+            <button onClick={() => dispatch({ type: 'DISMISS_YEAR_SUMMARY' })}
+              className="bg-blue-600 hover:bg-blue-500 text-white font-bold px-8 py-3 rounded-lg text-lg transition">
+              Onward to {s.year + 1}!
+            </button>
+          </div>
+        </div>
+      </div>
+    );
+  };
+
   return (
     <div className="w-full min-h-screen bg-gray-950 text-white">
       {renderCeremony()}
+      {renderYearSummary()}
       <div className="max-w-7xl mx-auto p-4">
         {/* Header */}
         <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-3 mb-4">
