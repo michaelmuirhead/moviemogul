@@ -641,6 +641,18 @@ const TRAITS = {
     { name: 'Blockbuster Pen', desc: '+15% domestic gross', effect: { domesticBonus: 0.15 } },
     { name: 'Deep Lore', desc: '+5 quality for franchise films', effect: { franchiseLore: 5 } },
   ],
+  producer: [
+    { name: 'Budget Hawk', desc: '-15% production costs', effect: { budgetDiscount: 0.15 } },
+    { name: 'Talent Magnet', desc: '+10 morale for all crew', effect: { moraleBuff: 10 } },
+    { name: 'Marketing Genius', desc: '+20% marketing effectiveness', effect: { marketingBonus: 0.20 } },
+    { name: 'Studio Fixer', desc: 'Prevents budget overruns', effect: { noOverruns: true } },
+    { name: 'Award Campaigner', desc: '+30% awards campaign effectiveness', effect: { awardsCampaignBonus: 0.30 } },
+    { name: 'Franchise Producer', desc: '+10% gross on sequels and franchise films', effect: { franchiseProducer: 0.10 } },
+    { name: 'International Connector', desc: '+15% international gross', effect: { intlBonus: 0.15 } },
+    { name: 'Risk Taker', desc: 'Higher variance: quality ±15', effect: { qualityVariance: 15 } },
+    { name: 'Legendary Producer', desc: '+5 quality, +3 prestige per film', effect: { qualityFlat: 5, prestigeBonus: 3 } },
+    { name: 'Development Expert', desc: '-1 development month', effect: { devSpeed: 1 } },
+  ],
 };
 
 const makeTalent = (id, type, skillRange, ageRange) => {
@@ -1321,6 +1333,13 @@ const calcQuality = (film, facilitiesLevel, genreTrend, specialization) => {
     if (dirControl >= 90) base += 3;
   }
 
+  // Producer contribution
+  if (film.producer) {
+    base += film.producer.skill * 0.10; // producers add stability
+    if (film.producer.traitEffect?.qualityFlat) base += film.producer.traitEffect.qualityFlat;
+    if (film.producer.traitEffect?.qualityVariance) base += randInt(-film.producer.traitEffect.qualityVariance, film.producer.traitEffect.qualityVariance);
+  }
+
   // Theme bonuses
   if (film.themes && film.themes.length > 0) {
     film.themes.forEach(tid => {
@@ -1523,6 +1542,7 @@ const INIT = {
   devDirectorId: null,
   devActorId: null,
   devWriterId: null,
+  devProducerId: null,
   devFilmType: 'original',  // 'original' | 'sequel' | 'reboot' | 'adaptation'
   devAdaptation: null,      // index into ADAPTATIONS
   devFranchiseId: null,     // for sequels/reboots
@@ -1644,9 +1664,10 @@ function reducer(state, action) {
         makeTalent(1, 'director', [35, 55]),
         makeTalent(2, 'actor', [35, 55]),
         makeTalent(3, 'writer', [35, 55]),
+        makeTalent(4, 'producer', [35, 55]),
       ];
       const avail = Array.from({ length: 10 }, (_, i) => {
-        const types = ['actor', 'director', 'writer'];
+        const types = ['actor', 'director', 'writer', 'producer'];
         return makeTalent(10 + i, pick(types), [25, 90]);
       });
       const spec = SPECIALIZATIONS[action.specialization || 0];
@@ -1712,6 +1733,7 @@ function reducer(state, action) {
         devDirectorId: state.contracts.find(t => t.type === 'director')?.id ?? null,
         devActorId: state.contracts.find(t => t.type === 'actor')?.id ?? null,
         devWriterId: state.contracts.find(t => t.type === 'writer')?.id ?? null,
+        devProducerId: state.contracts.find(t => t.type === 'producer')?.id ?? null,
         devFilmType: 'original',
         devGenre2: script.genre2 || null,
         devTone: 'serious',
@@ -1736,6 +1758,7 @@ function reducer(state, action) {
         devDirectorId: state.contracts.find(t => t.type === 'director')?.id ?? null,
         devActorId: state.contracts.find(t => t.type === 'actor')?.id ?? null,
         devWriterId: state.contracts.find(t => t.type === 'writer')?.id ?? null,
+        devProducerId: state.contracts.find(t => t.type === 'producer')?.id ?? null,
         devFilmType: 'original',
         devAdaptation: null,
         devFranchiseId: null,
@@ -2025,6 +2048,7 @@ function reducer(state, action) {
       if (dir.traitEffect && dir.traitEffect.speedBonus) prodTurns = Math.max(1, prodTurns - dir.traitEffect.speedBonus);
       // "Fast Draft" writer trait makes development instant
       const devTurns = (wri.traitEffect && wri.traitEffect.devSpeed) ? 0 : 1;
+      const prod = state.contracts.find(t => t.id === state.devProducerId) || null;
       const film = {
         id: state.nextId,
         title, genre: script.genre, genre2: state.devGenre2, logline: script.logline,
@@ -2032,6 +2056,7 @@ function reducer(state, action) {
         director: { id: dir.id, name: dir.name, skill: dir.skill, genreBonus: dir.genreBonus, trait: dir.trait, traitDesc: dir.traitDesc, traitEffect: dir.traitEffect, profitParticipation: dir.profitParticipation || 0 },
         actor: { id: act.id, name: act.name, skill: act.skill, popularity: act.popularity, genreBonus: act.genreBonus, trait: act.trait, traitDesc: act.traitDesc, traitEffect: act.traitEffect, profitParticipation: act.profitParticipation || 0 },
         writer: { id: wri.id, name: wri.name, skill: wri.skill, genreBonus: wri.genreBonus, trait: wri.trait, traitDesc: wri.traitDesc, traitEffect: wri.traitEffect, profitParticipation: wri.profitParticipation || 0 },
+        producer: prod ? { id: prod.id, name: prod.name, skill: prod.skill, trait: prod.trait, traitDesc: prod.traitDesc, traitEffect: prod.traitEffect, profitParticipation: prod.profitParticipation || 0 } : null,
         status: 'development',
         turnsInStatus: 0,
         turnsNeeded: devTurns, // development turns (0 if Fast Draft writer)
@@ -3629,7 +3654,7 @@ function reducer(state, action) {
       // 15. Refresh talent pool and scripts
       const newNextId = state.nextId + 20;
       const newAvail = Array.from({ length: 10 }, (_, i) => {
-        const types = ['actor', 'director', 'writer'];
+        const types = ['actor', 'director', 'writer', 'producer'];
         return makeTalent(state.nextId + i, pick(types), [25, 90]);
       });
 
@@ -4973,13 +4998,14 @@ export default function MovieMogul() {
     const dir = state.contracts.find(t => t.id === state.devDirectorId);
     const act = state.contracts.find(t => t.id === state.devActorId);
     const wri = state.contracts.find(t => t.id === state.devWriterId);
+    const prod = state.contracts.find(t => t.id === state.devProducerId);
     const totalCost = (state.devBudgetM + state.devMarketingM) * 1e6;
     const canAfford = state.cash >= totalCost;
     const hasTeam = dir && act && wri;
 
     let projectedQuality = null;
     if (hasTeam) {
-      const fakeFilm = { director: dir, actor: act, writer: wri, budget: state.devBudgetM * 1e6, genre: script.genre, genre2: state.devGenre2 };
+      const fakeFilm = { director: dir, actor: act, writer: wri, producer: prod || null, budget: state.devBudgetM * 1e6, genre: script.genre, genre2: state.devGenre2 };
       projectedQuality = calcQuality(fakeFilm, state.facilitiesLevel, state.genreTrends[script.genre] || 0, state.specialization);
     }
 
@@ -4993,6 +5019,121 @@ export default function MovieMogul() {
           <div className="text-white font-bold text-2xl mt-1">{script.title}</div>
           <div className="text-gray-300 text-sm mt-2">{script.logline}</div>
         </div>
+
+        {/* FILM TYPE SELECTOR */}
+        <div className="bg-gray-800 border border-gray-700 rounded-lg p-4">
+          <div className="text-white font-bold text-sm mb-2">Film Type</div>
+          <div className="flex flex-wrap gap-2">
+            {[
+              { id: 'original', label: 'Original', desc: 'A brand new story', icon: '✨' },
+              { id: 'sequel', label: 'Sequel', desc: 'Continue a franchise', icon: '2️⃣', needs: state.franchises.length > 0 },
+              { id: 'reboot', label: 'Reboot', desc: 'Reimagine a franchise', icon: '🔄', needs: state.franchises.length > 0 },
+              { id: 'adaptation', label: 'Adaptation', desc: 'Adapt existing IP', icon: '📚' },
+            ].map(ft => (
+              <button key={ft.id}
+                onClick={() => dispatch({ type: 'SET_DEV', key: 'devFilmType', value: ft.id })}
+                disabled={ft.needs === false}
+                className={`flex-1 min-w-[100px] p-2 rounded-lg border text-center transition ${
+                  state.devFilmType === ft.id
+                    ? 'bg-amber-700 border-amber-400 text-white'
+                    : ft.needs === false
+                      ? 'bg-gray-900 border-gray-800 text-gray-600 cursor-not-allowed'
+                      : 'bg-gray-700 border-gray-600 text-gray-300 hover:bg-gray-600'
+                }`}>
+                <div className="text-lg">{ft.icon}</div>
+                <div className="text-xs font-bold">{ft.label}</div>
+                <div className="text-xs text-gray-500">{ft.desc}</div>
+              </button>
+            ))}
+          </div>
+        </div>
+
+        {/* FRANCHISE PICKER (for sequels and reboots) */}
+        {(state.devFilmType === 'sequel' || state.devFilmType === 'reboot') && (
+          <div className="bg-gray-800 border border-purple-600 rounded-lg p-4">
+            <div className="text-white font-bold text-sm mb-2">
+              {state.devFilmType === 'sequel' ? 'Select Franchise for Sequel' : 'Select Franchise to Reboot'}
+            </div>
+            {state.franchises.length === 0 ? (
+              <div className="text-gray-500 text-sm">No franchises yet. Release a film that grosses $100M+ and create a franchise from the Release tab.</div>
+            ) : (
+              <div className="space-y-2">
+                {state.franchises.map(fr => {
+                  const isSelected = state.devFranchiseId === fr.id;
+                  const filmCount = fr.filmIds.length;
+                  const franchiseFilms = state.films.filter(f => fr.filmIds.includes(f.id));
+                  return (
+                    <button key={fr.id}
+                      onClick={() => dispatch({ type: 'SET_DEV', key: 'devFranchiseId', value: fr.id })}
+                      className={`w-full text-left p-3 rounded-lg border transition ${
+                        isSelected ? 'bg-purple-800 border-purple-400 text-white' : 'bg-gray-700 border-gray-600 text-gray-300 hover:bg-gray-600'
+                      }`}>
+                      <div className="flex justify-between items-center">
+                        <div>
+                          <div className="font-bold text-sm">{fr.name}</div>
+                          <div className="text-xs text-gray-400 mt-0.5">
+                            {filmCount} film{filmCount !== 1 ? 's' : ''} · Total gross: {fmt(fr.totalGross || 0)}
+                          </div>
+                        </div>
+                        <div className="text-right">
+                          {state.devFilmType === 'sequel' && (
+                            <div className="text-xs text-amber-400">This would be #{filmCount + 1}</div>
+                          )}
+                          {state.devFilmType === 'reboot' && (
+                            <div className="text-xs text-blue-400">Fresh start</div>
+                          )}
+                        </div>
+                      </div>
+                      {franchiseFilms.length > 0 && (
+                        <div className="text-xs text-gray-500 mt-1">
+                          Films: {franchiseFilms.map(f => `"${f.title}" (Q:${f.quality})`).join(', ')}
+                        </div>
+                      )}
+                    </button>
+                  );
+                })}
+              </div>
+            )}
+            {state.devFilmType === 'sequel' && state.devFranchiseId && (
+              <div className="mt-2 text-xs text-gray-400 bg-gray-900 rounded p-2">
+                Sequels get a +10% marketing boost but quality decays slightly with each entry (-3 per sequel). Franchise fatigue kicks in after the 3rd film.
+              </div>
+            )}
+            {state.devFilmType === 'reboot' && state.devFranchiseId && (
+              <div className="mt-2 text-xs text-gray-400 bg-gray-900 rounded p-2">
+                Reboots get a flat +20% gross bonus from brand recognition but cost 15% more to produce.
+              </div>
+            )}
+          </div>
+        )}
+
+        {/* ADAPTATION PICKER */}
+        {state.devFilmType === 'adaptation' && (
+          <div className="bg-gray-800 border border-blue-600 rounded-lg p-4">
+            <div className="text-white font-bold text-sm mb-2">Select Source Material</div>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-2 max-h-48 overflow-y-auto">
+              {ADAPTATIONS.map((adapt, idx) => {
+                const isSelected = state.devAdaptation === idx;
+                return (
+                  <button key={idx}
+                    onClick={() => dispatch({ type: 'SET_DEV', key: 'devAdaptation', value: idx })}
+                    className={`text-left p-2 rounded-lg border transition ${
+                      isSelected ? 'bg-blue-800 border-blue-400 text-white' : 'bg-gray-700 border-gray-600 text-gray-300 hover:bg-gray-600'
+                    }`}>
+                    <div className="font-bold text-xs">{adapt.name}</div>
+                    <div className="text-xs text-gray-400">{adapt.type} · {adapt.genre}</div>
+                    <div className="text-xs text-gray-500">IP Cost: {fmt(adapt.cost)} · Audience: +{Math.round(adapt.marketingMult * 100 - 100)}%</div>
+                  </button>
+                );
+              })}
+            </div>
+            {state.devAdaptation !== null && (
+              <div className="mt-2 text-xs text-gray-400 bg-gray-900 rounded p-2">
+                Adaptations come with built-in audiences and marketing advantages, but you'll pay an IP licensing fee on top of the production budget.
+              </div>
+            )}
+          </div>
+        )}
 
         <div className="bg-gray-800 border border-gray-700 rounded-lg p-4">
           <div className="text-white font-bold text-sm mb-2">Secondary Genre <span className="text-gray-500 font-normal">(optional — adds broader audience appeal)</span></div>
@@ -5030,8 +5171,8 @@ export default function MovieMogul() {
           </div>
         </div>
 
-        <div className="grid grid-cols-3 gap-3">
-          {[['devDirectorId', 'Director', 'director'], ['devActorId', 'Lead Actor', 'actor'], ['devWriterId', 'Writer', 'writer']].map(([key, label, type]) => (
+        <div className="grid grid-cols-4 gap-3">
+          {[['devDirectorId', 'Director', 'director'], ['devActorId', 'Lead Actor', 'actor'], ['devWriterId', 'Writer', 'writer'], ['devProducerId', 'Producer', 'producer']].map(([key, label, type]) => (
             <div key={key} className="bg-gray-800 border border-gray-700 rounded-lg p-3">
               <div className="text-white font-bold text-xs mb-2">{label}</div>
               <select value={state[key] ?? ''} onChange={e => dispatch({ type: 'SET_DEV', key, value: e.target.value ? parseInt(e.target.value) : null })}
@@ -5550,41 +5691,90 @@ export default function MovieMogul() {
   const renderTalent = () => {
     const totalSalary = state.contracts.reduce((s, t) => s + t.salary, 0);
     const avgMorale = state.contracts.length > 0 ? Math.round(state.contracts.reduce((s, t) => s + (t.morale || 75), 0) / state.contracts.length) : 0;
+
+    const roleConfig = [
+      { type: 'director', label: 'Directors', icon: '🎬' },
+      { type: 'actor', label: 'Actors', icon: '⭐' },
+      { type: 'writer', label: 'Writers', icon: '📝' },
+      { type: 'producer', label: 'Producers', icon: '🎯' },
+    ];
+
     return (
       <div>
+        {/* Header with summary stats */}
         <div className="flex justify-between items-center mb-4">
           <div>
             <div className="text-white font-bold text-lg">Talent Management</div>
-            <div className="text-gray-400 text-sm">Annual salary: {fmt(totalSalary)} | Avg morale: <span className={`${avgMorale >= 70 ? 'text-green-400' : avgMorale >= 40 ? 'text-yellow-400' : 'text-red-400'}`}>{avgMorale}</span></div>
+            <div className="text-gray-400 text-sm">
+              Roster: {state.contracts.length} | Annual salary: {fmt(totalSalary)} | Avg morale: <span className={`${avgMorale >= 70 ? 'text-green-400' : avgMorale >= 40 ? 'text-yellow-400' : 'text-red-400'}`}>{avgMorale}</span>
+            </div>
           </div>
           <button onClick={() => dispatch({ type: 'BOOST_MORALE' })} disabled={state.cash < 500000 || state.contracts.length === 0}
             className="bg-purple-600 hover:bg-purple-500 disabled:opacity-40 text-white font-bold px-4 py-2 rounded transition text-sm">
             Studio Retreat ({fmt(500000)})
           </button>
         </div>
+
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+          {/* YOUR ROSTER - grouped by role */}
           <div>
-            <div className="text-amber-400 font-bold text-sm mb-3">Available for Signing</div>
-            <div className="grid grid-cols-1 gap-2 max-h-[500px] overflow-y-auto">
-              {state.availableTalent.map(t => {
-                const sp = calcStarPower(t);
+            <div className="text-amber-400 font-bold text-sm mb-3">Your Roster ({state.contracts.length})</div>
+            {state.contracts.length === 0 ? (
+              <div className="text-gray-500 text-sm">No talent signed. Sign some from the available pool!</div>
+            ) : (
+              <div className="space-y-4 max-h-[600px] overflow-y-auto">
+                {roleConfig.map(role => {
+                  const roleTalent = state.contracts.filter(t => t.type === role.type);
+                  if (roleTalent.length === 0) return null;
+                  const roleSalary = roleTalent.reduce((s, t) => s + t.salary, 0);
+                  return (
+                    <div key={role.type}>
+                      <div className="flex items-center gap-2 mb-2 px-1">
+                        <span className="text-lg">{role.icon}</span>
+                        <span className="text-white font-bold text-sm">{role.label}</span>
+                        <span className="text-gray-500 text-xs">({roleTalent.length})</span>
+                        <span className="text-gray-600 text-xs ml-auto">{fmt(roleSalary)}/yr</span>
+                      </div>
+                      <div className="space-y-1.5">
+                        {roleTalent.map(t => (
+                          <TalentCard key={t.id} talent={t} action={() => dispatch({ type: 'RELEASE_TALENT', id: t.id })} actionLabel="Release" actionColor="bg-red-600" />
+                        ))}
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            )}
+          </div>
+
+          {/* AVAILABLE FOR SIGNING - grouped by role */}
+          <div>
+            <div className="text-amber-400 font-bold text-sm mb-3">Available for Signing ({state.availableTalent.length})</div>
+            <div className="space-y-4 max-h-[600px] overflow-y-auto">
+              {roleConfig.map(role => {
+                const roleTalent = state.availableTalent.filter(t => t.type === role.type);
+                if (roleTalent.length === 0) return null;
                 return (
-                  <div key={t.id} className="relative">
-                    <TalentCard talent={t} action={() => dispatch({ type: 'NEGOTIATE_TALENT', talentId: t.id })} actionLabel="Negotiate" actionColor="bg-amber-600" />
-                    {sp > 40 && <div className="absolute top-1 right-20 text-xs text-amber-400 font-bold">Star:{sp}</div>}
+                  <div key={role.type}>
+                    <div className="flex items-center gap-2 mb-2 px-1">
+                      <span className="text-lg">{role.icon}</span>
+                      <span className="text-white font-bold text-sm">{role.label}</span>
+                      <span className="text-gray-500 text-xs">({roleTalent.length})</span>
+                    </div>
+                    <div className="space-y-1.5">
+                      {roleTalent.map(t => {
+                        const sp = calcStarPower(t);
+                        return (
+                          <div key={t.id} className="relative">
+                            <TalentCard talent={t} action={() => dispatch({ type: 'NEGOTIATE_TALENT', talentId: t.id })} actionLabel="Negotiate" actionColor="bg-amber-600" />
+                            {sp > 40 && <div className="absolute top-1 right-20 text-xs text-amber-400 font-bold">Star:{sp}</div>}
+                          </div>
+                        );
+                      })}
+                    </div>
                   </div>
                 );
               })}
-            </div>
-          </div>
-          <div>
-            <div className="text-amber-400 font-bold text-sm mb-3">Your Roster ({state.contracts.length})</div>
-            <div className="grid grid-cols-1 gap-2 max-h-[500px] overflow-y-auto">
-              {state.contracts.length === 0 ? (
-                <div className="text-gray-500 text-sm">No talent signed. Sign some from the available pool!</div>
-              ) : state.contracts.map(t => (
-                <TalentCard key={t.id} talent={t} action={() => dispatch({ type: 'RELEASE_TALENT', id: t.id })} actionLabel="Release" actionColor="bg-red-600" />
-              ))}
             </div>
           </div>
         </div>
@@ -5608,7 +5798,7 @@ export default function MovieMogul() {
           </div>
         )}
 
-        {/* TALENT MOODS & RELATIONSHIPS (NEW SYSTEM 2) */}
+        {/* TALENT MOODS & RELATIONSHIPS */}
         {state.contracts.length > 0 && (
           <div className="bg-gray-800 border border-gray-700 rounded-lg p-5 mt-4">
             <div className="text-white font-bold text-lg mb-3">Talent Moods & Perks</div>
@@ -5662,7 +5852,7 @@ export default function MovieMogul() {
           <div className="text-white font-bold text-lg mb-2">Talent Academy</div>
           <div className="text-gray-400 text-sm mb-3">Train your own talent from scratch. Cheaper long-term but takes time.</div>
           <div className="flex gap-2 mb-3">
-            {['actor', 'director', 'writer'].map(type => (
+            {['actor', 'director', 'writer', 'producer'].map(type => (
               <button key={type} onClick={() => dispatch({ type: 'TRAIN_TALENT', talentType: type })}
                 disabled={state.cash < 1000000}
                 className="bg-teal-600 hover:bg-teal-500 disabled:opacity-40 text-white text-sm px-3 py-1.5 rounded transition capitalize">
