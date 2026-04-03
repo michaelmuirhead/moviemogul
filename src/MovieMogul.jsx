@@ -1269,6 +1269,7 @@ const INIT = {
   distributionTurnsLeft: 0,
   rivalFilms: [],               // recent rival releases for display
   rivalFilmsThisYear: [],     // accumulated rival films for annual awards
+  allFilmHistory: [],          // permanent record of ALL films ever made (player + rival)
   // dev UI
   devScriptIdx: -1,
   devBudgetM: 10,
@@ -1999,6 +2000,11 @@ function reducer(state, action) {
       if (state.cash < acquisitionCost) return { ...state, errorMsg: `Acquisition costs ${fmt(acquisitionCost)}. Not enough cash!` };
       if (rival.reputation > state.reputation + 20) return { ...state, errorMsg: `${rival.name} is too powerful to acquire!` };
       const newCompetitors = state.competitors.filter((_, i) => i !== action.rivalIdx);
+      // Transfer all films from the acquired studio to the player's studio
+      const transferredFilmCount = (state.allFilmHistory || []).filter(f => f.studio === rival.name).length;
+      const updatedHistory = (state.allFilmHistory || []).map(f =>
+        f.studio === rival.name ? { ...f, studio: state.studioName, originalStudio: f.originalStudio || f.studio, acquiredFrom: rival.name } : f
+      );
       return {
         ...state,
         cash: state.cash - acquisitionCost + rival.cash,
@@ -2006,7 +2012,8 @@ function reducer(state, action) {
         prestige: state.prestige + rival.prestige,
         acquiredStudios: [...state.acquiredStudios, rival.name],
         competitors: newCompetitors,
-        gameLog: [...state.gameLog, { text: `ACQUIRED ${rival.name} for ${fmt(acquisitionCost)}! Gained their ${fmt(rival.cash)} cash reserves and ${rival.prestige} prestige.`, type: 'success' }],
+        allFilmHistory: updatedHistory,
+        gameLog: [...state.gameLog, { text: `ACQUIRED ${rival.name} for ${fmt(acquisitionCost)}! Gained their ${fmt(rival.cash)} cash reserves, ${rival.prestige} prestige, and film library (${transferredFilmCount} films).`, type: 'success' }],
       };
     }
 
@@ -2594,15 +2601,19 @@ function reducer(state, action) {
       let pendingCeremony = null;
       if (state.month === 1 && state.turn > 0) {
         const prevYear = state.year - 1;
-        // Gather ALL films from previous year: player + rival
+        // Pull all films from permanent history for the previous year
+        const allYearFilms = (state.allFilmHistory || []).filter(f => f.releasedYear === prevYear);
+        // Also include player films released this year that might not be in history yet
         const playerYearFilms = films.filter(f => f.status === 'released' && f.releasedYear === prevYear)
           .map(f => ({ ...f, studio: state.studioName, isRival: false }));
-        const rivalYearFilms = (state.rivalFilmsThisYear || []).filter(f => f.releasedYear === prevYear);
-        const allYearFilms = [...playerYearFilms, ...rivalYearFilms];
-        if (allYearFilms.length > 0) {
+        // Merge, avoiding duplicates by checking title+studio
+        const historyTitles = new Set(allYearFilms.map(f => f.title + '|' + f.studio));
+        const missingPlayerFilms = playerYearFilms.filter(f => !historyTitles.has(f.title + '|' + f.studio));
+        const combinedYearFilms = [...allYearFilms, ...missingPlayerFilms];
+        if (combinedYearFilms.length > 0) {
           const ceremonyData = { year: prevYear, categories: [] };
           ANNUAL_AWARD_CATEGORIES.forEach(cat => {
-            const nominees = generateNominees(allYearFilms, cat);
+            const nominees = generateNominees(combinedYearFilms, cat);
             if (nominees.length > 0) {
               const winner = nominees[0];
               ceremonyData.categories.push({
@@ -3020,6 +3031,12 @@ function reducer(state, action) {
       }
       const newScripts = [...makeScripts(newYear), ...deliveredScripts];
 
+      // Accumulate released films into permanent history
+      const newPlayerReleases = films.filter(f => f.status === 'released' && f.releasedYear === state.year && f.releasedMonth === state.month)
+        .map(f => ({ ...f, studio: state.studioName, isRival: false, historyId: f.id }));
+      const newRivalReleases = rivalFilmsThisQ.map((rf, i) => ({ ...rf, historyId: `rival_${state.turn}_${i}` }));
+      const allFilmHistory = [...(state.allFilmHistory || []), ...newPlayerReleases, ...newRivalReleases];
+
       return {
         ...state,
         phase,
@@ -3045,6 +3062,7 @@ function reducer(state, action) {
         competitors,
         rivalFilms: rivalFilmsThisQ,
         rivalFilmsThisYear,
+        allFilmHistory,
         annualAwards,
         boxOfficeChart,
         legacyScore,
@@ -4923,9 +4941,15 @@ export default function MovieMogul() {
                       <div className="text-xs text-gray-400">{rf.studio} | {rf.genre}</div>
                     </div>
                     <div className="text-right">
-                      <div className="text-amber-400 text-sm font-bold">{rf.quality}</div>
+                      <div className="text-amber-400 text-sm font-bold">Q:{rf.quality}</div>
                       <div className="text-green-400 text-xs">{fmt(rf.gross)}</div>
                     </div>
+                  </div>
+                  <div className="flex gap-3 mt-1 text-xs text-gray-500">
+                    <span>Dir: {rf.director?.name || '?'}</span>
+                    <span>Star: {rf.actor?.name || '?'}</span>
+                    <span>Critics: {rf.criticScore || '?'}</span>
+                    <span>Audience: {rf.audienceScore || '?'}</span>
                   </div>
                 </div>
               ))}
@@ -5028,6 +5052,111 @@ export default function MovieMogul() {
               </div>
             ))}
           </div>
+        </div>
+
+        {/* INDUSTRY FILM HISTORY */}
+        <div>
+          <div className="text-white font-bold text-lg mb-3">Industry Film History</div>
+          <div className="text-gray-400 text-sm mb-3">Every film ever made in the industry. Your library: {(state.allFilmHistory || []).filter(f => !f.isRival || f.studio === state.studioName).length} films. Industry total: {(state.allFilmHistory || []).length} films.</div>
+
+          {/* Awards History by Year */}
+          {state.annualAwards.length > 0 && (
+            <div className="mb-4">
+              <div className="text-white font-bold text-sm mb-2">Awards History</div>
+              <div className="space-y-2 max-h-64 overflow-y-auto">
+                {state.annualAwards.slice().reverse().map((yr, yi) => {
+                  const playerWins = yr.awards.filter(a => !a.isRivalWin).length;
+                  return (
+                    <div key={yi} className="bg-gray-800 border border-gray-700 rounded-lg p-3">
+                      <div className="flex justify-between items-center mb-1">
+                        <span className="text-amber-400 font-bold text-sm">{yr.year} Awards</span>
+                        <span className="text-xs text-gray-400">{playerWins}/{yr.awards.length} won by you</span>
+                      </div>
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-1">
+                        {yr.awards.map((a, ai) => (
+                          <div key={ai} className={`text-xs flex items-center gap-1 ${a.isRivalWin ? 'text-gray-500' : 'text-white'}`}>
+                            <span>{a.isRivalWin ? '🎬' : '🏆'}</span>
+                            <span className="font-bold">{a.category}:</span>
+                            <span className="truncate">"{a.film}"</span>
+                            <span className="text-gray-600 text-xs ml-auto shrink-0">({a.studio})</span>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+          )}
+
+          {/* Studio Filmographies */}
+          {(() => {
+            const history = state.allFilmHistory || [];
+            const studioGroups = {};
+            history.forEach(f => {
+              const studio = f.studio || 'Unknown';
+              if (!studioGroups[studio]) studioGroups[studio] = [];
+              studioGroups[studio].push(f);
+            });
+            // Sort studios: player first, then by film count
+            const studioNames = Object.keys(studioGroups).sort((a, b) => {
+              if (a === state.studioName) return -1;
+              if (b === state.studioName) return 1;
+              return studioGroups[b].length - studioGroups[a].length;
+            });
+            return (
+              <div className="space-y-3">
+                <div className="text-white font-bold text-sm mb-1">Studio Filmographies</div>
+                {studioNames.map(studio => {
+                  const studioFilms = studioGroups[studio].sort((a, b) => (b.releasedYear || 0) - (a.releasedYear || 0) || (b.releasedMonth || 0) - (a.releasedMonth || 0));
+                  const totalGross = studioFilms.reduce((s, f) => s + (f.totalGross || 0), 0);
+                  const avgQuality = studioFilms.length > 0 ? Math.round(studioFilms.reduce((s, f) => s + (f.quality || 0), 0) / studioFilms.length) : 0;
+                  const isPlayer = studio === state.studioName;
+                  const isAcquired = state.acquiredStudios.includes(studio);
+                  return (
+                    <details key={studio} className={`bg-gray-800 border ${isPlayer ? 'border-amber-600' : 'border-gray-700'} rounded-lg`}>
+                      <summary className="p-3 cursor-pointer hover:bg-gray-750 transition">
+                        <div className="inline-flex items-center gap-2 w-full">
+                          <span className={`font-bold text-sm ${isPlayer ? 'text-amber-400' : 'text-white'}`}>{studio}</span>
+                          {isAcquired && <span className="text-xs bg-red-900 text-red-300 px-1.5 py-0.5 rounded">Acquired</span>}
+                          <span className="text-xs text-gray-400 ml-auto">{studioFilms.length} films | {fmt(totalGross)} gross | Avg Q: {avgQuality}</span>
+                        </div>
+                      </summary>
+                      <div className="px-3 pb-3 max-h-48 overflow-y-auto">
+                        <table className="w-full text-xs">
+                          <thead>
+                            <tr className="text-gray-500 border-b border-gray-700">
+                              <th className="text-left py-1">Title</th>
+                              <th className="text-left">Genre</th>
+                              <th className="text-right">Year</th>
+                              <th className="text-right">Quality</th>
+                              <th className="text-right">Gross</th>
+                              {isPlayer && <th className="text-right">Profit</th>}
+                            </tr>
+                          </thead>
+                          <tbody>
+                            {studioFilms.map((f, fi) => (
+                              <tr key={fi} className="border-b border-gray-800 hover:bg-gray-750">
+                                <td className={`py-1 ${f.acquiredFrom ? 'text-gray-400' : 'text-white'}`}>
+                                  {f.title}
+                                  {f.acquiredFrom && <span className="text-xs text-gray-600 ml-1">(from {f.originalStudio || f.acquiredFrom})</span>}
+                                </td>
+                                <td className="text-amber-400">{f.genre}</td>
+                                <td className="text-right text-gray-400">{f.releasedYear}</td>
+                                <td className="text-right"><span className={f.quality >= 80 ? 'text-green-400' : f.quality >= 60 ? 'text-yellow-400' : f.quality >= 40 ? 'text-orange-400' : 'text-red-400'}>{f.quality || '?'}</span></td>
+                                <td className="text-right text-green-400">{fmt(f.totalGross || 0)}</td>
+                                {isPlayer && <td className={`text-right ${(f.profit || 0) >= 0 ? 'text-green-400' : 'text-red-400'}`}>{fmt(f.profit || 0)}</td>}
+                              </tr>
+                            ))}
+                          </tbody>
+                        </table>
+                      </div>
+                    </details>
+                  );
+                })}
+              </div>
+            );
+          })()}
         </div>
       </div>
     );
