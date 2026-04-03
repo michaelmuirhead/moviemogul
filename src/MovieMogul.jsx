@@ -710,15 +710,77 @@ const makeScripts = (year) => {
   });
 };
 
-const makeCompetitors = () => {
-  const personalities = [...RIVAL_PERSONALITIES].sort(() => Math.random() - 0.5);
-  return [
-    { name: 'Paramount Pictures', reputation: randInt(50, 80), cash: randInt(200, 500) * 1e6, filmsReleased: 0, totalGross: 0, releasesThisQ: 0, personality: personalities[0], awards: 0, prestige: randInt(30, 60) },
-    { name: 'MGM Studios', reputation: randInt(40, 70), cash: randInt(150, 400) * 1e6, filmsReleased: 0, totalGross: 0, releasesThisQ: 0, personality: personalities[1], awards: 0, prestige: randInt(20, 50) },
-    { name: 'Universal Pictures', reputation: randInt(55, 85), cash: randInt(250, 600) * 1e6, filmsReleased: 0, totalGross: 0, releasesThisQ: 0, personality: personalities[2], awards: 0, prestige: randInt(40, 70) },
-    { name: 'Warner Bros.', reputation: randInt(55, 85), cash: randInt(250, 600) * 1e6, filmsReleased: 0, totalGross: 0, releasesThisQ: 0, personality: personalities[3], awards: 0, prestige: randInt(40, 70) },
-    { name: 'Columbia Pictures', reputation: randInt(45, 75), cash: randInt(180, 450) * 1e6, filmsReleased: 0, totalGross: 0, releasesThisQ: 0, personality: personalities[4], awards: 0, prestige: randInt(25, 55) },
-  ];
+// ==================== RIVAL STUDIOS DATABASE ====================
+const RIVAL_STUDIOS = [
+  // Classic Hollywood (pre-1970, already exist at game start for most scenarios)
+  { name: 'Paramount Pictures', founded: 1912, tier: 'major', baseRep: 75, baseCash: 400e6, basePres: 55, desc: 'One of the original Big Five studios.' },
+  { name: 'Warner Bros.', founded: 1923, tier: 'major', baseRep: 78, baseCash: 450e6, basePres: 60, desc: 'From talkies to tentpoles — always a powerhouse.' },
+  { name: 'MGM Studios', founded: 1924, tier: 'major', baseRep: 60, baseCash: 250e6, basePres: 45, desc: 'More stars than there are in heaven.' },
+  { name: 'Columbia Pictures', founded: 1924, tier: 'major', baseRep: 55, baseCash: 200e6, basePres: 35, desc: 'The scrappy studio that became a giant.' },
+  { name: 'Universal Pictures', founded: 1912, tier: 'major', baseRep: 72, baseCash: 400e6, basePres: 50, desc: 'Home of monsters, blockbusters, and theme parks.' },
+  { name: '20th Century Fox', founded: 1935, tier: 'major', baseRep: 70, baseCash: 380e6, basePres: 50, desc: 'A titan of the golden age and beyond.' },
+  { name: 'Walt Disney Studios', founded: 1923, tier: 'major', baseRep: 80, baseCash: 500e6, basePres: 65, desc: 'The house that Mickey built — animation and beyond.' },
+  { name: 'United Artists', founded: 1919, tier: 'mid', baseRep: 50, baseCash: 150e6, basePres: 40, desc: 'Founded by Chaplin, Pickford, Fairbanks, and Griffith.' },
+  { name: 'RKO Pictures', founded: 1928, tier: 'mid', baseRep: 40, baseCash: 100e6, basePres: 30, desc: 'Home of Citizen Kane and King Kong.', defunct: 1959 },
+
+  // New Hollywood era
+  { name: 'New Line Cinema', founded: 1967, tier: 'indie', baseRep: 35, baseCash: 50e6, basePres: 20, desc: 'The house that Freddy built.' },
+  { name: 'Lionsgate Films', founded: 1997, tier: 'mid', baseRep: 45, baseCash: 150e6, basePres: 25, desc: 'Indie spirit with blockbuster ambitions.' },
+  { name: 'Miramax Films', founded: 1979, tier: 'indie', baseRep: 55, baseCash: 80e6, basePres: 45, desc: 'Indie film revolutionaries.' },
+  { name: 'DreamWorks', founded: 1994, tier: 'major', baseRep: 65, baseCash: 300e6, basePres: 50, desc: 'Spielberg, Katzenberg, and Geffen dream big.' },
+  { name: 'Pixar Animation', founded: 1986, tier: 'mid', baseRep: 70, baseCash: 200e6, basePres: 60, desc: 'Revolutionized animation with computer magic.' },
+  { name: 'A24', founded: 2012, tier: 'indie', baseRep: 60, baseCash: 60e6, basePres: 65, desc: 'The coolest studio in town — prestige indie darlings.' },
+  { name: 'Blumhouse Productions', founded: 2000, tier: 'indie', baseRep: 50, baseCash: 40e6, basePres: 20, desc: 'Micro-budget horror with massive returns.' },
+  { name: 'Focus Features', founded: 2002, tier: 'indie', baseRep: 50, baseCash: 100e6, basePres: 45, desc: 'Prestige arm with an eye for quality.' },
+  { name: 'Legendary Entertainment', founded: 2000, tier: 'mid', baseRep: 55, baseCash: 250e6, basePres: 30, desc: 'Big-budget spectacle and franchise builders.' },
+  { name: 'STX Entertainment', founded: 2014, tier: 'indie', baseRep: 30, baseCash: 80e6, basePres: 10, desc: 'The new kids trying to crack the code.' },
+  { name: 'Amblin Entertainment', founded: 1981, tier: 'mid', baseRep: 65, baseCash: 200e6, basePres: 55, desc: 'Spielberg\'s personal label — wonder and adventure.' },
+  { name: 'Orion Pictures', founded: 1978, tier: 'mid', baseRep: 50, baseCash: 120e6, basePres: 35, desc: 'Brief but brilliant — Platoon, Silence of the Lambs.', defunct: 1999 },
+  { name: 'TriStar Pictures', founded: 1982, tier: 'mid', baseRep: 45, baseCash: 130e6, basePres: 30, desc: 'Columbia\'s ambitious sibling.' },
+  { name: 'Neon', founded: 2017, tier: 'indie', baseRep: 55, baseCash: 30e6, basePres: 55, desc: 'Parasite proved they have impeccable taste.' },
+  { name: 'Annapurna Pictures', founded: 2011, tier: 'indie', baseRep: 50, baseCash: 100e6, basePres: 50, desc: 'Bold, auteur-driven filmmaking with deep pockets.' },
+];
+
+const PERSONALITY_FOR_TIER = {
+  major: { aggression: [0.4, 0.7], budgetMult: [1.0, 1.5], marketingMult: [1.0, 1.5], qualityBonus: [0, 8], riskTolerance: [0.2, 0.5] },
+  mid: { aggression: [0.2, 0.5], budgetMult: [0.7, 1.2], marketingMult: [0.7, 1.2], qualityBonus: [2, 10], riskTolerance: [0.3, 0.6] },
+  indie: { aggression: [0.1, 0.4], budgetMult: [0.3, 0.7], marketingMult: [0.4, 0.8], qualityBonus: [5, 15], riskTolerance: [0.5, 0.9] },
+};
+
+const makeCompetitor = (studioDef) => {
+  const personalities = RIVAL_PERSONALITIES;
+  const personality = pick(personalities);
+  const tierConfig = PERSONALITY_FOR_TIER[studioDef.tier] || PERSONALITY_FOR_TIER.mid;
+  // Merge personality with tier-based overrides
+  const mergedPersonality = {
+    ...personality,
+    aggression: tierConfig.aggression[0] + Math.random() * (tierConfig.aggression[1] - tierConfig.aggression[0]),
+    budgetMult: tierConfig.budgetMult[0] + Math.random() * (tierConfig.budgetMult[1] - tierConfig.budgetMult[0]),
+    marketingMult: tierConfig.marketingMult[0] + Math.random() * (tierConfig.marketingMult[1] - tierConfig.marketingMult[0]),
+    qualityBonus: Math.round(tierConfig.qualityBonus[0] + Math.random() * (tierConfig.qualityBonus[1] - tierConfig.qualityBonus[0])),
+    riskTolerance: tierConfig.riskTolerance[0] + Math.random() * (tierConfig.riskTolerance[1] - tierConfig.riskTolerance[0]),
+  };
+  return {
+    name: studioDef.name,
+    founded: studioDef.founded,
+    tier: studioDef.tier,
+    desc: studioDef.desc,
+    defunct: studioDef.defunct || null,
+    reputation: clamp(studioDef.baseRep + randInt(-10, 10), 20, 95),
+    cash: Math.round(studioDef.baseCash * (0.8 + Math.random() * 0.4)),
+    prestige: clamp(studioDef.basePres + randInt(-5, 5), 5, 80),
+    filmsReleased: 0,
+    totalGross: 0,
+    releasesThisQ: 0,
+    personality: mergedPersonality,
+    awards: 0,
+  };
+};
+
+const makeCompetitors = (startYear) => {
+  // Only include studios that existed by the start year and aren't defunct
+  const eligible = RIVAL_STUDIOS.filter(s => s.founded <= (startYear || 1970) && (!s.defunct || s.defunct > (startYear || 1970)));
+  return eligible.map(s => makeCompetitor(s));
 };
 
 const RIVAL_FILM_TITLES = gameContent.rivalFilmTitles;
@@ -1691,7 +1753,7 @@ function reducer(state, action) {
         contracts,
         availableTalent: avail,
         scripts: makeScripts(startYear),
-        competitors: makeCompetitors(),
+        competitors: makeCompetitors(startYear),
         genreTrends: makeGenreTrends(startYear),
         cashHistory: [{ turn: 0, year: startYear, month: 1, cash: startCash }],
         activeMovements: getActiveMovements(startYear),
@@ -2477,24 +2539,46 @@ function reducer(state, action) {
     case 'ACQUIRE_RIVAL': {
       const rival = state.competitors[action.rivalIdx];
       if (!rival) return state;
-      const acquisitionCost = Math.round(rival.cash * 2 + rival.totalGross * 0.1);
-      if (state.cash < acquisitionCost) return { ...state, errorMsg: `Acquisition costs ${fmt(acquisitionCost)}. Not enough cash!` };
-      if (rival.reputation > state.reputation + 20) return { ...state, errorMsg: `${rival.name} is too powerful to acquire!` };
+      // Acquisition cost based on studio value
+      const studioValue = rival.cash + rival.totalGross * 0.15 + rival.reputation * 2e6 + (rival.prestige || 0) * 1e6 + (rival.awards || 0) * 5e6;
+      const tierPremium = rival.tier === 'major' ? 2.5 : rival.tier === 'mid' ? 1.8 : 1.2;
+      const acquisitionCost = Math.round(studioValue * tierPremium);
+
+      if (state.cash < acquisitionCost) return { ...state, errorMsg: `${rival.name} costs ${fmt(acquisitionCost)} to acquire. Not enough cash!` };
+      if (rival.reputation > state.reputation + 15) return { ...state, errorMsg: `${rival.name} is too prestigious to acquire — build your reputation first.` };
+
       const newCompetitors = state.competitors.filter((_, i) => i !== action.rivalIdx);
-      // Transfer all films from the acquired studio to the player's studio
+
+      // Transfer film catalog
       const transferredFilmCount = (state.allFilmHistory || []).filter(f => f.studio === rival.name).length;
       const updatedHistory = (state.allFilmHistory || []).map(f =>
         f.studio === rival.name ? { ...f, studio: state.studioName, originalStudio: f.originalStudio || f.studio, acquiredFrom: rival.name } : f
       );
+
+      // Absorb some of their talent (random chance for each hypothetical talent)
+      const absorbedTalentCount = randInt(1, 3);
+      const newTalent = [];
+      for (let i = 0; i < absorbedTalentCount; i++) {
+        const types = ['actor', 'director', 'writer', 'producer'];
+        const t = makeTalent(state.nextId + i + 50, pick(types), [40, 80]);
+        newTalent.push(t);
+      }
+
       return {
         ...state,
-        cash: state.cash - acquisitionCost + rival.cash,
-        reputation: state.reputation + 5,
-        prestige: state.prestige + rival.prestige,
+        cash: state.cash - acquisitionCost + Math.round(rival.cash * 0.7), // get 70% of their cash reserves
+        reputation: clamp(state.reputation + Math.round(rival.reputation * 0.1), 0, 100),
+        prestige: clamp(state.prestige + Math.round((rival.prestige || 0) * 0.15), 0, 100),
+        totalAwards: state.totalAwards + (rival.awards || 0),
         acquiredStudios: [...state.acquiredStudios, rival.name],
         competitors: newCompetitors,
         allFilmHistory: updatedHistory,
-        gameLog: [...state.gameLog, { text: `ACQUIRED ${rival.name} for ${fmt(acquisitionCost)}! Gained their ${fmt(rival.cash)} cash reserves, ${rival.prestige} prestige, and film library (${transferredFilmCount} films).`, type: 'success' }],
+        availableTalent: [...state.availableTalent, ...newTalent],
+        nextId: state.nextId + absorbedTalentCount + 50,
+        gameLog: [...state.gameLog, {
+          text: `ACQUIRED ${rival.name} for ${fmt(acquisitionCost)}! Gained ${fmt(Math.round(rival.cash * 0.7))} cash, ${transferredFilmCount} films, ${absorbedTalentCount} talent, and ${rival.awards || 0} awards.`,
+          type: 'success'
+        }],
       };
     }
 
@@ -3546,6 +3630,28 @@ function reducer(state, action) {
       let newMonth = state.month + 1;
       let newYear = state.year;
       if (newMonth > 12) { newMonth = 1; newYear += 1; }
+
+      // 12a. Spawn new studios that should exist by this year
+      const newStudios = RIVAL_STUDIOS.filter(s => {
+        // Studio was founded this year
+        if (s.founded !== newYear) return false;
+        // Not already in competitors or acquired
+        if (competitors.some(c => c.name === s.name)) return false;
+        if ((state.acquiredStudios || []).includes(s.name)) return false;
+        return true;
+      });
+      newStudios.forEach(s => {
+        const newComp = makeCompetitor(s);
+        competitors.push(newComp);
+        log.push({ text: `NEW STUDIO: ${s.name} enters the industry! "${s.desc}"`, type: 'info' });
+      });
+
+      // Remove defunct studios
+      const defunctThisYear = competitors.filter(c => c.defunct && c.defunct === newYear);
+      defunctThisYear.forEach(c => {
+        log.push({ text: `${c.name} has shut down operations.`, type: 'warning' });
+      });
+      competitors = competitors.filter(c => !c.defunct || c.defunct > newYear);
 
       // 12b. Monthly tax withholding
       {
@@ -6564,24 +6670,38 @@ export default function MovieMogul() {
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
             {state.competitors.map((c, i) => (
               <div key={i} className="bg-gray-800 border border-gray-700 rounded-lg p-4">
-                <div className="flex justify-between items-start">
-                  <div className="text-white font-bold text-sm">{c.name}</div>
-                  {c.personality && <span className="text-xs bg-gray-700 text-amber-400 px-2 py-0.5 rounded">{c.personality.name}</span>}
+                <div className="text-white font-bold text-sm">{c.name}</div>
+                <div className="flex items-center gap-2 mt-0.5">
+                  <span className={`text-xs px-1.5 py-0.5 rounded font-bold ${c.tier === 'major' ? 'bg-amber-700 text-amber-200' : c.tier === 'mid' ? 'bg-blue-700 text-blue-200' : 'bg-green-700 text-green-200'}`}>
+                    {(c.tier || 'mid').toUpperCase()}
+                  </span>
+                  <span className="text-xs text-gray-500">Est. {c.founded || '?'}</span>
                 </div>
+                {c.personality && <span className="text-xs bg-gray-700 text-amber-400 px-2 py-0.5 rounded inline-block mt-2">{c.personality.name}</span>}
                 {c.personality && <div className="text-xs text-gray-500 italic mt-0.5">{c.personality.desc}</div>}
-                <div className="text-xs text-gray-400 mt-1 space-y-0.5">
+                <div className="text-xs text-gray-400 mt-2 space-y-0.5">
                   <div>Reputation: <span className="text-white">{c.reputation}</span> | Prestige: <span className="text-purple-400">{c.prestige || 0}</span></div>
                   <div>Films: <span className="text-white">{c.filmsReleased}</span> | Awards: <span className="text-amber-400">{c.awards || 0}</span></div>
                   <div>Total Gross: <span className="text-green-400">{fmt(c.totalGross)}</span></div>
                   <div>Est. Cash: <span className="text-green-400">{fmt(c.cash)}</span></div>
                 </div>
                 {c.releasesThisQ > 0 && <div className="text-amber-400 text-xs mt-2 font-bold">Released {c.releasesThisQ} film(s) this month!</div>}
-                {state.cash > c.cash * 2 && c.reputation < state.reputation && (
-                  <button onClick={() => dispatch({ type: 'ACQUIRE_RIVAL', rivalIdx: i })}
-                    className="mt-2 bg-red-700 hover:bg-red-600 text-white text-xs px-3 py-1 rounded transition">
-                    Acquire (~{fmt(Math.round(c.cash * 2 + c.totalGross * 0.1))})
-                  </button>
-                )}
+                {(() => {
+                  const studioValue = c.cash + c.totalGross * 0.15 + c.reputation * 2e6 + (c.prestige || 0) * 1e6 + (c.awards || 0) * 5e6;
+                  const tierPremium = c.tier === 'major' ? 2.5 : c.tier === 'mid' ? 1.8 : 1.2;
+                  const cost = Math.round(studioValue * tierPremium);
+                  const canAcquire = state.cash >= cost && c.reputation <= state.reputation + 15;
+                  return (
+                    <div className="mt-3">
+                      <div className="text-xs text-gray-500 mb-1">Acquisition cost: {fmt(cost)} {c.tier === 'major' ? '(major studio premium)' : ''}</div>
+                      <button onClick={() => dispatch({ type: 'ACQUIRE_RIVAL', rivalIdx: i })}
+                        disabled={!canAcquire}
+                        className="w-full bg-red-700 hover:bg-red-600 disabled:opacity-30 disabled:cursor-not-allowed text-white text-xs px-3 py-1.5 rounded transition font-bold">
+                        {canAcquire ? `Acquire ${c.name}` : (state.cash < cost ? 'Not enough cash' : 'Too prestigious')}
+                      </button>
+                    </div>
+                  );
+                })()}
               </div>
             ))}
           </div>
