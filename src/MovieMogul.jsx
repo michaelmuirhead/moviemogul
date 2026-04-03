@@ -527,7 +527,7 @@ const getWindowMultiplier = (window, genre) => {
 
 // ==================== HELPERS ====================
 
-const pick = (arr) => arr[Math.floor(Math.random() * arr.length)];
+const pick = (arr) => arr.length > 0 ? arr[Math.floor(Math.random() * arr.length)] : undefined;
 const randInt = (min, max) => Math.floor(Math.random() * (max - min + 1)) + min;
 const clamp = (v, lo, hi) => Math.max(lo, Math.min(hi, v));
 
@@ -652,6 +652,18 @@ const TRAITS = {
     { name: 'Risk Taker', desc: 'Higher variance: quality ±15', effect: { qualityVariance: 15 } },
     { name: 'Legendary Producer', desc: '+5 quality, +3 prestige per film', effect: { qualityFlat: 5, prestigeBonus: 3 } },
     { name: 'Development Expert', desc: '-1 development month', effect: { devSpeed: 1 } },
+  ],
+  showrunner: [
+    { name: 'Prestige Showrunner', desc: '+10 quality on Drama/Thriller', effect: { qualityBonus: 10, genres: ['Drama Series', 'Thriller Series'] } },
+    { name: 'Comedy Architect', desc: '+12 quality on Comedy series', effect: { qualityBonus: 12, genres: ['Comedy Series'] } },
+    { name: 'World Builder', desc: '+8 quality on Sci-Fi/Fantasy series', effect: { qualityBonus: 8, genres: ['Sci-Fi Series', 'Animation Series'] } },
+    { name: 'Binge Master', desc: '+20% subscriber boost', effect: { subscriberBonus: 0.20 } },
+    { name: 'Budget Miracle', desc: '-20% production costs', effect: { costDiscount: 0.20 } },
+    { name: 'Critical Darling', desc: '+8 critic score for series', effect: { criticBonus: 8 } },
+    { name: 'Audience Magnet', desc: '+15% viewership', effect: { viewershipBonus: 0.15 } },
+    { name: 'Multi-Season Master', desc: 'Quality stays high across seasons', effect: { noSeasonDecay: true } },
+    { name: 'Controversy Generator', desc: 'High buzz but risky', effect: { buzzBonus: 30, scandalChance: 0.15 } },
+    { name: 'Franchise Builder', desc: 'Spinoffs get +15 quality', effect: { spinoffBonus: 15 } },
   ],
 };
 
@@ -981,6 +993,105 @@ const TECH_TREE = [
   { id: 'consciousness_cinema', name: 'Consciousness Cinema', year: 2150, cost: 500000000, qualityBonus: 15, desc: 'Audiences experience films as lucid dreams.', unlocks: '+50% all gross, +15 quality' },
 ];
 
+// ==================== SYSTEM 1: FILMMAKING ERAS ====================
+const FILMMAKING_ERAS = [
+  { id: 'silent', name: 'Silent Era', startYear: 0, endYear: 1927, qualityMod: -10, budgetMult: 0.3, genreLimit: ['Drama','Comedy','Horror','Romance','Western'], techDesc: 'No sound — visual storytelling only.', announcement: 'The dawn of cinema.' },
+  { id: 'golden', name: 'Golden Age of Hollywood', startYear: 1927, endYear: 1948, qualityMod: -5, budgetMult: 0.5, genreLimit: ['Drama','Comedy','Horror','Romance','Western','Musical','War','Mystery'], techDesc: 'Talkies arrive. Studio system dominance.', announcement: 'Sound revolutionizes cinema!' },
+  { id: 'postwar', name: 'Post-War Cinema', startYear: 1948, endYear: 1960, qualityMod: -3, budgetMult: 0.6, genreLimit: null, techDesc: 'TV competition. Widescreen and color.', announcement: 'Television threatens — Hollywood adapts with spectacle.' },
+  { id: 'newHollywood', name: 'New Hollywood', startYear: 1960, endYear: 1980, qualityMod: 0, budgetMult: 0.8, genreLimit: null, techDesc: 'Auteur directors. Gritty realism.', announcement: 'A new generation of filmmakers takes control.' },
+  { id: 'blockbuster', name: 'Blockbuster Era', startYear: 1980, endYear: 1995, qualityMod: 2, budgetMult: 1.0, genreLimit: null, techDesc: 'Tentpoles, VHS, and merchandise.', announcement: 'The age of the blockbuster begins!' },
+  { id: 'digital', name: 'Digital Revolution', startYear: 1995, endYear: 2005, qualityMod: 3, budgetMult: 1.1, genreLimit: null, techDesc: 'CGI transforms filmmaking. DVD sales boom.', announcement: 'Digital filmmaking changes everything.' },
+  { id: 'franchise', name: 'Franchise Dominance', startYear: 2005, endYear: 2015, qualityMod: 3, budgetMult: 1.3, genreLimit: null, techDesc: 'IP is king. Shared universes. 3D.', announcement: 'Franchises and shared universes dominate.' },
+  { id: 'streaming', name: 'Streaming Disruption', startYear: 2015, endYear: 2025, qualityMod: 4, budgetMult: 1.4, genreLimit: null, techDesc: 'Theaters vs streaming. Peak TV.', announcement: 'Streaming reshapes the industry!' },
+  { id: 'aiAge', name: 'AI & Virtual Production', startYear: 2025, endYear: 2045, qualityMod: 5, budgetMult: 1.5, genreLimit: null, techDesc: 'AI tools and LED volumes.', announcement: 'AI and virtual production emerge.' },
+  { id: 'immersive', name: 'Immersive Cinema', startYear: 2045, endYear: 2080, qualityMod: 7, budgetMult: 1.8, genreLimit: null, techDesc: 'Holographic and VR experiences.', announcement: 'Cinema becomes immersive experience.' },
+  { id: 'neural', name: 'Neural Cinema', startYear: 2080, endYear: 9999, qualityMod: 10, budgetMult: 2.0, genreLimit: null, techDesc: 'Direct neural storytelling.', announcement: 'Neural cinema: audiences live the story.' },
+];
+
+const getCurrentFilmEra = (year) => FILMMAKING_ERAS.slice().reverse().find(e => year >= e.startYear) || FILMMAKING_ERAS[0];
+
+// ==================== SYSTEM 2: ACQUISITION TARGETS ====================
+const ACQUISITION_TARGETS = [
+  { id: 'talent_agency', name: 'Talent Agency', type: 'agency', baseCost: 50e6, benefit: 'All hiring costs -20%. Exclusive first pick of new talent.', benefitEffect: { hiringDiscount: 0.20, talentPriority: true } },
+  { id: 'vfx_house', name: 'VFX House', type: 'production', baseCost: 80e6, benefit: '+10 quality on VFX-heavy genres. -15% VFX budget.', benefitEffect: { vfxQuality: 10, vfxDiscount: 0.15 } },
+  { id: 'music_label', name: 'Music Label', type: 'production', baseCost: 40e6, benefit: 'Soundtrack revenue +200%. +5 quality on Musical.', benefitEffect: { soundtrackMult: 3, musicalQuality: 5 } },
+  { id: 'animation_studio', name: 'Animation Studio', type: 'production', baseCost: 120e6, benefit: '+15 quality on Animation. -20% Animation costs.', benefitEffect: { animQuality: 15, animDiscount: 0.20 } },
+  { id: 'indie_label', name: 'Indie Distribution Label', type: 'distribution', baseCost: 30e6, benefit: '+15 prestige per film. Sundance/Cannes access boost.', benefitEffect: { prestigeBonus: 15, festivalBoost: true } },
+  { id: 'streaming_tech', name: 'Streaming Tech Company', type: 'tech', baseCost: 150e6, benefit: 'Streaming infrastructure -30%. +5M subscriber capacity.', benefitEffect: { streamDiscount: 0.30, subCapBonus: 5e6 } },
+];
+
+// ==================== SYSTEM 3: ECONOMIC CYCLES ====================
+const ECONOMIC_CYCLES = [
+  { id: 'boom', name: 'Economic Boom', grossMult: 1.25, budgetInflation: 1.1, talentCostMult: 1.15, duration: [24, 48], desc: 'Spending is up — audiences flock to theaters.' },
+  { id: 'stable', name: 'Stable Economy', grossMult: 1.0, budgetInflation: 1.0, talentCostMult: 1.0, duration: [36, 72], desc: 'Steady economic conditions.' },
+  { id: 'recession', name: 'Recession', grossMult: 0.75, budgetInflation: 0.9, talentCostMult: 0.85, duration: [12, 36], desc: 'Belt-tightening everywhere. Cheaper talent, lower grosses.' },
+  { id: 'depression', name: 'Depression', grossMult: 0.55, budgetInflation: 0.75, talentCostMult: 0.7, duration: [12, 24], desc: 'Severe downturn. Only escapist content thrives.' },
+];
+
+// ==================== SYSTEM 3: AI STUDIOS ====================
+const AI_STUDIOS = [
+  { name: 'SynthFilm AI', founded: 2028, strategy: 'volume', filmsPerYear: 20, avgBudget: 15e6, qualityRange: [30, 65], desc: 'Churns out cheap AI-generated content at massive scale.' },
+  { name: 'DeepMind Pictures', founded: 2030, strategy: 'prestige', filmsPerYear: 5, avgBudget: 80e6, qualityRange: [60, 90], desc: 'AI-crafted prestige films that win awards.' },
+  { name: 'NeuralVerse Studios', founded: 2032, strategy: 'franchise', filmsPerYear: 8, avgBudget: 120e6, qualityRange: [50, 80], desc: 'AI builds infinite franchise expansions.' },
+  { name: 'AutoDirector', founded: 2035, strategy: 'niche', filmsPerYear: 12, avgBudget: 5e6, qualityRange: [40, 70], desc: 'Hyper-personalized films for niche audiences.' },
+  { name: 'Prometheus AI', founded: 2040, strategy: 'blockbuster', filmsPerYear: 6, avgBudget: 200e6, qualityRange: [55, 85], desc: 'AI-driven blockbusters with perfect market optimization.' },
+];
+
+// ==================== SYSTEM 3: WORLD EVENTS ====================
+const WORLD_EVENTS = [
+  { id: 'pandemic_2020', name: 'Global Pandemic', triggerYear: 2020, duration: 18, grossMult: 0.35, streamingBoost: 2.0, productionDelay: 3, desc: 'Theaters shut down worldwide. Streaming surges.', unique: true },
+  { id: 'writers_strike_2023', name: "Writers' Guild Strike", triggerYear: 2023, duration: 6, productionDelay: 2, qualityMod: -5, desc: 'Writers walk out. Productions halt.', unique: true },
+  { id: 'actors_strike_2023', name: 'SAG-AFTRA Strike', triggerYear: 2023, duration: 4, productionDelay: 2, talentCostMult: 1.3, desc: 'Actors demand fair AI compensation.', unique: true },
+  { id: 'metaverse_hype', name: 'Metaverse Hype Cycle', triggerYear: 2027, duration: 24, genreBoost: { 'Sci-Fi': 0.2, Animation: 0.15 }, desc: 'Virtual worlds captivate public imagination.' },
+  { id: 'ai_regulation', name: 'AI Content Regulation', triggerYear: 2030, duration: 36, qualityMod: -3, budgetMult: 1.1, desc: 'Governments regulate AI in filmmaking.' },
+  { id: 'fusion_power', name: 'Fusion Power Revolution', triggerYear: 2050, duration: 48, budgetMult: 0.85, qualityMod: 3, desc: 'Cheap energy transforms production costs.' },
+];
+
+// ==================== SYSTEM 4: LABOR RELATIONS ====================
+const LABOR_RELATIONS = {
+  excellent: { name: 'Excellent', costMod: 1.05, qualityMod: 5, strikeChance: 0.0, desc: 'Unions love working with you.' },
+  good: { name: 'Good', costMod: 1.0, qualityMod: 2, strikeChance: 0.01, desc: 'Smooth labor relations.' },
+  neutral: { name: 'Neutral', costMod: 1.0, qualityMod: 0, strikeChance: 0.03, desc: 'Standard industry relations.' },
+  poor: { name: 'Poor', costMod: 0.95, qualityMod: -3, strikeChance: 0.08, desc: 'Tension with unions.' },
+  hostile: { name: 'Hostile', costMod: 0.90, qualityMod: -8, strikeChance: 0.15, desc: 'Workers may walk out.' },
+};
+
+// ==================== SYSTEM 4: CAREER STAGES ====================
+const CAREER_STAGES = [
+  { id: 'unknown', name: 'Unknown', salaryMult: 0.3, qualityMod: -5, popularityRange: [5, 25], desc: 'Nobody knows them yet.' },
+  { id: 'rising', name: 'Rising Star', salaryMult: 0.6, qualityMod: 0, popularityRange: [20, 50], desc: 'Critics and audiences are noticing.' },
+  { id: 'aList', name: 'A-List', salaryMult: 1.2, qualityMod: 5, popularityRange: [60, 90], desc: 'Top of the industry.' },
+  { id: 'established', name: 'Established', salaryMult: 1.0, qualityMod: 3, popularityRange: [45, 75], desc: 'Reliable and respected.' },
+  { id: 'declining', name: 'Declining', salaryMult: 0.7, qualityMod: -3, popularityRange: [20, 50], desc: 'Past their prime.' },
+  { id: 'comeback', name: 'Comeback', salaryMult: 0.9, qualityMod: 8, popularityRange: [40, 70], desc: 'Against all odds, they\'re back!' },
+  { id: 'legendary', name: 'Legendary', salaryMult: 1.5, qualityMod: 10, popularityRange: [70, 99], desc: 'An icon of cinema.' },
+];
+
+const getCareerStage = (talent) => {
+  if (!talent) return CAREER_STAGES[0];
+  const films = talent.filmography || 0;
+  const hits = talent.consecutiveHits || 0;
+  const age = talent.age || 25;
+  const popularity = talent.popularity || 30;
+
+  if (age >= 55 && films >= 20 && popularity >= 70) return CAREER_STAGES.find(s => s.id === 'legendary');
+  if (talent._wasDeclined && hits >= 2) return CAREER_STAGES.find(s => s.id === 'comeback');
+  if (age >= 50 && popularity < 40) return CAREER_STAGES.find(s => s.id === 'declining');
+  if (popularity >= 70 && films >= 5) return CAREER_STAGES.find(s => s.id === 'aList');
+  if (films >= 8 && popularity >= 40) return CAREER_STAGES.find(s => s.id === 'established');
+  if (films >= 2 || popularity >= 30) return CAREER_STAGES.find(s => s.id === 'rising');
+  return CAREER_STAGES[0];
+};
+
+// ==================== SYSTEM 4: AGENT DEAL TYPES ====================
+const AGENT_DEAL_TYPES = [
+  { id: 'standard', name: 'Standard Contract', salaryMult: 1.0, years: 3, desc: 'Basic deal — annual salary, no frills.' },
+  { id: 'option', name: 'Option Deal', salaryMult: 0.7, years: 1, optionYears: 2, desc: '1-year deal with 2-year option. Cheaper but they can walk.' },
+  { id: 'backend', name: 'Back-End Deal', salaryMult: 0.5, profitSharePct: 5, years: 3, desc: 'Lower salary, 5% of net profits per film.' },
+  { id: 'exclusive', name: 'Exclusive Multi-Year', salaryMult: 1.4, years: 5, exclusive: true, desc: 'Premium deal — they work only for you.' },
+  { id: 'perFilm', name: 'Per-Film Deal', salaryMult: 1.3, years: 0, perFilm: true, desc: 'No commitment — hire per project at premium rates.' },
+];
+
 // ==================== CULTURAL MOVEMENTS ====================
 const CULTURAL_MOVEMENTS = [
   { name: 'Civil Rights Movement', startYear: 1970, endYear: 1985, genreBoost: { Drama: 0.2, Documentary: 0.3 }, prestigeBonus: 3, desc: 'Social justice films resonate deeply.' },
@@ -1199,6 +1310,47 @@ const FILM_FESTIVALS = [
 // ==================== TV/SERIES DIVISION ====================
 const TV_GENRES = ['Drama Series', 'Comedy Series', 'Sci-Fi Series', 'Thriller Series', 'Documentary Series', 'Animation Series', 'Reality Show'];
 
+const TV_FORMATS = [
+  { id: 'drama', name: 'Drama Series', episodesRange: [8, 13], baseCostPerEp: 3e6, qualityWeight: 0.9, audienceBase: 1.0 },
+  { id: 'comedy', name: 'Comedy Series', episodesRange: [10, 22], baseCostPerEp: 1.5e6, qualityWeight: 0.7, audienceBase: 1.2 },
+  { id: 'scifi', name: 'Sci-Fi Series', episodesRange: [8, 10], baseCostPerEp: 5e6, qualityWeight: 0.85, audienceBase: 0.8 },
+  { id: 'thriller', name: 'Thriller Series', episodesRange: [8, 10], baseCostPerEp: 3.5e6, qualityWeight: 0.85, audienceBase: 0.9 },
+  { id: 'docuseries', name: 'Documentary Series', episodesRange: [6, 8], baseCostPerEp: 1e6, qualityWeight: 0.8, audienceBase: 0.6 },
+  { id: 'animation', name: 'Animation Series', episodesRange: [10, 13], baseCostPerEp: 2e6, qualityWeight: 0.75, audienceBase: 1.1 },
+  { id: 'reality', name: 'Reality Show', episodesRange: [10, 16], baseCostPerEp: 500000, qualityWeight: 0.4, audienceBase: 1.5 },
+  { id: 'limited', name: 'Limited Series', episodesRange: [6, 8], baseCostPerEp: 4e6, qualityWeight: 0.95, audienceBase: 0.7, maxSeasons: 1 },
+];
+
+const STREAMING_TIERS = [
+  { id: 'basic', name: 'Ad-Supported', monthlyPrice: 5.99, adRevPerSub: 3, churnRate: 0.08, desc: 'Free with ads — high volume, high churn' },
+  { id: 'standard', name: 'Standard', monthlyPrice: 12.99, adRevPerSub: 0, churnRate: 0.04, desc: 'No ads — the sweet spot' },
+  { id: 'premium', name: 'Premium', monthlyPrice: 19.99, adRevPerSub: 0, churnRate: 0.03, desc: '4K, downloads, exclusive early access' },
+];
+
+const RIVAL_STREAMERS = [
+  { name: 'RedStream', tier: 'major', baseSubscribers: 100e6, contentBudget: 800e6, founded: 2007, desc: 'The pioneer — started with DVDs, conquered streaming.' },
+  { name: 'GreenClip', tier: 'mid', baseSubscribers: 30e6, contentBudget: 200e6, founded: 2008, desc: 'Ad-supported upstart backed by broadcast networks.' },
+  { name: 'Titan Video', tier: 'major', baseSubscribers: 80e6, contentBudget: 700e6, founded: 2011, desc: 'Tech giant with unlimited cash and fast shipping perks.' },
+  { name: 'CastleVision+', tier: 'major', baseSubscribers: 60e6, contentBudget: 600e6, founded: 2019, desc: 'Family entertainment empire goes direct-to-consumer.' },
+  { name: 'MaxScreen', tier: 'major', baseSubscribers: 40e6, contentBudget: 500e6, founded: 2020, desc: 'Premium prestige content from a legendary studio.' },
+  { name: 'Orchard TV+', tier: 'mid', baseSubscribers: 25e6, contentBudget: 400e6, founded: 2019, desc: 'Tech company betting big on original prestige content.' },
+  { name: 'Plume', tier: 'mid', baseSubscribers: 15e6, contentBudget: 150e6, founded: 2020, desc: 'Broadcast network reinvents itself for the streaming age.' },
+  { name: 'Summit+', tier: 'mid', baseSubscribers: 20e6, contentBudget: 200e6, founded: 2021, desc: 'Classic studio catalog meets modern streaming.' },
+];
+
+const CONTENT_DISTRIBUTION_OPTIONS = [
+  { id: 'theatrical', name: 'Theatrical Release', desc: 'Traditional wide release in cinemas', filmOnly: true },
+  { id: 'streaming_exclusive', name: 'Streaming Exclusive', desc: 'Skip theaters, release directly on your platform', requiresStreaming: true },
+  { id: 'hybrid', name: 'Hybrid Release', desc: 'Theaters first, then streaming after window', requiresStreaming: true },
+  { id: 'day_and_date', name: 'Day-and-Date', desc: 'Simultaneous theater + streaming', requiresStreaming: true },
+];
+
+const WINDOWING_OPTIONS = [
+  { id: 'exclusive_90', name: '90-Day Exclusive', theatricalBonus: 1.0, streamingDelay: 3, desc: 'Full theatrical run before streaming' },
+  { id: 'exclusive_45', name: '45-Day Window', theatricalBonus: 0.85, streamingDelay: 1.5, desc: 'Shortened window, faster to streaming' },
+  { id: 'simultaneous', name: 'Same Day', theatricalBonus: 0.5, streamingDelay: 0, desc: 'Both at once — cannibalizes box office but boosts subs' },
+];
+
 // ==================== THEME PARKS ====================
 const THEME_PARK_TIERS = [
   { name: 'Small Theme Park', cost: 50000000, monthlyRevenue: 700000, prestigeBonus: 5, minFranchises: 1, buildMonths: 12 },
@@ -1324,6 +1476,68 @@ const getCreditRating = (state) => {
   const score = calcCreditScore(state);
   return CREDIT_RATINGS.find(r => score >= r.minScore) || CREDIT_RATINGS[CREDIT_RATINGS.length - 1];
 };
+
+// ==================== AI COMPETITION SYSTEMS ====================
+
+// CEO Archetypes with deep behavior patterns
+const CEO_ARCHETYPES = [
+  { id: 'blockbuster_king', name: 'The Blockbuster King', strategy: 'tentpole', aggression: 0.7, riskTolerance: 0.8,
+    genreWeights: { Action: 3, 'Sci-Fi': 2.5, Fantasy: 2, Animation: 1.5, Comedy: 1, Drama: 0.5 },
+    budgetMult: 1.5, marketingMult: 1.6, franchiseFocus: 0.6, acquisitionRate: 0.05,
+    desc: 'Goes big on tentpoles and franchises. High risk, high reward.' },
+  { id: 'bean_counter', name: 'The Bean Counter', strategy: 'conservative', aggression: 0.25, riskTolerance: 0.2,
+    genreWeights: { Comedy: 2, Horror: 2, Drama: 1.5, Thriller: 1.5, Documentary: 1, Romance: 1 },
+    budgetMult: 0.6, marketingMult: 0.7, franchiseFocus: 0.1, acquisitionRate: 0.01,
+    desc: 'Conservative, steady profits, rarely takes risks.' },
+  { id: 'prestige_chaser', name: 'The Prestige Chaser', strategy: 'awards', aggression: 0.4, riskTolerance: 0.5,
+    genreWeights: { Drama: 3, Documentary: 2, War: 1.5, Romance: 1, Mystery: 1 },
+    budgetMult: 0.9, marketingMult: 0.5, franchiseFocus: 0.05, acquisitionRate: 0.03,
+    desc: 'Burns money for awards. Critics over box office.' },
+  { id: 'disruptor', name: 'The Disruptor', strategy: 'streaming', aggression: 0.6, riskTolerance: 0.7,
+    genreWeights: { Thriller: 2, Horror: 2, 'Sci-Fi': 1.5, Comedy: 1.5, Drama: 1 },
+    budgetMult: 0.8, marketingMult: 1.3, franchiseFocus: 0.3, acquisitionRate: 0.08,
+    desc: 'Streaming-first. Buys IP aggressively, undercuts on pricing.' },
+  { id: 'legacy_studio', name: 'The Legacy Studio', strategy: 'franchise', aggression: 0.35, riskTolerance: 0.3,
+    genreWeights: { Animation: 2, Fantasy: 2, Action: 1.5, 'Sci-Fi': 1, Musical: 1 },
+    budgetMult: 1.2, marketingMult: 1.1, franchiseFocus: 0.8, acquisitionRate: 0.02,
+    desc: 'Franchise-dependent. Slow to adapt but massive catalog.' },
+];
+
+// Espionage/dirty tricks types
+const ESPIONAGE_ACTIONS = [
+  { id: 'twin_film', name: 'Twin Film', desc: 'A rival rushes a suspiciously similar film to market before yours.', playerGrossPenalty: 0.25, cost: 0, detectChance: 0.3 },
+  { id: 'talent_tamper', name: 'Talent Tampering', desc: 'A rival whispers sweet nothings to your contracted talent.', relationshipPenalty: 15, cost: 0, detectChance: 0.4 },
+  { id: 'leaked_script', name: 'Script Leak', desc: 'Your upcoming film\'s plot was leaked online.', openingWeekendPenalty: 0.2, cost: 0, detectChance: 0.5 },
+  { id: 'negative_reviews', name: 'Planted Negative Reviews', desc: 'Suspicious wave of negative reviews appeared.', criticScorePenalty: 8, cost: 0, detectChance: 0.35 },
+  { id: 'poach_crew', name: 'Key Crew Poached', desc: 'A rival hired away your key crew mid-production.', qualityPenalty: 10, delayMonths: 1, cost: 0, detectChance: 0.45 },
+  { id: 'smear_campaign', name: 'Smear Campaign', desc: 'Negative press about your studio appeared during awards season.', awardsPenalty: 0.3, repPenalty: 5, cost: 0, detectChance: 0.4 },
+];
+
+// Player espionage actions (risky but rewarding)
+const PLAYER_ESPIONAGE = [
+  { id: 'spy_development', name: 'Spy on Development', cost: 2e6, successChance: 0.6, caughtChance: 0.2, repPenalty: 10, desc: 'Learn what rivals are developing. Helps counter-program.' },
+  { id: 'poach_talent', name: 'Poach Rival Talent', cost: 5e6, successChance: 0.5, caughtChance: 0.25, repPenalty: 8, desc: 'Lure top talent from a rival studio.' },
+  { id: 'plant_mole', name: 'Plant a Mole', cost: 3e6, successChance: 0.4, caughtChance: 0.15, repPenalty: 15, desc: 'Insider at a rival studio. Early warning on releases.' },
+  { id: 'sabotage_marketing', name: 'Sabotage Marketing', cost: 4e6, successChance: 0.45, caughtChance: 0.3, repPenalty: 12, desc: 'Undermine a rival\'s film marketing campaign.' },
+  { id: 'counter_intel', name: 'Counter-Intelligence', cost: 8e6, successChance: 0.8, caughtChance: 0, repPenalty: 0, desc: 'Protect your studio from espionage. Reduces rival spy success by 50%.' },
+];
+
+// Industry coalition types
+const INDUSTRY_COALITIONS = [
+  { id: 'theatrical_alliance', name: 'Theatrical Alliance', desc: 'Push for longer theatrical windows. Hurts streaming, boosts box office.', effect: { theatricalGrossMult: 1.15, streamingRevMult: 0.85 }, opposedBy: 'streaming' },
+  { id: 'streaming_coalition', name: 'Streaming Coalition', desc: 'Push for shorter windows. Boosts streaming, hurts theatrical.', effect: { theatricalGrossMult: 0.85, streamingRevMult: 1.2 }, opposedBy: 'theatrical' },
+  { id: 'talent_guild', name: 'Talent Guild Alliance', desc: 'Support union demands. Higher costs but better talent access.', effect: { talentCostMult: 1.15, qualityMod: 3, laborBonus: true } },
+  { id: 'tech_consortium', name: 'Tech Consortium', desc: 'Invest in new filmmaking tech. Early access to innovations.', effect: { techDiscount: 0.2, qualityMod: 2 } },
+  { id: 'indie_collective', name: 'Independent Film Collective', desc: 'Support indie filmmaking. Prestige boost, festival advantages.', effect: { prestigeBonus: 5, festivalBoost: 0.15 } },
+];
+
+// Lobby regulation types
+const LOBBY_REGULATIONS = [
+  { id: 'extend_windows', name: 'Extended Theatrical Windows', targetBiz: 'streaming', effect: { streamingDelay: 2, theatricalBonus: 0.1 }, desc: 'Forces 90-day theatrical exclusivity.' },
+  { id: 'ai_content_tax', name: 'AI Content Tax', targetBiz: 'ai', effect: { aiCostPenalty: 0.25 }, desc: 'Tax on AI-generated content hits AI studios.' },
+  { id: 'foreign_film_quota', name: 'Foreign Film Quota', targetBiz: 'international', effect: { domesticBonus: 0.1 }, desc: 'Limits foreign film market share.' },
+  { id: 'antitrust_action', name: 'Antitrust Investigation', targetBiz: 'dominant', effect: { acquisitionBlock: true, repPenalty: 5 }, desc: 'Triggered when one studio gets too big.' },
+];
 
 // ==================== DIRECTOR-ACTOR CHEMISTRY ====================
 const calcChemistry = (directorId, actorId, films) => {
@@ -1457,6 +1671,20 @@ const calcQuality = (film, facilitiesLevel, genreTrend, specialization) => {
   // Apply adaptation/sequel/reboot quality bonuses
   if (film._qualityBonus) base += film._qualityBonus;
 
+  // Coalition quality bonus
+  if (film._coalitionQualityMod) base += film._coalitionQualityMod;
+
+  // Filmmaking era quality modifier
+  if (film._eraQualityMod !== undefined) base += film._eraQualityMod;
+  // Era-specific genre bonuses
+  if (film._eraId) {
+    if (film._eraId === 'digital' && ['Sci-Fi', 'Action', 'Fantasy', 'Animation'].includes(film.genre)) base += 4; // CGI revolution boosts VFX genres
+    if (film._eraId === 'franchise' && film.franchiseId !== null) base += 3; // Franchise era rewards franchise films
+    if (film._eraId === 'aiAge' && ['Sci-Fi', 'Fantasy'].includes(film.genre)) base += 3; // Virtual production boosts these
+    if (film._eraId === 'immersive' && ['Action', 'Sci-Fi', 'Fantasy', 'Horror'].includes(film.genre)) base += 5; // Immersive tech
+    if (film._eraId === 'silent' && ['Drama', 'Comedy', 'Horror'].includes(film.genre)) base += 3; // Silent era masters
+  }
+
   // Budget allocation quality impact
   if (film.budgetAlloc) {
     const alloc = film.budgetAlloc;
@@ -1569,6 +1797,23 @@ const calcBoxOffice = (quality, budget, marketing, year, genre, film) => {
     // Adaptations apply marketing bonus
     domestic = domestic * film._marketingMult;
     international = international * film._marketingMult;
+  }
+
+  // Apply espionage penalties (twin film and leaked script)
+  if (film && film._twinFilmPenalty) {
+    domestic *= (1 - film._twinFilmPenalty);
+    international *= (1 - film._twinFilmPenalty);
+  }
+  if (film && film._leakedScript) {
+    domestic *= 0.85;
+    international *= 0.85;
+  }
+
+  // Filmmaking era revenue modifier (later eras have bigger global markets)
+  if (film && film._eraBudgetMult) {
+    const eraRevMult = 0.7 + film._eraBudgetMult * 0.3; // ranges from 0.79 (silent) to 1.3 (neural)
+    domestic *= eraRevMult;
+    international *= eraRevMult;
   }
 
   const totalGross = domestic + international;
@@ -1738,8 +1983,20 @@ const INIT = {
   // Film festivals
   festivalSubmissions: [],  // [{filmId, festivalId, year, result}]
   // TV division
-  tvShows: [],              // [{id, title, genre, quality, seasons, subscriberBoost, monthlyRevenue, status}]
+  tvShows: [],              // [{id, title, format, genre, showrunnerId, quality, seasons, currentSeason, episodes, episodeCost, totalCost, status:'development'|'production'|'airing'|'renewed'|'cancelled'|'ended', viewership, criticScore, subscriberImpact, turnsInStatus, turnsNeeded, releaseStrategy}]
+  tvDevFormat: null,        // selected TV format id
+  tvDevShowrunnerId: null,  // showrunner for TV development
+  tvDevEpisodes: 8,         // episode order
+  tvDevBudgetPerEp: 3,      // budget per episode in $M
+  tvDevTitle: '',           // custom title
+  tvDevDistribution: 'streaming_exclusive', // distribution strategy
   devTvGenre: null,
+  licensingDeals: [],       // [{id, type:'in'|'out', partner, contentTitle, contentType:'film'|'show', monthlyFee, monthsLeft}]
+  streamingHistory: [],     // [{turn, subscribers, revenue, churn, contentCount}]
+  windowingStrategy: 'exclusive_45', // default windowing for hybrid releases
+  rivalStreamers: [],               // AI rival streaming platforms [{name, subscribers, contentCount, quality, ...}]
+  _streamingName: '',       // temp UI state for streaming platform name
+  _streamingTier: 'standard', // temp UI state for streaming tier
   // Director's cuts
   reReleases: [],           // [{filmId, year, grossBonus}]
   // Co-productions
@@ -1806,6 +2063,35 @@ const INIT = {
   // ---- SYSTEM 9: DISTRIBUTION ----
   distributionTier: 'self',   // current distribution deal tier
   theaterRelationship: 50,    // 0-100 relationship with theater chains
+  // ---- SYSTEM 1: FILMMAKING ERAS ----
+  currentFilmEra: 'newHollywood',
+  // ---- SYSTEM 2: ACQUISITIONS & FINANCIAL ----
+  acquisitions: [],
+  coProductionProposals: [],
+  // ---- SYSTEM 3: ECONOMIC & EVENTS ----
+  economicCycle: { phase: 'stable', monthsLeft: 48 },
+  worldEventsTriggered: [],
+  aiStudiosSpawned: [],
+  laborRelations: 'neutral',
+  // ---- SYSTEM 4: TALENT RELATIONSHIPS ----
+  talentRelationships: {},
+  talentCareerStages: {},
+  pendingDealNegotiation: null,
+  // ---- AI COMPETITION SYSTEMS ----
+  rivalMarketShare: {},         // genre -> {studioName: sharePercent}
+  rivalStrategies: {},          // studioName -> {copiedGenre, counterTarget, lastPivot}
+  rivalAlliances: [],           // [{studios: [name1, name2], purpose, monthsLeft}]
+  rivalAcquisitions: {},        // studioName -> [{type, name, year}]
+  activeEspionage: [],          // [{type, rivalName, targetFilmId, monthsLeft, effects}]
+  playerEspionage: [],          // [{type, targetRival, monthsLeft, active}]
+  studioSecurity: 0,            // 0-100, reduces espionage success rate
+  industryCoalitions: [],       // [{id, members: [studioNames], monthsLeft, effects}]
+  activeRegulations: [],        // [{id, name, monthsLeft, effects}]
+  playerCoalition: null,        // coalition id player has joined
+  rivalBidWars: [],             // [{scriptIdx, rivalName, rivalBid}] — active bid wars on scripts
+  twinFilmWarnings: [],         // [{rivalName, genre, title, monthsUntilRelease}]
+  espionageLog: [],             // [{turn, type, rival, result, desc}]
+  difficultyScale: 1.0,         // adaptive difficulty multiplier
 };
 
 function reducer(state, action) {
@@ -1823,6 +2109,9 @@ function reducer(state, action) {
         const types = ['actor', 'director', 'writer', 'producer'];
         return makeTalent(10 + i, pick(types), [25, 90]);
       });
+      // Add initial showrunner to available talent
+      const showrunner = makeTalent(21, 'showrunner', [30, 50]);
+      avail.push(showrunner);
       const spec = SPECIALIZATIONS[action.specialization || 0];
       const startYear = scenario.startYear || 1970;
       const startCash = scenario.startCash || 2000000;
@@ -2173,6 +2462,21 @@ function reducer(state, action) {
       // Apply filming location cost multiplier
       const filmLoc = FILMING_LOCATIONS.find(l => l.id === (state.devLocation || 'hollywood'));
       if (filmLoc) budget = Math.round(budget * filmLoc.costMult);
+
+      // Apply tech consortium VFX discount
+      const techCoal = state.playerCoalition ? INDUSTRY_COALITIONS.find(c => c.id === state.playerCoalition) : null;
+      const isVFXHeavy = ['Sci-Fi', 'Action', 'Fantasy', 'Animation'].includes(script.genre);
+      if (techCoal?.effect?.techDiscount && isVFXHeavy) {
+        budget = Math.round(budget * (1 - techCoal.effect.techDiscount));
+      }
+
+      // Apply era and zeitgeist budget multipliers
+      const era = getCurrentFilmEra(state.year);
+      const eraBudgetMult = era.budgetMult || 1.0;
+      const zeitgeistBudgetMult = (state.activeZeitgeist || []).reduce((m, z) => m * (z.budgetInflation || 1.0), 1.0);
+      budget = Math.round(budget * eraBudgetMult * zeitgeistBudgetMult);
+      marketing = Math.round(marketing * zeitgeistBudgetMult); // Zeitgeist affects marketing too
+
       // Apply co-production cost sharing
       const activeCoProd = state.coProductions.find(cp => cp.active);
       let totalCost = budget + marketing + adaptationCost;
@@ -2243,7 +2547,13 @@ function reducer(state, action) {
         investor: investorId, // investor type id or null
         insured: isInsured, // whether insurance was purchased
         targetReleaseMonth: state.devReleaseMonth, // Feature 1: target month for release
+        _eraQualityMod: era.qualityMod || 0,
+        _eraId: era.id,
+        _eraBudgetMult: eraBudgetMult,
       };
+
+      const playerCoalition = state.playerCoalition ? INDUSTRY_COALITIONS.find(c => c.id === state.playerCoalition) : null;
+      if (playerCoalition?.effect?.qualityMod) film._coalitionQualityMod = playerCoalition.effect.qualityMod;
 
       let updatedFranchises = state.franchises;
       if (state.devFilmType === 'sequel' && franchiseId !== null) {
@@ -2333,13 +2643,256 @@ function reducer(state, action) {
     }
 
     case 'LAUNCH_STREAMING': {
-      if (state.year < 2005 || state.cash < 50000000 || state.streamingPlatform) return state;
+      if (state.year < 2005) return { ...state, errorMsg: 'Streaming technology is not available yet. Come back after 2005.' };
+      if (state.cash < 100e6) return { ...state, errorMsg: 'Need $100M to launch a streaming platform.' };
+      if (state.streamingPlatform) return { ...state, errorMsg: 'Already have a streaming platform!' };
+      // Back catalog: all released films are automatically in the streaming library
+      const backCatalog = state.films.filter(f => f.status === 'released').map(f => f.id);
+      const platform = {
+        name: state._streamingName || `${state.studioName}+`,
+        subscribers: 0,
+        tier: state._streamingTier || 'standard',
+        adTier: false,
+        contentLibrary: backCatalog.length,
+        tvContentCount: 0,
+        launchYear: state.year,
+        monthlyRevenue: 0,
+        churnRate: STREAMING_TIERS.find(t => t.id === (state._streamingTier || 'standard'))?.churnRate || 0.04,
+        licensedInContent: 0,
+        marketingSpend: 0,
+        catalogFilmIds: backCatalog, // track which films are on platform
+        catalogShowIds: [],          // track which TV shows are on platform
+      };
+      // Rival streamers that exist by this year
+      const activeRivals = RIVAL_STREAMERS.filter(s => s.founded <= state.year).map(s => ({
+        ...s,
+        subscribers: Math.round(s.baseSubscribers * (0.5 + Math.random() * 0.6) * Math.min(1, (state.year - s.founded + 1) / 5)),
+        contentCount: randInt(20, 150) + (state.year - s.founded) * 15,
+        quality: randInt(50, 80),
+      }));
       return {
         ...state,
-        cash: state.cash - 50000000,
-        streamingPlatform: { subscribers: 100000, launched: state.year },
-        gameLog: [...state.gameLog, { text: `Launched streaming platform "${state.studioName}+"! 100K initial subscribers.`, type: 'success' }],
+        cash: state.cash - 100e6,
+        streamingPlatform: platform,
+        rivalStreamers: activeRivals,
+        gameLog: [...state.gameLog, { text: `Launched streaming platform "${platform.name}"! Invested $100M. ${backCatalog.length} films from your back catalog added to the library.`, type: 'success' }],
+        errorMsg: '',
+        _streamingName: '',
+        _streamingTier: 'standard',
       };
+    }
+
+    case 'SET_STREAMING_TIER': {
+      if (!state.streamingPlatform) return state;
+      const tier = STREAMING_TIERS.find(t => t.id === action.tier);
+      if (!tier) return state;
+      return {
+        ...state,
+        streamingPlatform: { ...state.streamingPlatform, tier: action.tier, churnRate: tier.churnRate },
+        gameLog: [...state.gameLog, { text: `Streaming tier changed to ${tier.name} ($${tier.monthlyPrice}/mo).`, type: 'info' }],
+      };
+    }
+
+    case 'TOGGLE_AD_TIER': {
+      if (!state.streamingPlatform) return state;
+      return {
+        ...state,
+        streamingPlatform: { ...state.streamingPlatform, adTier: !state.streamingPlatform.adTier },
+      };
+    }
+
+    case 'STREAMING_MARKETING': {
+      if (!state.streamingPlatform) return state;
+      const spend = action.amount || 5e6;
+      if (state.cash < spend) return { ...state, errorMsg: 'Not enough cash for streaming marketing.' };
+      return {
+        ...state,
+        cash: state.cash - spend,
+        streamingPlatform: { ...state.streamingPlatform, marketingSpend: (state.streamingPlatform.marketingSpend || 0) + spend },
+        gameLog: [...state.gameLog, { text: `Spent ${fmt(spend)} on streaming platform marketing.`, type: 'info' }],
+        errorMsg: '',
+      };
+    }
+
+    case 'GREENLIGHT_TV': {
+      const format = TV_FORMATS.find(f => f.id === state.tvDevFormat);
+      if (!format) return { ...state, errorMsg: 'Select a TV format first.' };
+      const showrunner = state.contracts.find(t => t.id === state.tvDevShowrunnerId && t.type === 'showrunner');
+      if (!showrunner) return { ...state, errorMsg: 'Assign a showrunner first.' };
+      const episodes = state.tvDevEpisodes || format.episodesRange[0];
+      const costPerEp = (state.tvDevBudgetPerEp || 3) * 1e6;
+      const totalCost = episodes * costPerEp;
+      if (state.cash < totalCost) return { ...state, errorMsg: `Need ${fmt(totalCost)} to greenlight this show.` };
+
+      const formatName = format.name;
+      const titlePool = (gameContent.tvShowTitles && gameContent.tvShowTitles[formatName]) || [];
+      const usedTitles = new Set(state.tvShows.map(s => s.title));
+      const available = titlePool.filter(t => !usedTitles.has(t.title || t));
+      const picked = available.length > 0 ? pick(available) : { title: state.tvDevTitle || `${state.studioName} Series #${state.tvShows.length + 1}`, logline: 'A new show in development.' };
+      const title = state.tvDevTitle || (typeof picked === 'object' ? picked.title : picked);
+
+      const show = {
+        id: state.nextId,
+        title,
+        logline: typeof picked === 'object' ? picked.logline : '',
+        format: format.id,
+        formatName: format.name,
+        showrunnerId: showrunner.id,
+        showrunnerName: showrunner.name,
+        quality: 0,
+        seasons: 0,
+        currentSeason: 1,
+        episodes,
+        episodeCost: costPerEp,
+        totalCost,
+        status: 'development',
+        viewership: 0,
+        criticScore: 0,
+        audienceScore: 0,
+        subscriberImpact: 0,
+        turnsInStatus: 0,
+        turnsNeeded: 2,
+        prodTurns: Math.ceil(episodes / 3),
+        releaseStrategy: state.tvDevDistribution || 'streaming_exclusive',
+        year: state.year,
+        events: [],
+      };
+
+      return {
+        ...state,
+        tvShows: [...state.tvShows, show],
+        cash: state.cash - totalCost,
+        nextId: state.nextId + 1,
+        tvDevFormat: null,
+        tvDevShowrunnerId: null,
+        tvDevTitle: '',
+        gameLog: [...state.gameLog, { text: `Greenlit "${title}" (${format.name}, ${episodes} eps, ${fmt(totalCost)})!`, type: 'success' }],
+        errorMsg: '',
+      };
+    }
+
+    case 'SET_TV_DEV': {
+      return { ...state, [action.field]: action.value };
+    }
+
+    case 'RENEW_SHOW': {
+      const show = state.tvShows.find(s => s.id === action.showId);
+      if (!show || show.status !== 'airing') return state;
+      const format = TV_FORMATS.find(f => f.id === show.format);
+      if (format && format.maxSeasons && show.seasons >= format.maxSeasons) return { ...state, errorMsg: 'Limited series cannot be renewed.' };
+      const renewCost = show.totalCost * 0.9;
+      if (state.cash < renewCost) return { ...state, errorMsg: `Need ${fmt(renewCost)} to renew.` };
+      return {
+        ...state,
+        tvShows: state.tvShows.map(s => s.id === action.showId ? { ...s, status: 'production', currentSeason: s.currentSeason + 1, turnsInStatus: 0, turnsNeeded: Math.ceil(s.episodes / 3), totalCost: s.totalCost + renewCost, events: [...(s.events || []), `Renewed for Season ${s.currentSeason + 1}`] } : s),
+        cash: state.cash - renewCost,
+        gameLog: [...state.gameLog, { text: `Renewed "${show.title}" for Season ${show.currentSeason + 1}! Cost: ${fmt(renewCost)}`, type: 'success' }],
+        errorMsg: '',
+      };
+    }
+
+    case 'CANCEL_SHOW': {
+      const show = state.tvShows.find(s => s.id === action.showId);
+      if (!show) return state;
+      return {
+        ...state,
+        tvShows: state.tvShows.map(s => s.id === action.showId ? { ...s, status: 'cancelled' } : s),
+        gameLog: [...state.gameLog, { text: `Cancelled "${show.title}" after ${show.seasons} season(s).`, type: 'warning' }],
+      };
+    }
+
+    case 'LICENSE_CONTENT_OUT': {
+      const content = action.contentType === 'film'
+        ? state.films.find(f => f.id === action.contentId && f.status === 'released')
+        : state.tvShows.find(s => s.id === action.contentId && (s.status === 'airing' || s.status === 'ended'));
+      if (!content) return state;
+      const monthlyFee = Math.round((content.quality || 50) * 5000 * (action.contentType === 'show' ? 2 : 1));
+      const deal = {
+        id: state.nextId,
+        type: 'out',
+        partner: action.partner || pick(RIVAL_STREAMERS).name,
+        contentTitle: content.title,
+        contentType: action.contentType,
+        monthlyFee,
+        monthsLeft: 12,
+      };
+      return {
+        ...state,
+        licensingDeals: [...(state.licensingDeals || []), deal],
+        nextId: state.nextId + 1,
+        gameLog: [...state.gameLog, { text: `Licensed "${content.title}" to ${deal.partner} for ${fmt(monthlyFee)}/mo (12 months).`, type: 'success' }],
+      };
+    }
+
+    case 'LICENSE_CONTENT_IN': {
+      if (!state.streamingPlatform) return { ...state, errorMsg: 'Launch a streaming platform first.' };
+      const monthlyFee = action.monthlyFee || randInt(50000, 300000);
+      const deal = {
+        id: state.nextId,
+        type: 'in',
+        partner: action.partner || 'External Studio',
+        contentTitle: action.title || 'Licensed Content Package',
+        contentType: 'package',
+        monthlyFee,
+        monthsLeft: action.months || 12,
+        qualityBoost: randInt(3, 10),
+      };
+      return {
+        ...state,
+        licensingDeals: [...(state.licensingDeals || []), deal],
+        streamingPlatform: { ...state.streamingPlatform, licensedInContent: (state.streamingPlatform.licensedInContent || 0) + 1 },
+        nextId: state.nextId + 1,
+        gameLog: [...state.gameLog, { text: `Licensed content from ${deal.partner} for ${fmt(monthlyFee)}/mo.`, type: 'info' }],
+      };
+    }
+
+    case 'SET_WINDOWING': {
+      return { ...state, windowingStrategy: action.strategy };
+    }
+
+    case 'SET_FILM_DISTRIBUTION': {
+      return {
+        ...state,
+        films: state.films.map(f => f.id === action.filmId ? { ...f, distributionStrategy: action.strategy } : f),
+      };
+    }
+
+    case 'ADD_TO_CATALOG': {
+      // Add a released film or ended show to streaming catalog
+      if (!state.streamingPlatform) return { ...state, errorMsg: 'Launch a streaming platform first.' };
+      const sp = { ...state.streamingPlatform };
+      const catalogFilmIds = [...(sp.catalogFilmIds || [])];
+      const catalogShowIds = [...(sp.catalogShowIds || [])];
+      if (action.contentType === 'film') {
+        if (catalogFilmIds.includes(action.contentId)) return { ...state, errorMsg: 'Already in your catalog.' };
+        const film = state.films.find(f => f.id === action.contentId && f.status === 'released');
+        if (!film) return state;
+        catalogFilmIds.push(action.contentId);
+        sp.catalogFilmIds = catalogFilmIds;
+        sp.contentLibrary = catalogFilmIds.length + catalogShowIds.length;
+        return { ...state, streamingPlatform: sp, gameLog: [...state.gameLog, { text: `Added "${film.title}" to ${sp.name} catalog.`, type: 'info' }] };
+      } else if (action.contentType === 'show') {
+        if (catalogShowIds.includes(action.contentId)) return { ...state, errorMsg: 'Already in your catalog.' };
+        const show = state.tvShows.find(s => s.id === action.contentId);
+        if (!show) return state;
+        catalogShowIds.push(action.contentId);
+        sp.catalogShowIds = catalogShowIds;
+        sp.contentLibrary = catalogFilmIds.length + catalogShowIds.length;
+        return { ...state, streamingPlatform: sp, gameLog: [...state.gameLog, { text: `Added "${show.title}" to ${sp.name} catalog.`, type: 'info' }] };
+      }
+      return state;
+    }
+
+    case 'REMOVE_FROM_CATALOG': {
+      if (!state.streamingPlatform) return state;
+      const sp2 = { ...state.streamingPlatform };
+      if (action.contentType === 'film') {
+        sp2.catalogFilmIds = (sp2.catalogFilmIds || []).filter(id => id !== action.contentId);
+      } else {
+        sp2.catalogShowIds = (sp2.catalogShowIds || []).filter(id => id !== action.contentId);
+      }
+      sp2.contentLibrary = (sp2.catalogFilmIds || []).length + (sp2.catalogShowIds || []).length;
+      return { ...state, streamingPlatform: sp2 };
     }
 
     case 'SCHEDULE_RELEASE': {
@@ -2534,7 +3087,7 @@ function reducer(state, action) {
     case 'PRODUCE_TV_SHOW': {
       const tvCost = 5000000; // $5M per season
       if (state.cash < tvCost) return { ...state, errorMsg: 'Not enough cash for a TV show!' };
-      if (!state.streamingPlatform) return { ...state, errorMsg: 'You need a streaming platform first!' };
+      if (!state.streamingPlatform) return { ...state, errorMsg: 'You need a streaming platform first! (Available after 2005)' };
       const tvGenre = action.genre || 'Drama Series';
       const quality = randInt(40, 85) + (state.facilitiesLevel * 2);
       const subscriberBoost = Math.round(quality * 500 + Math.random() * 20000);
@@ -2938,6 +3491,34 @@ function reducer(state, action) {
         box.domestic = Math.round(box.domestic * windowMult);
         box.international = Math.round(box.international * windowMult);
 
+        // Apply economic cycle multiplier
+        const economicCycle = ECONOMIC_CYCLES.find(c => c.id === state.economicCycle.phase);
+        const cycleGrossMult = economicCycle?.grossMult || 1.0;
+        box.domestic = Math.round(box.domestic * cycleGrossMult);
+        box.international = Math.round(box.international * cycleGrossMult);
+
+        // Apply zeitgeist event gross multipliers
+        const zeitgeistGrossMult = (state.activeZeitgeist || []).reduce((m, z) => m * (z.grossMult || 1.0), 1.0);
+        box.domestic = Math.round(box.domestic * zeitgeistGrossMult);
+        box.international = Math.round(box.international * zeitgeistGrossMult);
+
+        // Apply coalition theatrical gross modifier
+        const playerCoal = state.playerCoalition ? INDUSTRY_COALITIONS.find(c => c.id === state.playerCoalition) : null;
+        if (playerCoal?.effect?.theatricalGrossMult) {
+          box.domestic = Math.round(box.domestic * playerCoal.effect.theatricalGrossMult);
+        }
+
+        // Apply active regulation effects
+        const hasExtendedWindows = (state.activeRegulations || []).some(r => r.id === 'extend_windows');
+        if (hasExtendedWindows) {
+          box.domestic = Math.round(box.domestic * 1.1); // 10% theatrical bonus
+        }
+
+        const hasForeignQuota = (state.activeRegulations || []).some(r => r.id === 'foreign_film_quota');
+        if (hasForeignQuota) {
+          box.domestic = Math.round(box.domestic * 1.1); // 10% domestic bonus
+        }
+
         // FEATURE 6: International Box Office breakdown by market
         const intlResult = calcInternationalGross(box.domestic, f.genre, f.quality, f);
         f.internationalGross = intlResult.total;
@@ -3000,7 +3581,7 @@ function reducer(state, action) {
         }
 
         // Theater chain screen bonus
-        const screenBonus = state.theaterChains.reduce((sum, c) => sum + c.screenBonus, 0);
+        const screenBonus = theaterChains.reduce((sum, c) => sum + c.screenBonus, 0);
         if (screenBonus > 0) {
           box.domestic = Math.round(box.domestic * (1 + screenBonus));
         }
@@ -3188,6 +3769,9 @@ function reducer(state, action) {
         const dTrait = f.director.traitEffect || {}, aTrait = f.actor.traitEffect || {};
         if (dTrait.prestigeBonus) pres += dTrait.prestigeBonus;
         if (aTrait.prestigeBonus) pres += aTrait.prestigeBonus;
+        // Coalition prestige bonus
+        const indieCoal = state.playerCoalition ? INDUSTRY_COALITIONS.find(c => c.id === state.playerCoalition) : null;
+        if (indieCoal?.effect?.prestigeBonus) pres += indieCoal.effect.prestigeBonus;
         // Franchise gross
         if (f.franchiseId !== null) {
           franchises = franchises.map(fr =>
@@ -3199,7 +3783,12 @@ function reducer(state, action) {
       });
 
       // 3. Monthly expenses
-      const salaryExpense = state.contracts.reduce((sum, t) => sum + Math.round(t.salary / 12), 0);
+      let salaryExpense = state.contracts.reduce((sum, t) => sum + Math.round(t.salary / 12), 0);
+      // Apply coalition talent cost multiplier
+      const talentCostCoal = state.playerCoalition ? INDUSTRY_COALITIONS.find(c => c.id === state.playerCoalition) : null;
+      if (talentCostCoal?.effect?.talentCostMult) {
+        salaryExpense = Math.round(salaryExpense * talentCostCoal.effect.talentCostMult);
+      }
       const overhead = 50000 + state.facilitiesLevel * 30000; // scales: $80K at lvl1, $230K at lvl6
       expenses = salaryExpense + overhead;
 
@@ -3220,7 +3809,12 @@ function reducer(state, action) {
       if (streaming) {
         const growth = 1 + (Math.random() * 0.03 + 0.01); // 1-4% monthly growth
         streaming.subscribers = Math.round(streaming.subscribers * growth);
-        const streamRev = Math.round(streaming.subscribers * 1); // $1/subscriber/month
+        let streamRev = Math.round(streaming.subscribers * 1); // $1/subscriber/month
+        // Apply streaming coalition multiplier
+        const streamCoal = state.playerCoalition ? INDUSTRY_COALITIONS.find(c => c.id === state.playerCoalition) : null;
+        if (streamCoal?.effect?.streamingRevMult) {
+          streamRev = Math.round(streamRev * streamCoal.effect.streamingRevMult);
+        }
         revenue += streamRev;
       }
 
@@ -3245,7 +3839,8 @@ function reducer(state, action) {
       revenue += licensingRev;
 
       // 5b. Theme park revenue
-      let themeParks = state.themeParks.map(p => ({ ...p }));
+      let themeParks = (state.themeParks || []).map(p => ({ ...p }));
+      let theaterChains = (state.theaterChains || []).map(c => ({ ...c }));
       themeParks.forEach(park => {
         if (park.turnsLeft > 0) {
           park.turnsLeft -= 1;
@@ -3264,28 +3859,188 @@ function reducer(state, action) {
       if (merchRev > 0) revenue += merchRev;
 
       // 5d. Theater chain ticket cut revenue (cut of all industry gross)
-      const totalTheaterCut = state.theaterChains.reduce((sum, c) => sum + c.ticketCut, 0);
+      const totalTheaterCut = theaterChains.reduce((sum, c) => sum + c.ticketCut, 0);
       if (totalTheaterCut > 0) {
         const industryGross = tGross * 0.01 + state.competitors.reduce((s, c) => s + c.totalGross * 0.001, 0);
         revenue += Math.round(industryGross * totalTheaterCut);
       }
 
-      // 5e. TV show revenue
-      let tvShows = state.tvShows.map(s => ({ ...s }));
-      tvShows.forEach(show => {
-        if (show.status === 'airing') {
-          revenue += show.monthlyRevenue;
-          // Shows may get cancelled (low quality) or renewed
-          if (Math.random() < 0.1 && show.quality < 50) {
-            show.status = 'cancelled';
-            log.push({ text: `TV show "${show.title}" cancelled due to low ratings.`, type: 'warning' });
-          } else if (state.month === 12) {
-            show.seasons += 1;
-            show.quality = clamp(show.quality + randInt(-5, 3), 20, 95);
-            show.monthlyRevenue = Math.round(show.quality * 150 * show.seasons * 0.8);
+      // 5e. TV Show Pipeline
+      let tvShows = (state.tvShows || []).map(s => ({ ...s, events: [...(s.events || [])] }));
+      tvShows = tvShows.map(show => {
+        if (show.status === 'cancelled' || show.status === 'ended') return show;
+        const s = { ...show };
+        s.turnsInStatus = (s.turnsInStatus || 0) + 1;
+
+        if (s.status === 'development' && s.turnsInStatus >= s.turnsNeeded) {
+          s.status = 'production';
+          s.turnsInStatus = 0;
+          s.turnsNeeded = s.prodTurns || Math.ceil(s.episodes / 3);
+          s.events.push(`S${s.currentSeason} entered production`);
+          log.push({ text: `"${s.title}" S${s.currentSeason} entered production.`, type: 'info' });
+        } else if (s.status === 'production' && s.turnsInStatus >= s.turnsNeeded) {
+          s.status = 'airing';
+          s.turnsInStatus = 0;
+          s.turnsNeeded = s.episodes;
+          s.seasons = s.currentSeason;
+
+          const showrunner = state.contracts.find(t => t.id === s.showrunnerId);
+          let q = (showrunner ? showrunner.skill * 0.5 : 30) + randInt(10, 30);
+          const format = TV_FORMATS.find(f => f.id === s.format);
+          if (format) q *= format.qualityWeight;
+          if (showrunner?.traitEffect?.qualityBonus) {
+            const traitGenres = showrunner.traitEffect.genres || [];
+            if (traitGenres.includes(s.formatName)) q += showrunner.traitEffect.qualityBonus;
+          }
+          if (s.currentSeason > 2 && !(showrunner?.traitEffect?.noSeasonDecay)) {
+            q -= (s.currentSeason - 2) * 4;
+          }
+          const genreId = (state.genreIdentity || {})[s.formatName?.split(' ')[0]];
+          if (genreId && genreId.reputation > 30) q += 5;
+          if (Math.random() < 0.05) {
+            const scandal = pick(PRODUCTION_SCANDALS);
+            q += scandal.qualityHit;
+            s.events.push(`SCANDAL: ${scandal.name}`);
+            rep += scandal.repChange;
+            log.push({ text: `SCANDAL on "${s.title}" S${s.currentSeason}: ${scandal.desc}`, type: 'warning' });
+          }
+
+          s.quality = Math.round(clamp(q, 10, 98));
+          s.criticScore = clamp(s.quality + randInt(-10, 10), 5, 100);
+          s.audienceScore = clamp(Math.round(s.quality * 0.85 + randInt(-5, 15)), 10, 100);
+
+          let viewerBase = s.quality * 10000 + randInt(50000, 500000);
+          if (format) viewerBase *= format.audienceBase;
+          if (showrunner?.traitEffect?.viewershipBonus) viewerBase *= (1 + showrunner.traitEffect.viewershipBonus);
+          s.viewership = Math.round(viewerBase);
+
+          const isStreamingExclusive = s.releaseStrategy === 'streaming_exclusive' || s.releaseStrategy === 'hybrid';
+          if (isStreamingExclusive && streaming) {
+            let subBoost = Math.round(s.viewership * 0.1 * (s.quality / 50));
+            if (showrunner?.traitEffect?.subscriberBonus) subBoost = Math.round(subBoost * (1 + showrunner.traitEffect.subscriberBonus));
+            s.subscriberImpact = subBoost;
+            s.monthlyRevenue = 0;
+          } else {
+            s.monthlyRevenue = Math.round(s.viewership * 0.5 + s.quality * 5000);
+          }
+
+          s.criticReviews = (FILM_CRITICS || []).slice(0, 5).map(critic => {
+            let score = s.quality;
+            const baseGenre = s.formatName?.split(' ')[0] || 'Drama';
+            if (critic.genreLove?.includes(baseGenre)) score += 10;
+            if (critic.genreHate?.includes(baseGenre)) score -= 12;
+            score += (Math.random() - 0.5) * 15;
+            score = Math.round(clamp(score, 5, 100));
+            let verdict;
+            if (score >= 80) verdict = pick(['Must-watch TV', 'Brilliant series', 'Peak television']);
+            else if (score >= 60) verdict = pick(['Solid show', 'Worth binging', 'Good television']);
+            else if (score >= 40) verdict = pick(['Has its moments', 'Uneven but watchable']);
+            else verdict = pick(['Skip this one', 'Disappointing', 'Below par']);
+            return { name: critic.name, publication: critic.publication, score, verdict };
+          });
+
+          log.push({ text: `"${s.title}" S${s.currentSeason} premieres! Quality: ${s.quality} | Viewers: ${(s.viewership/1e6).toFixed(1)}M${s.subscriberImpact > 0 ? ` | +${(s.subscriberImpact/1e6).toFixed(1)}M subs` : ''}`, type: 'success' });
+          s.events.push(`S${s.currentSeason} premiered (Q:${s.quality})`);
+        } else if (s.status === 'airing') {
+          revenue += s.monthlyRevenue;
+
+          if (streaming && s.subscriberImpact > 0) {
+            const monthlySubGain = Math.round(s.subscriberImpact / Math.max(s.turnsNeeded, 1));
+            streaming.subscribers = (streaming.subscribers || 0) + monthlySubGain;
+          }
+
+          if (s.turnsInStatus >= s.turnsNeeded) {
+            s.status = s.currentSeason >= (TV_FORMATS.find(f => f.id === s.format)?.maxSeasons || 99) ? 'ended' : 'airing';
+            s.events.push(`S${s.currentSeason} finished airing`);
+            if (s.quality < 35 && Math.random() < 0.4) {
+              log.push({ text: `"${s.title}" S${s.currentSeason} had poor ratings. Consider cancellation.`, type: 'warning' });
+            }
           }
         }
+        return s;
       });
+
+      // 5e2. Streaming Platform Economics
+      if (streaming) {
+        const tierData = STREAMING_TIERS.find(t => t.id === streaming.tier) || STREAMING_TIERS[1];
+
+        const catalogFilmCount = (streaming.catalogFilmIds || []).length;
+        const catalogShowCount = (streaming.catalogShowIds || []).length;
+        const licensedIn = (state.licensingDeals || []).filter(d => d.type === 'in' && d.monthsLeft > 0).length;
+        streaming.contentLibrary = catalogFilmCount + catalogShowCount + licensedIn;
+        streaming.tvContentCount = catalogShowCount;
+
+        const catalogFilmSet = new Set(streaming.catalogFilmIds || []);
+        const catalogShowSet = new Set(streaming.catalogShowIds || []);
+        const contentQuality = [
+          ...films.filter(f => f.status === 'released' && catalogFilmSet.has(f.id)).map(f => f.quality || 50),
+          ...tvShows.filter(s => catalogShowSet.has(s.id)).map(s => s.quality || 50),
+        ];
+        const avgContentQuality = contentQuality.length > 0 ? contentQuality.reduce((a, b) => a + b, 0) / contentQuality.length : 40;
+
+        const marketingBoost = Math.min((streaming.marketingSpend || 0) / 10e6, 0.5);
+        const contentBoost = Math.min(streaming.contentLibrary * 0.002, 0.3);
+        const qualityBoost = (avgContentQuality - 40) * 0.005;
+        const baseGrowthRate = 0.02 + marketingBoost + contentBoost + qualityBoost;
+        const churn = streaming.churnRate || tierData.churnRate;
+        const netGrowth = Math.max(baseGrowthRate - churn, -0.05);
+
+        if (streaming.subscribers === 0 && streaming.launchYear === state.year) {
+          streaming.subscribers = Math.round(500000 + (state.reputation * 20000) + (streaming.marketingSpend || 0) / 10);
+        }
+
+        streaming.subscribers = Math.round(Math.max(0, streaming.subscribers * (1 + netGrowth)));
+        streaming.marketingSpend = Math.round((streaming.marketingSpend || 0) * 0.8);
+
+        const subRevenue = Math.round(streaming.subscribers * tierData.monthlyPrice);
+        const adRevenue = streaming.adTier ? Math.round(streaming.subscribers * 0.3 * tierData.adRevPerSub) : 0;
+        streaming.monthlyRevenue = subRevenue + adRevenue;
+        revenue += streaming.monthlyRevenue;
+
+        const streamHist = [...(state.streamingHistory || [])];
+        streamHist.push({ turn: state.turn, subscribers: streaming.subscribers, revenue: streaming.monthlyRevenue, churn: Math.round(churn * 100), contentCount: streaming.contentLibrary });
+      }
+
+      // 5e2b. Rival Streamers — spawn new ones as their founding year arrives, grow/shrink existing
+      let rivalStreamers = (state.rivalStreamers || []).map(rs => ({ ...rs }));
+      if (state.year >= 2005) {
+        // Spawn new rival streamers when their founding year arrives
+        RIVAL_STREAMERS.forEach(def => {
+          if (def.founded === state.year && state.month === 1 && !rivalStreamers.find(rs => rs.name === def.name)) {
+            const newRival = {
+              ...def,
+              subscribers: Math.round(def.baseSubscribers * 0.1),
+              contentCount: randInt(10, 40),
+              quality: randInt(55, 75),
+            };
+            rivalStreamers.push(newRival);
+            log.push({ text: `New streaming platform "${def.name}" has launched! ${def.desc}`, type: 'info' });
+          }
+        });
+        // Update existing rivals: grow/shrink based on age and quality
+        rivalStreamers = rivalStreamers.map(rs => {
+          const age = state.year - rs.founded;
+          const maturity = Math.min(age / 5, 1); // reaches maturity in ~5 years
+          const targetSubs = rs.baseSubscribers * maturity;
+          const growthRate = rs.subscribers < targetSubs ? 0.03 + Math.random() * 0.02 : -0.01 + Math.random() * 0.02;
+          rs.subscribers = Math.round(Math.max(100000, rs.subscribers * (1 + growthRate)));
+          rs.contentCount += randInt(1, 5);
+          rs.quality = clamp(rs.quality + randInt(-2, 2), 40, 90);
+          return rs;
+        });
+      }
+
+      // 5e3. Content licensing deal processing
+      let licensingDeals = (state.licensingDeals || []).map(d => ({ ...d }));
+      licensingDeals = licensingDeals.map(d => {
+        const deal = { ...d, monthsLeft: d.monthsLeft - 1 };
+        if (deal.type === 'out') {
+          revenue += deal.monthlyFee;
+        } else if (deal.type === 'in') {
+          expenses += deal.monthlyFee;
+        }
+        return deal;
+      }).filter(d => d.monthsLeft > 0);
 
       // 5f. Soundtrack revenue (small passive from all released films)
       const soundtrackRev = Math.round(films.filter(f => f.status === 'released').length * 15000);
@@ -3609,29 +4364,82 @@ function reducer(state, action) {
         log.push({ text: `DRAMA: ${dramaText}`, type: 'warning' });
       }
 
-      // 11. Rival studio competition
-      let competitors = state.competitors.map(c => ({ ...c, releasesThisQ: 0 }));
+      // 11. ENHANCED: Rival studio competition with AI learning systems
+      // Calculate player market share by genre
+      const releasedPlayerFilms = films.filter(f => f.status === 'released');
+      const playerGenreShare = {};
+      GENRES.forEach(g => {
+        const playerCount = releasedPlayerFilms.filter(f => f.genre === g).length;
+        const totalCount = Math.max(1, playerCount + (state.allFilmHistory || []).filter(f => f.genre === g && f.isRival).length);
+        playerGenreShare[g] = playerCount / totalCount;
+      });
+
+      // Adaptive difficulty - scale with player dominance
+      let difficultyScale = state.difficultyScale || 1.0;
+      const playerRep = rep;
+      const avgRivalRep = state.competitors.length > 0 ? state.competitors.reduce((s, c) => s + c.reputation, 0) / state.competitors.length : 50;
+      if (playerRep > avgRivalRep + 20) difficultyScale = clamp(difficultyScale + 0.02, 1.0, 2.0);
+      else if (playerRep < avgRivalRep - 10) difficultyScale = clamp(difficultyScale - 0.01, 0.8, 2.0);
+
+      let competitors = state.competitors.map(c => ({ ...c, releasesThisQ: 0, personality: c.personality ? { ...c.personality, genreWeights: { ...(c.personality.genreWeights || {}) } } : c.personality }));
       const rivalFilmsThisQ = [];
       const usedTitlesThisTurn = new Set((state.rivalFilmsThisYear || []).map(f => f.title));
+
       competitors.forEach(comp => {
         // Personality-driven release chance — rivals release 1-3 films per year on average
         const releaseChance = comp.personality ? 0.08 + comp.personality.aggression * 0.10 : 0.12;
         if (Math.random() < releaseChance) {
-          // Personality-driven genre selection
+          // ENHANCED: Strategic genre selection with counter-programming
           let genre;
-          if (comp.personality && comp.personality.genreWeights) {
-            const weights = Object.entries(comp.personality.genreWeights);
-            const totalW = weights.reduce((s, [, w]) => s + w, 0);
-            let r = Math.random() * totalW;
-            genre = GENRES[0];
-            for (const [g, w] of weights) { r -= w; if (r <= 0) { genre = g; break; } }
-          } else { genre = pick(GENRES); }
+          const rivalStrategy = state.rivalStrategies?.[comp.name] || {};
+
+          // 30% chance to counter-program against player's current productions
+          if (Math.random() < 0.3 * difficultyScale) {
+            const playerInDev = films.filter(f => ['development', 'production'].includes(f.status));
+            if (playerInDev.length > 0) {
+              const targetFilm = pick(playerInDev);
+              genre = targetFilm.genre;
+              comp._counterTarget = targetFilm.title;
+            }
+          }
+          // 25% chance to copy player's successful strategy with delay
+          if (!genre && Math.random() < 0.25 * difficultyScale) {
+            const recentHits = films.filter(f => f.status === 'released' && f.profit > 0 && f.releasedYear >= state.year - 3);
+            if (recentHits.length > 0) {
+              const hitGenres = {};
+              recentHits.forEach(f => { hitGenres[f.genre] = (hitGenres[f.genre] || 0) + 1; });
+              const topGenre = Object.entries(hitGenres).sort((a, b) => b[1] - a[1])[0];
+              if (topGenre) genre = topGenre[0];
+            }
+          }
+          // 20% chance to exploit gap
+          if (!genre && Math.random() < 0.2) {
+            const underserved = GENRES.filter(g => (playerGenreShare[g] || 0) < 0.05);
+            if (underserved.length > 0) genre = pick(underserved);
+          }
+          // Otherwise use personality weights
+          if (!genre) {
+            if (comp.personality && comp.personality.genreWeights) {
+              const weights = Object.entries(comp.personality.genreWeights);
+              const totalW = weights.reduce((s, [, w]) => s + w, 0);
+              let r = Math.random() * totalW;
+              genre = GENRES[0];
+              for (const [g, w] of weights) { r -= w; if (r <= 0) { genre = g; break; } }
+            } else { genre = pick(GENRES); }
+          }
+
           const pBonus = comp.personality ? comp.personality.qualityBonus : 0;
-          const quality = clamp(randInt(35, 88) + Math.round(comp.reputation * 0.1) + pBonus, 25, 96);
+          let quality = clamp(randInt(35, 88) + Math.round(comp.reputation * 0.1) + pBonus, 25, 96);
           const bMult = comp.personality ? comp.personality.budgetMult : 1;
-          const budget = Math.round(randInt(10, 100) * 1e6 * bMult);
+          let budget = Math.round(randInt(10, 100) * 1e6 * bMult);
           const mMult = comp.personality ? comp.personality.marketingMult : 1;
-          const gross = Math.round(budget * (quality >= 75 ? 3.0 : quality >= 55 ? 1.5 : 0.5) * (1 + Math.random()) * mMult);
+          // Apply AI content tax if regulation active
+          const hasAITax = (state.activeRegulations || []).some(r => r.id === 'ai_content_tax');
+          if (hasAITax && comp.isAI) {
+            quality = Math.max(25, Math.round(quality * 0.75)); // Reduce quality by 25%
+            budget = Math.round(budget * 1.25); // Increase costs by 25%
+          }
+          let gross = Math.round(budget * (quality >= 75 ? 3.0 : quality >= 55 ? 1.5 : 0.5) * (1 + Math.random()) * mMult);
           const availableTitles = RIVAL_FILM_TITLES.filter(t => !usedTitlesThisTurn.has(t));
           const title = availableTitles.length > 0 ? pick(availableTitles) : `${pick(RIVAL_FILM_TITLES)}: ${pick(['Reborn','Unleashed','Redux','Returns','Rising','Legacy','Untold','Chronicles','Awakening'])}`;
           usedTitlesThisTurn.add(title);
@@ -3663,6 +4471,215 @@ function reducer(state, action) {
         // Rival reputation natural drift
         comp.reputation = clamp(comp.reputation + randInt(-2, 2), 10, 95);
       });
+
+      // ENHANCED: Rival alliance formation (quarterly check)
+      let rivalAlliances = (state.rivalAlliances || []).map(a => ({ ...a, monthsLeft: a.monthsLeft - 1 })).filter(a => a.monthsLeft > 0);
+      if (state.month % 3 === 0 && competitors.length >= 3) {
+        const playerIsLeader = competitors.every(c => rep > c.reputation);
+        if (playerIsLeader && Math.random() < 0.15 * difficultyScale) {
+          const allies = competitors.filter(c => c.cash > 50e6).slice(0, 2).map(c => c.name);
+          if (allies.length >= 2) {
+            rivalAlliances.push({ studios: allies, purpose: 'counter_leader', monthsLeft: randInt(12, 24) });
+            log.push({ text: `INDUSTRY ALERT: ${allies.join(' & ')} formed an alliance to challenge your dominance!`, type: 'warning' });
+            allies.forEach(name => {
+              const ally = competitors.find(c => c.name === name);
+              if (ally) { ally.reputation = clamp(ally.reputation + 3, 10, 95); ally.cash += 20e6; }
+            });
+          }
+        }
+      }
+
+      // ENHANCED: Rival acquisitions (annual check in January)
+      let rivalAcquisitions = { ...(state.rivalAcquisitions || {}) };
+      if (state.month === 1) {
+        const hasAntitrust = (state.activeRegulations || []).some(r => r.id === 'antitrust_action');
+        competitors.forEach(comp => {
+          const acqRate = comp.personality ? (comp.personality.acquisitionRate || 0.03) : 0.03;
+          if (comp.cash > 200e6 && Math.random() < acqRate * difficultyScale) {
+            // Block acquisitions if antitrust is active
+            if (hasAntitrust) {
+              rep += 5; // Player gets reputation boost from antitrust enforcement
+              log.push({ text: `ANTITRUST: Blocked ${comp.name}'s acquisition attempt. Market competition protected.`, type: 'info' });
+              return; // Skip this acquisition
+            }
+            const acqTypes = ['talent_agency', 'vfx_house', 'theater_chain', 'streaming_tech', 'indie_studio'];
+            const acqType = pick(acqTypes);
+            const cost = randInt(30, 150) * 1e6;
+            comp.cash -= cost;
+            const existing = rivalAcquisitions[comp.name] || [];
+            existing.push({ type: acqType, year: state.year });
+            rivalAcquisitions[comp.name] = existing;
+            if (acqType === 'talent_agency') comp.reputation = clamp(comp.reputation + 5, 10, 95);
+            if (acqType === 'vfx_house') comp.personality = { ...comp.personality, qualityBonus: (comp.personality?.qualityBonus || 0) + 5 };
+            if (acqType === 'streaming_tech') comp.cash += 10e6;
+            log.push({ text: `${comp.name} acquired a ${acqType.replace(/_/g, ' ')} for ${fmt(cost)}.`, type: 'info' });
+          }
+        });
+      }
+
+      // ENHANCED: AI learning - track genre performance and pivot
+      if (state.month === 12) {
+        let rivalStrategies = { ...(state.rivalStrategies || {}) };
+        competitors.forEach(comp => {
+          const compFilms = (state.allFilmHistory || []).filter(f => f.studio === comp.name && f.releasedYear === state.year);
+          if (compFilms.length > 0) {
+            const avgQuality = compFilms.reduce((s, f) => s + (f.quality || 50), 0) / compFilms.length;
+            const profitable = compFilms.filter(f => (f.totalGross || 0) * 0.45 > (f.budget || 0)).length;
+            const failedGenres = {};
+            compFilms.filter(f => (f.totalGross || 0) * 0.45 < (f.budget || 0)).forEach(f => {
+              failedGenres[f.genre] = (failedGenres[f.genre] || 0) + 1;
+            });
+            if (comp.personality && comp.personality.genreWeights) {
+              Object.entries(failedGenres).forEach(([g, count]) => {
+                if (count >= 2) {
+                  comp.personality.genreWeights[g] = Math.max(0.1, (comp.personality.genreWeights[g] || 1) * 0.5);
+                  log.push({ text: `${comp.name} is pulling back from ${g} after poor results.`, type: 'info' });
+                }
+              });
+              const successGenres = {};
+              compFilms.filter(f => (f.quality || 0) >= 70).forEach(f => {
+                successGenres[f.genre] = (successGenres[f.genre] || 0) + 1;
+              });
+              Object.entries(successGenres).forEach(([g, count]) => {
+                if (count >= 1) {
+                  comp.personality.genreWeights[g] = Math.min(4, (comp.personality.genreWeights[g] || 1) * 1.3);
+                }
+              });
+            }
+            rivalStrategies[comp.name] = { ...rivalStrategies[comp.name], lastPivotYear: state.year, avgQuality: Math.round(avgQuality), profitRate: compFilms.length > 0 ? profitable / compFilms.length : 0 };
+          }
+        });
+      }
+
+      // ENHANCED: Espionage against player (passive events)
+      let activeEspionage = (state.activeEspionage || []).map(e => ({ ...e, monthsLeft: (e.monthsLeft || 1) - 1 })).filter(e => e.monthsLeft > 0);
+      let espionageLog = [...(state.espionageLog || [])];
+      const securityLevel = state.studioSecurity || 0;
+
+      if (Math.random() < 0.04 * difficultyScale && competitors.length > 0) {
+        const aggressor = pick(competitors.filter(c => c.reputation > 30));
+        if (aggressor) {
+          const action = pick(ESPIONAGE_ACTIONS);
+          const blocked = Math.random() < (securityLevel * 0.005);
+          if (blocked) {
+            log.push({ text: `SECURITY: Blocked ${action.name} attempt by ${aggressor.name}!`, type: 'success' });
+            espionageLog.push({ turn: state.turn, type: action.id, rival: aggressor.name, result: 'blocked', desc: `Security blocked: ${action.desc}` });
+          } else {
+            let effectDesc = action.desc;
+            if (action.id === 'twin_film') {
+              const playerInDev = films.filter(f => ['development', 'production'].includes(f.status));
+              if (playerInDev.length > 0) {
+                const target = pick(playerInDev);
+                const twinTitle = `${pick(RIVAL_FILM_TITLES)}`;
+                log.push({ text: `ESPIONAGE: ${aggressor.name} is rushing "${twinTitle}" — suspiciously similar to your "${target.title}"!`, type: 'warning' });
+                target._twinFilmPenalty = (target._twinFilmPenalty || 0) + action.playerGrossPenalty;
+                effectDesc = `Twin of "${target.title}" being fast-tracked`;
+              }
+            } else if (action.id === 'talent_tamper') {
+              if (state.contracts.length > 0) {
+                const target = pick(state.contracts);
+                target.morale = clamp((target.morale || 70) - 15, 20, 100);
+                talentRelationships[target.id] = clamp((talentRelationships[target.id] || 50) - action.relationshipPenalty, 0, 100);
+                log.push({ text: `ESPIONAGE: ${aggressor.name} is trying to lure away ${target.name}! Morale and loyalty dropping.`, type: 'warning' });
+                effectDesc = `${target.name} being courted by ${aggressor.name}`;
+              }
+            } else if (action.id === 'leaked_script') {
+              const inProd = films.filter(f => f.status === 'production');
+              if (inProd.length > 0) {
+                const target = pick(inProd);
+                target._leakedScript = true;
+                log.push({ text: `ESPIONAGE: Script for "${target.title}" was leaked online! Opening weekend will suffer.`, type: 'warning' });
+                effectDesc = `Script leaked for "${target.title}"`;
+              }
+            } else if (action.id === 'negative_reviews') {
+              const released = films.filter(f => f.status === 'released' && f.releasedYear === state.year);
+              if (released.length > 0) {
+                const target = pick(released);
+                target.criticScore = clamp((target.criticScore || 50) - action.criticScorePenalty, 5, 100);
+                log.push({ text: `ESPIONAGE: Suspicious wave of negative reviews for "${target.title}"!`, type: 'warning' });
+                effectDesc = `Planted reviews hurt "${target.title}"`;
+              }
+            } else if (action.id === 'poach_crew') {
+              const inProd = films.filter(f => f.status === 'production');
+              if (inProd.length > 0) {
+                const target = pick(inProd);
+                target._qualityBoost = (target._qualityBoost || 0) - action.qualityPenalty;
+                target.turnsNeeded += action.delayMonths;
+                target.events.push(`Key crew poached by ${aggressor.name} — delays and quality hit`);
+                log.push({ text: `ESPIONAGE: ${aggressor.name} poached key crew from "${target.title}"!`, type: 'warning' });
+                effectDesc = `Crew poached from "${target.title}"`;
+              }
+            } else if (action.id === 'smear_campaign') {
+              rep -= action.repPenalty;
+              log.push({ text: `ESPIONAGE: ${aggressor.name} launched a smear campaign against your studio!`, type: 'warning' });
+              effectDesc = `Smear campaign, -${action.repPenalty} reputation`;
+            }
+            espionageLog.push({ turn: state.turn, type: action.id, rival: aggressor.name, result: 'success', desc: effectDesc });
+          }
+        }
+      }
+
+      // ENHANCED: Streaming price wars
+      if (streaming && rivalStreamers.length > 0) {
+        rivalStreamers.forEach(rs => {
+          if (rs.subscribers < streaming.subscribers && Math.random() < 0.05 * difficultyScale) {
+            const stolenSubs = Math.round(streaming.subscribers * 0.02);
+            streaming.subscribers = Math.max(0, streaming.subscribers - stolenSubs);
+            rs.subscribers += stolenSubs;
+            log.push({ text: `PRICE WAR: ${rs.name} dropped prices! Lost ${Math.round(stolenSubs / 1000)}K subscribers.`, type: 'warning' });
+          }
+        });
+      }
+
+      // ENHANCED: Genre flooding by dominant studios
+      if (state.month % 6 === 0 && competitors.length > 0) {
+        const playerDominantGenres = Object.entries(playerGenreShare).filter(([g, s]) => s > 0.3).map(([g]) => g);
+        if (playerDominantGenres.length > 0 && Math.random() < 0.1 * difficultyScale) {
+          const floodGenre = pick(playerDominantGenres);
+          const floodStudio = pick(competitors.filter(c => c.cash > 100e6));
+          if (floodStudio) {
+            for (let i = 0; i < randInt(2, 3); i++) {
+              const budget = randInt(5, 20) * 1e6;
+              const quality = randInt(25, 50);
+              const gross = Math.round(budget * 0.8);
+              const title = pick(RIVAL_FILM_TITLES) + ': ' + pick(['Unleashed', 'Rising', 'Returns', 'Redux']);
+              rivalFilmsThisQ.push({
+                studio: floodStudio.name, title, genre: floodGenre, quality, budget, totalGross: gross, gross,
+                criticScore: clamp(quality + randInt(-10, 5), 10, 60), audienceScore: clamp(quality + randInt(-5, 10), 15, 60),
+                director: { name: pick(RIVAL_DIRECTOR_NAMES), skill: quality }, actor: { name: pick(RIVAL_ACTOR_NAMES), skill: quality },
+                writer: { name: pick(RIVAL_WRITER_NAMES), skill: quality },
+                releasedYear: state.year, releasedMonth: state.month, isRival: true, isFlood: true,
+              });
+            }
+            log.push({ text: `MARKET FLOOD: ${floodStudio.name} is dumping cheap ${floodGenre} films to devalue the genre!`, type: 'warning' });
+          }
+        }
+      }
+
+      // ENHANCED: Hostile takeover - more aggressive when player is weak
+      let hostileTakeoverOffer = state.hostileTakeoverOffer;
+      if (!hostileTakeoverOffer) {
+        const playerWeakness = (cash < 0 ? 2 : 0) + (rep < 30 ? 1 : 0) + (state.loans?.length >= 3 ? 1 : 0) + (stockPrice > 0 && stockPrice < 20 ? 1 : 0);
+        const takeoverChance = playerWeakness * 0.05 * difficultyScale;
+        if (Math.random() < takeoverChance) {
+          const buyer = competitors.filter(c => c.cash > 200e6).sort((a, b) => b.cash - a.cash)[0];
+          if (buyer) {
+            const studioValue = Math.max(50e6, tGross * 0.1 + (streaming?.subscribers || 0) * 5 + films.length * 2e6);
+            const offer = Math.round(studioValue * (0.8 + Math.random() * 0.4));
+            const defenseCost = Math.round(offer * 0.3);
+            hostileTakeoverOffer = { buyer: buyer.name, offer, defenseCost, deadline: 3 };
+            log.push({ text: `HOSTILE TAKEOVER: ${buyer.name} launches a ${fmt(offer)} bid for ${state.studioName}! You need ${fmt(defenseCost)} to defend. You have 3 months.`, type: 'warning' });
+          }
+        }
+      }
+      if (hostileTakeoverOffer && hostileTakeoverOffer.deadline) {
+        hostileTakeoverOffer = { ...hostileTakeoverOffer, deadline: hostileTakeoverOffer.deadline - 1 };
+        if (hostileTakeoverOffer.deadline <= 0) {
+          log.push({ text: `TAKEOVER COMPLETE: ${hostileTakeoverOffer.buyer} acquired your studio. Game over.`, type: 'warning' });
+          phase = 'legacy';
+        }
+      }
+
       // Accumulate rival films for annual awards
       let rivalFilmsThisYear = [...(state.rivalFilmsThisYear || []), ...rivalFilmsThisQ];
       // Reset at start of new year (month 12 means next turn is Jan)
@@ -3674,39 +4691,146 @@ function reducer(state, action) {
         log.push({ text: `Crowded month! ${totalRivalReleases} rival films compete for audience.`, type: 'info' });
       }
 
-      // 11b. Stock price update (if public)
+      // 11b. Stock price update (if public) - ENHANCED
       let isPublic = state.isPublic;
       let stockPrice = state.stockPrice;
       let stockHistory = [...state.stockHistory];
       let shareholderDemand = state.shareholderDemand;
       if (isPublic) {
-        // Stock price influenced by monthly performance
-        const revenueRatio = revenue / Math.max(expenses, 1);
-        const priceChange = (revenueRatio - 1) * 10 + (Math.random() - 0.5) * 5;
+        const quarterlyRevenue = revenue;
+        const quarterlyExpenses = expenses;
+        const earningsRatio = quarterlyRevenue / Math.max(quarterlyExpenses, 1);
+
+        let sentimentMod = 0;
+        if (films.some(f => f.status === 'released' && f.releasedYear === state.year && f.releasedMonth === state.month && f.quality >= 85)) sentimentMod += 8;
+        if (films.some(f => f.status === 'released' && f.releasedYear === state.year && f.releasedMonth === state.month && f.profit < 0)) sentimentMod -= 5;
+        if (streaming && streaming.subscribers > (state.streamingPlatform?.subscribers || 0)) sentimentMod += 3;
+        (state.activeZeitgeist || []).forEach(z => { if (z.grossMult < 1) sentimentMod -= 2; else sentimentMod += 1; });
+
+        const priceChange = (earningsRatio - 1) * 15 + sentimentMod + (Math.random() - 0.5) * 8;
         stockPrice = Math.max(1, Math.round(stockPrice + priceChange));
         stockHistory.push({ turn: state.turn + 1, price: stockPrice });
-        shareholderDemand = clamp(shareholderDemand + (revenue < expenses ? 10 : -3), 0, 100);
+
+        shareholderDemand = clamp(shareholderDemand + (revenue < expenses ? 12 : -5), 0, 100);
         if (shareholderDemand >= 80) {
-          log.push({ text: 'Shareholders are FURIOUS! Stock price plummeting. Deliver results or face consequences.', type: 'warning' });
-          stockPrice = Math.max(1, Math.round(stockPrice * 0.85));
+          log.push({ text: 'Shareholders are FURIOUS! Stock price plummeting.', type: 'warning' });
+          stockPrice = Math.max(1, Math.round(stockPrice * 0.82));
         }
-        // Quarterly dividend pressure (month % 3 === 0 means Q1, Q2, Q3, Q4)
         if (state.month % 3 === 0) {
-          shareholderDemand += 5; // quarterly pressure for returns
-          if (shareholderDemand > 50) log.push({ text: 'Shareholders expect dividends or buybacks. Demand is building.', type: 'info' });
+          shareholderDemand += 5;
+          if (shareholderDemand > 50) log.push({ text: 'Quarterly pressure: Shareholders expect returns.', type: 'info' });
         }
       }
 
-      // 11c. Hostile takeover chance (when weak and not public, or when stock is low)
-      let hostileTakeoverOffer = state.hostileTakeoverOffer;
-      if (!hostileTakeoverOffer && cash < 0 && rep < 30 && Math.random() < 0.15) {
-        const buyer = pick(competitors);
-        if (buyer) {
-          const offer = Math.round(Math.abs(cash) * 2 + tGross * 0.05);
-          hostileTakeoverOffer = { buyer: buyer.name, offer };
-          log.push({ text: `HOSTILE TAKEOVER: ${buyer.name} offers ${fmt(offer)} to acquire ${state.studioName}! Respond in the Studio tab.`, type: 'warning' });
+      // SYSTEM 1: Filmmaking Era transition
+      const newEra = getCurrentFilmEra(newYear);
+      let currentFilmEra = newEra.id;
+      if (newEra.id !== state.currentFilmEra) {
+        log.push({ text: `ERA SHIFT: ${newEra.announcement}`, type: 'info' });
+      }
+
+      // SYSTEM 3: Economic Cycle progression
+      let economicCycle = { ...state.economicCycle };
+      economicCycle.monthsLeft = Math.max(0, economicCycle.monthsLeft - 1);
+      if (economicCycle.monthsLeft <= 0) {
+        const phases = ['boom', 'stable', 'recession', 'stable', 'boom', 'stable', 'recession', 'depression', 'stable'];
+        const currentIdx = phases.indexOf(economicCycle.phase);
+        const nextPhase = phases[(currentIdx + 1) % phases.length];
+        const cycleDef = ECONOMIC_CYCLES.find(c => c.id === nextPhase);
+        if (cycleDef) {
+          economicCycle = { phase: nextPhase, monthsLeft: randInt(cycleDef.duration[0], cycleDef.duration[1]) };
+          log.push({ text: `ECONOMY: ${cycleDef.name} begins. ${cycleDef.desc}`, type: nextPhase === 'recession' || nextPhase === 'depression' ? 'warning' : 'info' });
+        } else {
+          economicCycle = { phase: 'stable', monthsLeft: 48 };
         }
       }
+
+      // SYSTEM 3: Spawn AI studios
+      let aiStudiosSpawned = [...(state.aiStudiosSpawned || [])];
+      AI_STUDIOS.forEach(aiStudio => {
+        if (newYear >= aiStudio.founded && !aiStudiosSpawned.includes(aiStudio.name)) {
+          const newAI = {
+            name: aiStudio.name,
+            founded: aiStudio.founded,
+            isAI: true,
+            personality: { name: aiStudio.strategy, qualityBonus: 5, budgetMult: 0.8, marketingMult: 0.9, aggression: 0.15, genreWeights: {} },
+            reputation: 50,
+            prestige: 30,
+            cash: 100e6,
+            totalGross: 0,
+            filmsReleased: 0,
+            awards: 0,
+          };
+          competitors.push(newAI);
+          aiStudiosSpawned.push(aiStudio.name);
+          log.push({ text: `NEW AI STUDIO: ${aiStudio.name} emerges! "${aiStudio.desc}"`, type: 'info' });
+        }
+      });
+
+      // SYSTEM 3: World Events triggering
+      let worldEventsTriggered = [...(state.worldEventsTriggered || [])];
+      let activeZeitgeist = [...(state.activeZeitgeist || [])];
+      WORLD_EVENTS.forEach(event => {
+        if (newYear >= event.triggerYear && !worldEventsTriggered.includes(event.id)) {
+          let eventToadd = {
+            id: event.id,
+            name: event.name,
+            monthsLeft: event.duration,
+            grossMult: event.grossMult || 1.0,
+            streamingBoost: event.streamingBoost || 0,
+            qualityMod: event.qualityMod || 0,
+            budgetMult: event.budgetMult || 1.0,
+            talentCostMult: event.talentCostMult || 1.0,
+            genreBoost: event.genreBoost || {},
+            productionDelay: event.productionDelay || 0,
+          };
+          activeZeitgeist = [...activeZeitgeist, eventToadd];
+          worldEventsTriggered.push(event.id);
+          log.push({ text: `WORLD EVENT: ${event.name}! ${event.desc}`, type: 'warning' });
+        }
+      });
+
+      // SYSTEM 4: Labor strikes check
+      const laborRel = LABOR_RELATIONS[state.laborRelations];
+      let strikeChance = laborRel?.strikeChance || 0;
+      // Apply coalition labor bonus (reduces strike chance)
+      const talentCoal = state.playerCoalition ? INDUSTRY_COALITIONS.find(c => c.id === state.playerCoalition) : null;
+      if (talentCoal?.effect?.laborBonus) {
+        strikeChance *= 0.5; // 50% reduction in strike chance
+      }
+      if (laborRel && Math.random() < strikeChance) {
+        films.filter(f => ['development', 'production'].includes(f.status)).forEach(f => {
+          f.turnsNeeded = Math.min(f.turnsNeeded + 2, f.turnsNeeded * 1.3);
+          f.events.push('LABOR STRIKE: Production delayed 2 months');
+        });
+        log.push({ text: `UNION STRIKE! All productions delayed. Labor relations now at risk.`, type: 'warning' });
+        rep -= 5;
+      }
+
+      // SYSTEM 4: Talent relationships update
+      let talentRelationships = { ...(state.talentRelationships || {}) };
+      films.filter(f => f.status === 'released' && f.releasedYear === state.year && f.releasedMonth === state.month).forEach(film => {
+        [film.director, film.actor, film.writer].forEach(t => {
+          if (t && t.id) {
+            const current = talentRelationships[t.id] || 50;
+            let delta = 0;
+            if (film.quality >= 85) delta += 8;
+            else if (film.quality >= 70) delta += 4;
+            else if (film.quality < 40) delta -= 10;
+            else delta += 1;
+            if (film.profit > 0) delta += 3;
+            if (film.profit < -10e6) delta -= 5;
+            talentRelationships[t.id] = clamp(current + delta, 0, 100);
+          }
+        });
+      });
+      Object.keys(talentRelationships).forEach(tid => {
+        const val = talentRelationships[tid];
+        if (val > 55) talentRelationships[tid] = val - 1;
+        else if (val < 45) talentRelationships[tid] = val + 1;
+      });
+
+      // 11c. Hostile takeover chance (replaced by enhanced version above at line ~4552)
 
       // 11d. Update rival competition with personality-driven behavior
       competitors.forEach(comp => {
@@ -4064,7 +5188,7 @@ function reducer(state, action) {
       });
 
       // SYSTEM 8: Zeitgeist Events (2% chance each month for new event)
-      let activeZeitgeist = (state.activeZeitgeist || []).map(z => ({ ...z, monthsLeft: z.monthsLeft - 1 }));
+      activeZeitgeist = activeZeitgeist.map(z => ({ ...z, monthsLeft: z.monthsLeft - 1 }));
       activeZeitgeist = activeZeitgeist.filter(z => z.monthsLeft > 0);
       if (activeZeitgeist.length < 2 && Math.random() < 0.02) {
         const event = pick(ZEITGEIST_EVENTS);
@@ -4182,6 +5306,7 @@ function reducer(state, action) {
         gameLog: log,
         // New feature state
         themeParks,
+        theaterChains,
         tvShows,
         academy,
         isPublic,
@@ -4205,13 +5330,43 @@ function reducer(state, action) {
         talentMoods,
         catalogRevenue: catalogRevenue,
         cinematicUniverses,
-        activeZeitgeist,
+        activeZeitgeist: activeZeitgeist,
         theaterRelationship,
         studioFacilities: state.studioFacilities,
         awardsCampaignsDetailed: state.awardsCampaignsDetailed,
         pendingYearSummary,
         showYearSummary: pendingYearSummary !== null,
         genreIdentity,
+        // TV/Streaming expansion
+        licensingDeals: licensingDeals || [],
+        rivalStreamers,
+        streamingHistory: (state.streamingHistory || []).concat(streaming ? [{ turn: state.turn + 1, subscribers: streaming.subscribers, revenue: streaming.monthlyRevenue, churn: Math.round((streaming.churnRate || 0.04) * 100), contentCount: streaming.contentLibrary }] : []),
+        // SYSTEM 1: Filmmaking Eras
+        currentFilmEra,
+        // SYSTEM 2: Acquisitions
+        acquisitions: state.acquisitions,
+        // SYSTEM 3: Economic & Events
+        economicCycle,
+        worldEventsTriggered,
+        aiStudiosSpawned,
+        laborRelations: state.laborRelations,
+        // SYSTEM 4: Talent
+        talentRelationships,
+        talentCareerStages: state.talentCareerStages,
+        // ---- AI COMPETITION SYSTEMS ----
+        rivalMarketShare: playerGenreShare,
+        rivalStrategies,
+        rivalAlliances,
+        rivalAcquisitions,
+        activeEspionage,
+        playerEspionage: (state.playerEspionage || []).map(e => ({ ...e, monthsLeft: e.monthsLeft - 1 })).filter(e => e.monthsLeft > 0),
+        studioSecurity: Math.max(0, (state.studioSecurity || 0) - 1),
+        industryCoalitions: (state.industryCoalitions || []).map(c => ({ ...c, monthsLeft: c.monthsLeft - 1 })).filter(c => c.monthsLeft > 0),
+        activeRegulations: (state.activeRegulations || []).map(r => ({ ...r, monthsLeft: r.monthsLeft - 1 })).filter(r => r.monthsLeft > 0),
+        playerCoalition: state.playerCoalition,
+        twinFilmWarnings: state.twinFilmWarnings || [],
+        espionageLog,
+        difficultyScale,
       };
     }
 
@@ -4500,6 +5655,218 @@ function reducer(state, action) {
         ...state,
         internationalPartners: state.internationalPartners.filter(ip => ip.id !== action.partnerId),
         gameLog: [...state.gameLog, { text: `Dissolved partnership with ${partnerDef?.name}. No more monthly fees or bonuses.`, type: 'warning' }],
+      };
+    }
+
+    // ==================== SYSTEM 2: ACQUISITIONS ====================
+    case 'ACQUIRE_TARGET': {
+      const target = ACQUISITION_TARGETS.find(t => t.id === action.targetId);
+      if (!target) return state;
+      const cost = Math.round(target.baseCost * (1 + Math.random() * 0.3));
+      if (state.cash < cost) return { ...state, errorMsg: `Need ${fmt(cost)} to acquire ${target.name}.` };
+      if ((state.acquisitions || []).find(a => a.id === target.id)) return { ...state, errorMsg: 'Already acquired!' };
+      return {
+        ...state,
+        cash: state.cash - cost,
+        acquisitions: [...(state.acquisitions || []), { id: target.id, name: target.name, type: target.type, effect: target.benefitEffect, acquiredYear: state.year }],
+        gameLog: [...state.gameLog, { text: `Acquired ${target.name} for ${fmt(cost)}! ${target.benefit}`, type: 'success' }],
+        errorMsg: '',
+      };
+    }
+
+    case 'PROPOSE_COPRODUCTION': {
+      const rival = state.competitors.find(c => c.name === action.rivalName);
+      if (!rival) return state;
+      const film = state.films.find(f => f.id === action.filmId && f.status === 'development');
+      if (!film) return state;
+      const willingness = clamp(rival.reputation * 0.5 + state.reputation * 0.3 + (Math.random() - 0.3) * 40, 0, 100);
+      if (willingness < 40) {
+        return { ...state, gameLog: [...state.gameLog, { text: `${rival.name} declined your co-production offer for "${film.title}".`, type: 'warning' }] };
+      }
+      const costShare = 0.3 + Math.random() * 0.2;
+      const profitShare = costShare + 0.05;
+      const savings = Math.round(film.budget * costShare);
+      return {
+        ...state,
+        cash: state.cash + savings,
+        coProductions: [...(state.coProductions || []), { filmId: film.id, rivalName: rival.name, costShare, profitShare, active: true }],
+        gameLog: [...state.gameLog, { text: `${rival.name} agreed to co-produce "${film.title}"! They cover ${Math.round(costShare * 100)}% of costs (${fmt(savings)} savings) for ${Math.round(profitShare * 100)}% of profits.`, type: 'success' }],
+        errorMsg: '',
+      };
+    }
+
+    // ==================== SYSTEM 3: LABOR RELATIONS ====================
+    case 'SET_LABOR_POLICY': {
+      const policies = {
+        generous: { cost: 2e6, shift: 'up', desc: 'Generous benefits package' },
+        standard: { cost: 0, shift: 'none', desc: 'Standard terms' },
+        lean: { cost: -1e6, shift: 'down', desc: 'Cost-cutting measures' },
+      };
+      const policy = policies[action.policy];
+      if (!policy) return state;
+      const levels = ['hostile', 'poor', 'neutral', 'good', 'excellent'];
+      const currentIdx = levels.indexOf(state.laborRelations);
+      let newIdx = currentIdx;
+      if (policy.shift === 'up') newIdx = Math.min(currentIdx + 1, 4);
+      if (policy.shift === 'down') newIdx = Math.max(currentIdx - 1, 0);
+      return {
+        ...state,
+        cash: state.cash - policy.cost,
+        laborRelations: levels[newIdx],
+        gameLog: [...state.gameLog, { text: `Labor policy: ${policy.desc}. Relations now: ${levels[newIdx]}.`, type: 'info' }],
+        errorMsg: '',
+      };
+    }
+
+    // ==================== SYSTEM 4: TALENT RELATIONSHIPS ====================
+    case 'NEGOTIATE_TALENT_DEAL': {
+      const talent = state.availableTalent.find(t => t.id === action.talentId);
+      if (!talent) return state;
+      const relationship = (state.talentRelationships || {})[talent.id] || 50;
+      const salaryMult = 1 + Math.random() * 0.5 - (relationship > 70 ? 0.15 : 0);
+      const counterSalary = Math.round(talent.salary * salaryMult);
+      const wantsExclusive = talent.skill >= 80 && Math.random() < 0.3;
+      const wantsBackend = talent.skill >= 70 && Math.random() < 0.4;
+      const perks = [];
+      if (talent.skill >= 60 && Math.random() < 0.5) perks.push(pick(['Private trailer on all sets', 'First-class travel', 'Creative control clause', 'Personal chef on set']));
+      if (wantsBackend) perks.push('Profit participation (3-5%)');
+      return {
+        ...state,
+        pendingDealNegotiation: {
+          talentId: talent.id,
+          originalSalary: talent.salary,
+          counterOffer: counterSalary,
+          exclusive: wantsExclusive,
+          perks,
+          talentName: talent.name,
+          dealTypes: AGENT_DEAL_TYPES.filter(d => {
+            if (d.id === 'exclusive' && talent.skill < 75) return false;
+            if (d.id === 'backend' && talent.skill < 60) return false;
+            return true;
+          }),
+          relationship,
+        },
+      };
+    }
+
+    // ==================== AI COMPETITION: PLAYER ACTIONS ====================
+
+    case 'DEFEND_TAKEOVER': {
+      if (!state.hostileTakeoverOffer) return state;
+      const cost = state.hostileTakeoverOffer.defenseCost || Math.round(state.hostileTakeoverOffer.offer * 0.3);
+      if (state.cash < cost) return { ...state, errorMsg: `Need ${fmt(cost)} to fight the takeover!` };
+      return {
+        ...state,
+        cash: state.cash - cost,
+        hostileTakeoverOffer: null,
+        reputation: clamp(state.reputation + 5, 0, 100),
+        gameLog: [...state.gameLog, { text: `Successfully defended against hostile takeover! Cost: ${fmt(cost)}. Your defiance boosted reputation.`, type: 'success' }],
+        errorMsg: '',
+      };
+    }
+
+    case 'LAUNCH_ESPIONAGE': {
+      const espAction = PLAYER_ESPIONAGE.find(e => e.id === action.espionageId);
+      if (!espAction) return state;
+      if (state.cash < espAction.cost) return { ...state, errorMsg: `Need ${fmt(espAction.cost)} for ${espAction.name}.` };
+
+      if (espAction.id === 'counter_intel') {
+        return {
+          ...state,
+          cash: state.cash - espAction.cost,
+          studioSecurity: clamp((state.studioSecurity || 0) + 20, 0, 100),
+          gameLog: [...state.gameLog, { text: `Invested ${fmt(espAction.cost)} in counter-intelligence. Security level increased.`, type: 'success' }],
+        };
+      }
+
+      const success = Math.random() < espAction.successChance;
+      const caught = Math.random() < espAction.caughtChance;
+      let logMsg = '';
+      let newState = { ...state, cash: state.cash - espAction.cost };
+
+      if (success) {
+        const targetRival = action.targetRival ? state.competitors.find(c => c.name === action.targetRival) : pick(state.competitors);
+        if (espAction.id === 'spy_development') {
+          const rivalFilmsInDev = (state.allFilmHistory || []).filter(f => f.studio === targetRival?.name).slice(-3);
+          logMsg = `Intelligence gathered on ${targetRival?.name}. They favor: ${rivalFilmsInDev.map(f => f.genre).join(', ') || 'unknown genres'}.`;
+        } else if (espAction.id === 'poach_talent') {
+          const stolenTalent = makeTalent(state.nextId, pick(['actor', 'director', 'writer']), [65, 90]);
+          stolenTalent.name = `${pick(FIRST_NAMES)} ${pick(LAST_NAMES)}`;
+          newState = { ...newState, contracts: [...state.contracts, stolenTalent], nextId: state.nextId + 1 };
+          logMsg = `Poached ${stolenTalent.name} (${stolenTalent.type}, skill ${stolenTalent.skill}) from ${targetRival?.name}!`;
+        } else if (espAction.id === 'plant_mole') {
+          newState = { ...newState, playerEspionage: [...(state.playerEspionage || []), { type: 'mole', targetRival: targetRival?.name, monthsLeft: 12, active: true }] };
+          logMsg = `Mole planted at ${targetRival?.name}. You'll get early warnings on their releases for 12 months.`;
+        } else if (espAction.id === 'sabotage_marketing') {
+          const updated = state.competitors.map(c => c.name === targetRival?.name ? { ...c, reputation: clamp(c.reputation - 5, 10, 95) } : c);
+          newState = { ...newState, competitors: updated };
+          logMsg = `Sabotaged ${targetRival?.name}'s marketing campaign. Their reputation dropped.`;
+        }
+      } else {
+        logMsg = `${espAction.name} operation against ${action.targetRival || 'a rival'} failed.`;
+      }
+
+      if (caught) {
+        newState.reputation = clamp(newState.reputation - espAction.repPenalty, 0, 100);
+        logMsg += ` YOU WERE CAUGHT! -${espAction.repPenalty} reputation.`;
+      }
+
+      return {
+        ...newState,
+        espionageLog: [...(state.espionageLog || []), { turn: state.turn, type: espAction.id, rival: action.targetRival, result: success ? 'success' : 'failed', caught, desc: logMsg }],
+        gameLog: [...newState.gameLog, { text: `ESPIONAGE: ${logMsg}`, type: caught ? 'warning' : success ? 'success' : 'info' }],
+        errorMsg: '',
+      };
+    }
+
+    case 'JOIN_COALITION': {
+      const coalition = INDUSTRY_COALITIONS.find(c => c.id === action.coalitionId);
+      if (!coalition) return state;
+      if (state.playerCoalition === action.coalitionId) return { ...state, errorMsg: 'Already in this coalition!' };
+      return {
+        ...state,
+        playerCoalition: action.coalitionId,
+        gameLog: [...state.gameLog, { text: `Joined the ${coalition.name}. ${coalition.desc}`, type: 'success' }],
+        errorMsg: '',
+      };
+    }
+
+    case 'LEAVE_COALITION': {
+      return {
+        ...state,
+        playerCoalition: null,
+        gameLog: [...state.gameLog, { text: 'Left the industry coalition.', type: 'info' }],
+        errorMsg: '',
+      };
+    }
+
+    case 'LOBBY_REGULATION': {
+      const reg = LOBBY_REGULATIONS.find(r => r.id === action.regulationId);
+      if (!reg) return state;
+      const cost = 10e6;
+      if (state.cash < cost) return { ...state, errorMsg: `Need ${fmt(cost)} to lobby.` };
+      const success = Math.random() < 0.4 + (state.reputation / 200);
+      if (!success) {
+        return { ...state, cash: state.cash - cost, gameLog: [...state.gameLog, { text: `Lobbying for ${reg.name} failed. ${fmt(cost)} spent.`, type: 'warning' }] };
+      }
+      return {
+        ...state,
+        cash: state.cash - cost,
+        activeRegulations: [...(state.activeRegulations || []), { id: reg.id, name: reg.name, monthsLeft: randInt(24, 48), effects: reg.effect }],
+        gameLog: [...state.gameLog, { text: `Successfully lobbied for ${reg.name}! ${reg.desc}`, type: 'success' }],
+        errorMsg: '',
+      };
+    }
+
+    case 'UPGRADE_SECURITY': {
+      const cost = 5e6;
+      if (state.cash < cost) return { ...state, errorMsg: `Need ${fmt(cost)} for security upgrade.` };
+      return {
+        ...state,
+        cash: state.cash - cost,
+        studioSecurity: clamp((state.studioSecurity || 0) + 10, 0, 100),
+        gameLog: [...state.gameLog, { text: `Studio security upgraded to ${(state.studioSecurity || 0) + 10}%. Espionage defense improved.`, type: 'success' }],
+        errorMsg: '',
       };
     }
 
@@ -4846,7 +6213,7 @@ export default function MovieMogul() {
               <div className="text-white font-bold text-sm mb-3 text-center">Awards History</div>
               <div className="max-h-48 overflow-y-auto space-y-1">
                 {state.annualAwards.slice().reverse().map((yr, i) => (
-                  <div key={i} className="text-xs">
+                  <div key={yr.year} className="text-xs">
                     <span className={`font-bold ${yr.isNegative ? 'text-red-400' : 'text-amber-400'}`}>{yr.showIcon || '🏆'} {yr.year} {yr.showName || 'Awards'}:</span>
                     {yr.awards.slice(0, 3).map((a, j) => <span key={j} className={`ml-1 ${a.isRivalWin ? 'text-gray-600' : 'text-gray-300'}`}>{a.isRivalWin ? '' : '🏆'} {a.category}</span>)}
                     {yr.awards.length > 3 && <span className="text-gray-500 ml-1">+{yr.awards.length - 3} more</span>}
@@ -4886,8 +6253,8 @@ export default function MovieMogul() {
   const inPipeline = state.films.filter(f => ['development', 'production', 'postproduction'].includes(f.status));
   const released = state.films.filter(f => f.status === 'released').slice().reverse();
   const awaitingRelease = state.films.filter(f => f.status === 'completed' || f.status === 'scheduled');
-  const tabs = ['dashboard', 'develop', 'production', 'release', 'talent', 'studio', 'finance', 'market', 'catalog', 'press', 'academy', 'partners', 'screening'];
-  const tabIcons = { dashboard: '📊', develop: '🎬', production: '🎥', release: '🎞', talent: '⭐', studio: '🏢', finance: '💰', market: '📈', catalog: '📀', press: '📰', academy: '🎓', partners: '🌍', screening: '🎬' };
+  const tabs = ['dashboard', 'develop', 'production', 'release', 'talent', 'studio', 'finance', 'market', 'streaming', 'catalog', 'press', 'academy', 'partners', 'screening'];
+  const tabIcons = { dashboard: '📊', develop: '🎬', production: '🎥', release: '🎞', talent: '⭐', studio: '🏢', finance: '💰', market: '📈', streaming: '📺', catalog: '📀', press: '📰', academy: '🎓', partners: '🌍', screening: '🎬' };
 
   const facilityCosts = [0, 500000, 2000000, 5000000, 15000000, 50000000];
   const facilityNames = ['Garage Studio', 'Small Lot', 'Soundstages', 'VFX Lab', 'Backlot Complex', 'Premier Facilities'];
@@ -5090,7 +6457,7 @@ export default function MovieMogul() {
           </div>
           <div className="bg-gray-800 border border-amber-700 rounded-lg p-4 max-h-48 overflow-y-auto">
             {state.annualAwards.slice(-6).reverse().map((yr, i) => (
-              <div key={i} className="mb-2 last:mb-0">
+              <div key={yr.year} className="mb-2 last:mb-0">
                 <div className={`font-bold text-xs mb-1 ${yr.isNegative ? 'text-red-400' : 'text-amber-400'}`}>{yr.showIcon || '🏆'} {yr.year} {yr.showName || 'Awards'}</div>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-0.5">
                   {yr.awards.slice(0, 4).map((a, j) => (
@@ -6080,6 +7447,42 @@ export default function MovieMogul() {
           </div>
         </div>
 
+        {/* Labor Relations Panel (SYSTEM 4) */}
+        <div className="bg-gray-800 border border-gray-700 rounded-lg p-4 mt-4">
+          <div className="flex justify-between items-center mb-3">
+            <div className="text-amber-400 font-bold">Labor Relations</div>
+            <div className="text-sm text-white font-bold">{LABOR_RELATIONS[state.laborRelations]?.name || 'Neutral'}</div>
+          </div>
+          <div className="text-xs text-gray-400 mb-3">{LABOR_RELATIONS[state.laborRelations]?.desc || 'Standard industry relations.'}</div>
+          <div className="grid grid-cols-3 gap-2">
+            <button onClick={() => dispatch({ type: 'SET_LABOR_POLICY', policy: 'generous' })} disabled={state.cash < 2e6}
+              className="bg-green-700 hover:bg-green-600 disabled:opacity-40 text-white text-xs px-2 py-1 rounded font-bold transition">
+              Generous (${fmt(2e6)})
+            </button>
+            <button onClick={() => dispatch({ type: 'SET_LABOR_POLICY', policy: 'standard' })}
+              className="bg-gray-700 hover:bg-gray-600 text-white text-xs px-2 py-1 rounded font-bold transition">
+              Standard
+            </button>
+            <button onClick={() => dispatch({ type: 'SET_LABOR_POLICY', policy: 'lean' })}
+              className="bg-red-700 hover:bg-red-600 text-white text-xs px-2 py-1 rounded font-bold transition">
+              Lean (+${fmt(1e6)})
+            </button>
+          </div>
+        </div>
+
+        {/* Career Stages Panel (SYSTEM 4) */}
+        <div className="bg-gray-800 border border-gray-700 rounded-lg p-4 mt-4">
+          <div className="text-amber-400 font-bold mb-2 text-sm">Talent Career Stages</div>
+          <div className="grid grid-cols-2 gap-2 text-xs">
+            {CAREER_STAGES.map(stage => (
+              <div key={stage.id} className="bg-gray-700 rounded p-2 border border-gray-600">
+                <div className="font-bold text-white">{stage.name}</div>
+                <div className="text-gray-400 text-xs">{stage.desc}</div>
+              </div>
+            ))}
+          </div>
+        </div>
+
         {/* Negotiation Modal */}
         {state.pendingNegotiation && (
           <div className="bg-gray-800 border border-amber-500 rounded-lg p-5 mt-4">
@@ -6259,21 +7662,23 @@ export default function MovieMogul() {
       <div>
         <div className="text-white font-bold text-lg mb-3">Streaming Platform</div>
         {state.year < 2005 ? (
-          <div className="bg-gray-800 border border-gray-700 rounded-lg p-4 text-gray-400 text-sm">Streaming becomes available in 2005.</div>
+          <div className="bg-gray-800 border border-gray-700 rounded-lg p-4 text-gray-400 text-sm">Streaming technology becomes available around 2005. Manage your platform in the Streaming tab.</div>
         ) : !state.streamingPlatform ? (
           <div className="bg-gray-800 border border-gray-700 rounded-lg p-4">
-            <div className="text-gray-300 text-sm mb-3">Launch your own streaming platform to compete in the modern era. Cost: $50M.</div>
-            <button onClick={() => dispatch({ type: 'LAUNCH_STREAMING' })} disabled={state.cash < 50000000}
+            <div className="text-gray-300 text-sm mb-3">Launch your own streaming platform. Cost: $100M. Go to the Streaming tab for full setup.</div>
+            <button onClick={() => dispatch({ type: 'LAUNCH_STREAMING' })} disabled={state.cash < 100000000}
               className="w-full bg-blue-600 hover:bg-blue-500 disabled:opacity-40 text-white font-bold py-2 rounded transition">
-              Launch Platform ({fmt(50000000)})
+              Launch Platform ({fmt(100000000)})
             </button>
           </div>
         ) : (
           <div className="bg-gray-800 border border-gray-700 rounded-lg p-4">
-            <div className="text-white font-bold">{state.studioName}+</div>
-            <div className="text-sm text-gray-400 mt-2">Subscribers: {(state.streamingPlatform.subscribers / 1e6).toFixed(2)}M</div>
-            <div className="text-sm text-gray-400">Monthly Revenue: ~{fmt(state.streamingPlatform.subscribers * 1)}</div>
-            <div className="text-sm text-gray-400">Launched: {state.streamingPlatform.launched}</div>
+            <div className="text-white font-bold">{state.streamingPlatform.name}</div>
+            <div className="text-sm text-gray-400 mt-2">Subscribers: {state.streamingPlatform.subscribers >= 1e6 ? `${(state.streamingPlatform.subscribers / 1e6).toFixed(2)}M` : `${(state.streamingPlatform.subscribers / 1e3).toFixed(0)}K`}</div>
+            <div className="text-sm text-gray-400">Monthly Revenue: {fmt(state.streamingPlatform.monthlyRevenue || 0)}</div>
+            <div className="text-sm text-gray-400">Launched: {state.streamingPlatform.launchYear}</div>
+            <div className="text-sm text-gray-400">Content: {state.streamingPlatform.contentLibrary || 0} titles</div>
+            <div className="text-xs text-gray-500 mt-1">Manage in the Streaming tab</div>
           </div>
         )}
       </div>
@@ -6527,7 +7932,13 @@ export default function MovieMogul() {
         <div className="bg-red-900 border border-red-500 rounded-lg p-5">
           <div className="text-red-400 font-bold text-lg mb-2">HOSTILE TAKEOVER OFFER</div>
           <div className="text-white mb-2">{state.hostileTakeoverOffer.buyer} offers {fmt(state.hostileTakeoverOffer.offer)} to acquire {state.studioName}.</div>
+          <div className="text-gray-400 text-sm mb-2">Deadline: {state.hostileTakeoverOffer.deadline} months left</div>
           <div className="flex gap-3">
+            <button onClick={() => dispatch({ type: 'DEFEND_TAKEOVER' })}
+              disabled={state.cash < (state.hostileTakeoverOffer?.defenseCost || 0)}
+              className="bg-blue-700 hover:bg-blue-600 disabled:opacity-30 text-white font-bold px-4 py-2 rounded">
+              Defend ({fmt(state.hostileTakeoverOffer?.defenseCost || 0)})
+            </button>
             <button onClick={() => dispatch({ type: 'REJECT_TAKEOVER' })} className="bg-green-600 hover:bg-green-500 text-white font-bold px-4 py-2 rounded">Fight It Off</button>
             <button onClick={() => dispatch({ type: 'ACCEPT_TAKEOVER' })} className="bg-red-600 hover:bg-red-500 text-white font-bold px-4 py-2 rounded">Accept & End</button>
           </div>
@@ -6674,6 +8085,73 @@ export default function MovieMogul() {
             <div className="text-white font-bold">{state.loans.length} / {creditRating.maxLoans}</div>
           </div>
         </div>
+
+        {/* Economic Cycle & Era Display (SYSTEM 1 & 3) */}
+        <div className="grid grid-cols-2 gap-4">
+          <div className="bg-gray-800 border border-gray-700 rounded-lg p-3">
+            <div className="text-amber-400 text-xs font-bold mb-1">FILMMAKING ERA</div>
+            <div className="text-white font-bold">{getCurrentFilmEra(state.year).name}</div>
+            <div className="text-gray-400 text-xs mt-1">{getCurrentFilmEra(state.year).techDesc}</div>
+          </div>
+          <div className="bg-gray-800 border border-gray-700 rounded-lg p-3">
+            <div className="text-amber-400 text-xs font-bold mb-1">ECONOMIC CYCLE</div>
+            <div className="text-white font-bold">{ECONOMIC_CYCLES.find(c => c.id === state.economicCycle.phase)?.name || 'Stable'}</div>
+            <div className="text-gray-400 text-xs mt-1">{ECONOMIC_CYCLES.find(c => c.id === state.economicCycle.phase)?.desc || ''}</div>
+          </div>
+        </div>
+
+        {/* Acquisitions & Co-Productions (SYSTEM 2) */}
+        <div className="bg-gray-800 border border-gray-700 rounded-lg p-4">
+          <div className="text-white font-bold text-sm mb-3">Acquisitions & Partnerships</div>
+          {(state.acquisitions || []).length > 0 && (
+            <div className="mb-3 pb-3 border-b border-gray-700">
+              <div className="text-xs font-bold text-amber-400 mb-2">Owned Acquisitions:</div>
+              <div className="space-y-1">
+                {state.acquisitions.map(acq => (
+                  <div key={acq.id} className="text-xs bg-green-900/30 border border-green-700 rounded p-2 text-green-200">
+                    <div className="font-bold">{acq.name}</div>
+                    <div className="text-xs text-gray-300">{acq.benefit}</div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+          <div className="text-xs text-gray-400 mb-3">Acquire studios, agencies, and vendors to unlock special benefits.</div>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
+            {ACQUISITION_TARGETS.map(target => {
+              const owned = (state.acquisitions || []).find(a => a.id === target.id);
+              return (
+                <button key={target.id} onClick={() => dispatch({ type: 'ACQUIRE_TARGET', targetId: target.id })}
+                  disabled={state.cash < target.baseCost || owned}
+                  className={`p-2 rounded text-xs text-left border transition ${owned ? 'bg-green-900/40 border-green-600 text-gray-400 cursor-default' : 'bg-gray-700 border-gray-600 hover:bg-gray-600 text-white'}`}>
+                  <div className="font-bold">{target.name} {owned ? '✓' : `(${fmt(target.baseCost)})`}</div>
+                  <div className="text-gray-400">{target.benefit}</div>
+                </button>
+              );
+            })}
+          </div>
+        </div>
+
+        {/* Stock Management (SYSTEM 2) */}
+        {state.isPublic && (
+          <div className="bg-gray-800 border border-blue-700 rounded-lg p-4">
+            <div className="flex justify-between items-center mb-2">
+              <div className="text-white font-bold text-sm">Stock Price: <span className="text-blue-400">${state.stockPrice}</span></div>
+              <div className="text-xs text-gray-400">Shareholder Demand: {state.shareholderDemand}/100</div>
+            </div>
+            <div className="text-xs text-gray-400 mb-3">Stock buybacks boost price & shareholder confidence. Dividends calm investors.</div>
+            <div className="grid grid-cols-2 gap-2">
+              <button onClick={() => dispatch({ type: 'STOCK_BUYBACK', amount: 10e6 })} disabled={state.cash < 10e6}
+                className="bg-blue-700 hover:bg-blue-600 disabled:opacity-40 text-white text-xs px-3 py-2 rounded font-bold transition">
+                Buyback $10M
+              </button>
+              <button onClick={() => dispatch({ type: 'PAY_DIVIDEND', amount: 5e6 })} disabled={state.cash < 5e6}
+                className="bg-blue-700 hover:bg-blue-600 disabled:opacity-40 text-white text-xs px-3 py-2 rounded font-bold transition">
+                Dividend $5M
+              </button>
+            </div>
+          </div>
+        )}
 
         {/* Tax Deductions */}
         <div className="bg-gray-800 border border-gray-700 rounded-lg p-4">
@@ -6902,6 +8380,45 @@ export default function MovieMogul() {
           </div>
         </div>
 
+        {/* SYSTEM 3: AI Studios (SYSTEM 3) */}
+        {state.aiStudiosSpawned && state.aiStudiosSpawned.length > 0 && (
+          <div>
+            <div className="text-white font-bold text-lg mb-3 text-red-400">AI STUDIOS (Emerging Competitors)</div>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
+              {state.competitors.filter(c => c.isAI).map((ai, i) => (
+                <div key={i} className="bg-red-900/20 border border-red-600 rounded-lg p-3">
+                  <div className="text-red-400 font-bold text-sm">{ai.name}</div>
+                  <div className="text-xs text-gray-400 mt-1">
+                    <div>Strategy: {ai.personality?.name || 'Unknown'}</div>
+                    <div>Founded: {ai.founded}</div>
+                    <div>Films: {ai.filmsReleased} | Gross: {fmt(ai.totalGross)}</div>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+
+        {/* SYSTEM 3: World Events (SYSTEM 3) */}
+        {state.activeZeitgeist && state.activeZeitgeist.length > 0 && (
+          <div>
+            <div className="text-white font-bold text-lg mb-3 text-orange-400">WORLD EVENTS & ZEITGEIST</div>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
+              {state.activeZeitgeist.map((event, i) => (
+                <div key={i} className="bg-orange-900/20 border border-orange-600 rounded-lg p-3">
+                  <div className="text-orange-400 font-bold text-sm">{event.name}</div>
+                  <div className="text-xs text-gray-400 mt-1">
+                    <div>Months left: {event.monthsLeft}</div>
+                    <div>Gross multiplier: ×{event.grossMult?.toFixed(2) || '1.00'}</div>
+                    {event.streamingBoost && <div>Streaming boost: ×{event.streamingBoost?.toFixed(1) || ''}</div>}
+                    {event.qualityMod && <div>Quality mod: {event.qualityMod > 0 ? '+' : ''}{event.qualityMod}</div>}
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+
         {state.rivalFilms.length > 0 && (
           <div>
             <div className="text-white font-bold text-lg mb-3">Rival Releases This Month</div>
@@ -6989,11 +8506,11 @@ export default function MovieMogul() {
         )}
 
         {/* ACQUIRED STUDIOS */}
-        {state.acquiredStudios.length > 0 && (
+        {(state.acquiredStudios || []).length > 0 && (
           <div>
             <div className="text-white font-bold text-lg mb-3">Acquired Studios</div>
             <div className="flex flex-wrap gap-2">
-              {state.acquiredStudios.map((s, i) => (
+              {(state.acquiredStudios || []).map((s, i) => (
                 <div key={i} className="bg-gray-800 border border-green-600 rounded-lg px-4 py-2 text-green-400 text-sm font-bold">{s}</div>
               ))}
             </div>
@@ -7221,6 +8738,140 @@ export default function MovieMogul() {
             );
           })()}
         </div>
+
+        {/* Intelligence & Espionage */}
+        <div>
+          <div className="text-white font-bold text-lg mb-3">Intelligence & Espionage</div>
+          <div className="bg-gray-800 border border-gray-700 rounded-lg p-4">
+            <div className="flex items-center justify-between mb-3">
+              <div>
+                <span className="text-gray-400 text-sm">Studio Security: </span>
+                <span className="text-amber-400 font-bold">{state.studioSecurity || 0}%</span>
+              </div>
+              <button onClick={() => dispatch({ type: 'UPGRADE_SECURITY' })}
+                disabled={state.cash < 5e6}
+                className="bg-blue-700 hover:bg-blue-600 disabled:opacity-30 text-white text-xs px-3 py-1.5 rounded">
+                Upgrade Security ({fmt(5e6)})
+              </button>
+            </div>
+            <div className="text-amber-400 font-bold text-sm mb-2">Launch Operations</div>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
+              {PLAYER_ESPIONAGE.map(esp => (
+                <div key={esp.id} className="bg-gray-900 border border-gray-600 rounded p-2">
+                  <div className="text-white text-xs font-bold">{esp.name}</div>
+                  <div className="text-gray-400 text-xs mt-0.5">{esp.desc}</div>
+                  <div className="text-xs mt-1">
+                    <span className="text-green-400">Success: {Math.round(esp.successChance * 100)}%</span>
+                    <span className="text-red-400 ml-2">Caught: {Math.round(esp.caughtChance * 100)}%</span>
+                    <span className="text-gray-500 ml-2">Cost: {fmt(esp.cost)}</span>
+                  </div>
+                  <div className="flex gap-1 mt-1 flex-wrap">
+                    {state.competitors.slice(0, 5).map(c => (
+                      <button key={c.name} onClick={() => dispatch({ type: 'LAUNCH_ESPIONAGE', espionageId: esp.id, targetRival: c.name })}
+                        disabled={state.cash < esp.cost}
+                        className="bg-red-800 hover:bg-red-700 disabled:opacity-30 text-white text-xs px-2 py-0.5 rounded truncate max-w-24">
+                        {c.name.split(' ')[0]}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              ))}
+            </div>
+
+            {(state.espionageLog || []).length > 0 && (
+              <div className="mt-3">
+                <div className="text-gray-400 text-xs font-bold mb-1">Recent Intelligence</div>
+                <div className="max-h-32 overflow-y-auto space-y-1">
+                  {(state.espionageLog || []).slice(-8).reverse().map((e, i) => (
+                    <div key={`${e.turn}-${e.type}-${e.rival}`} className={`text-xs px-2 py-1 rounded ${e.result === 'success' ? 'bg-green-900/30 text-green-400' : e.result === 'blocked' ? 'bg-blue-900/30 text-blue-400' : 'bg-red-900/30 text-red-400'}`}>
+                      {e.desc}
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+          </div>
+        </div>
+
+        {/* Industry Politics */}
+        <div>
+          <div className="text-white font-bold text-lg mb-3">Industry Politics</div>
+          <div className="bg-gray-800 border border-gray-700 rounded-lg p-4">
+            <div className="text-amber-400 font-bold text-sm mb-2">Coalitions</div>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-2 mb-3">
+              {INDUSTRY_COALITIONS.map(c => (
+                <div key={c.id} className={`bg-gray-900 border rounded p-2 ${state.playerCoalition === c.id ? 'border-amber-500' : 'border-gray-600'}`}>
+                  <div className="text-white text-xs font-bold">{c.name}</div>
+                  <div className="text-gray-400 text-xs mt-0.5">{c.desc}</div>
+                  {state.playerCoalition === c.id ? (
+                    <button onClick={() => dispatch({ type: 'LEAVE_COALITION' })} className="bg-gray-600 hover:bg-gray-500 text-white text-xs px-2 py-0.5 rounded mt-1">Leave</button>
+                  ) : (
+                    <button onClick={() => dispatch({ type: 'JOIN_COALITION', coalitionId: c.id })}
+                      disabled={state.playerCoalition !== null}
+                      className="bg-amber-700 hover:bg-amber-600 disabled:opacity-30 text-white text-xs px-2 py-0.5 rounded mt-1">Join</button>
+                  )}
+                </div>
+              ))}
+            </div>
+
+            <div className="text-amber-400 font-bold text-sm mb-2">Lobby for Regulations</div>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
+              {LOBBY_REGULATIONS.map(r => (
+                <button key={r.id} onClick={() => dispatch({ type: 'LOBBY_REGULATION', regulationId: r.id })}
+                  disabled={state.cash < 10e6}
+                  className="bg-purple-800 hover:bg-purple-700 disabled:opacity-30 text-white text-xs p-2 rounded text-left">
+                  <div className="font-bold">{r.name} ({fmt(10e6)})</div>
+                  <div className="text-purple-300 text-xs mt-0.5">{r.desc}</div>
+                </button>
+              ))}
+            </div>
+
+            {(state.activeRegulations || []).length > 0 && (
+              <div className="mt-2">
+                <div className="text-green-400 text-xs font-bold">Active Regulations:</div>
+                {(state.activeRegulations || []).map((r, i) => (
+                  <div key={i} className="text-xs text-green-300">{r.name} ({r.monthsLeft} months left)</div>
+                ))}
+              </div>
+            )}
+
+            {(state.rivalAlliances || []).length > 0 && (
+              <div className="mt-2">
+                <div className="text-red-400 text-xs font-bold">Active Rival Alliances:</div>
+                {(state.rivalAlliances || []).map((a, i) => (
+                  <div key={i} className="text-xs text-red-300">{a.studios.join(' & ')} — {a.purpose} ({a.monthsLeft}mo left)</div>
+                ))}
+              </div>
+            )}
+          </div>
+        </div>
+
+        {/* Adaptive Difficulty & Market Intelligence */}
+        <div>
+          <div className="text-white font-bold text-lg mb-3">Market Intelligence</div>
+          <div className="bg-gray-800 border border-gray-700 rounded-lg p-4">
+            <div className="flex items-center gap-4 mb-3">
+              <div className="text-gray-400 text-sm">Competition Level: <span className={`font-bold ${(state.difficultyScale || 1) >= 1.5 ? 'text-red-400' : (state.difficultyScale || 1) >= 1.2 ? 'text-amber-400' : 'text-green-400'}`}>{((state.difficultyScale || 1) * 100).toFixed(0)}%</span></div>
+              <div className="text-gray-400 text-sm">Active Rivals: <span className="text-white font-bold">{state.competitors.length}</span></div>
+            </div>
+            <div className="text-amber-400 font-bold text-sm mb-1">Your Genre Dominance</div>
+            <div className="flex flex-wrap gap-1">
+              {Object.entries(state.rivalMarketShare || {}).filter(([, v]) => v > 0.1).sort((a, b) => b[1] - a[1]).map(([genre, share]) => (
+                <span key={genre} className={`text-xs px-2 py-0.5 rounded ${share > 0.3 ? 'bg-green-800 text-green-300' : 'bg-gray-700 text-gray-300'}`}>
+                  {genre}: {Math.round(share * 100)}%
+                </span>
+              ))}
+            </div>
+            {(state.twinFilmWarnings || []).length > 0 && (
+              <div className="mt-2">
+                <div className="text-red-400 text-xs font-bold">Twin Film Warnings:</div>
+                {state.twinFilmWarnings.map((w, i) => (
+                  <div key={i} className="text-xs text-red-300">{w.rivalName} developing a {w.genre} film similar to yours!</div>
+                ))}
+              </div>
+            )}
+          </div>
+        </div>
       </div>
     );
   };
@@ -7368,11 +9019,11 @@ export default function MovieMogul() {
         <div className="text-white font-bold text-lg mb-3">Film School Pipeline</div>
         <div className="text-gray-400 text-sm mb-4">Fund film schools to develop cheaper but riskier talent. Schools produce graduates regularly!</div>
 
-        {state.filmSchools.length === 0 ? (
+        {(state.filmSchools || []).length === 0 ? (
           <div className="text-gray-400 text-sm mb-4">No schools funded yet. Start investing to build your talent pipeline.</div>
         ) : (
           <div className="space-y-3 mb-4">
-            {state.filmSchools.map((fs, i) => {
+            {(state.filmSchools || []).map((fs, i) => {
               const schoolDef = FILM_SCHOOLS.find(s => s.id === fs.schoolId);
               const turnsToGraduate = Math.max(0, fs.nextGraduate - state.turn);
               return (
@@ -7430,11 +9081,11 @@ export default function MovieMogul() {
         <div className="text-white font-bold text-lg mb-3">International Studio Partnerships</div>
         <div className="text-gray-400 text-sm mb-4">Partner with regional studios to access new markets, genres, and talent!</div>
 
-        {state.internationalPartners.length === 0 ? (
+        {(state.internationalPartners || []).length === 0 ? (
           <div className="text-gray-400 text-sm mb-4">No partnerships yet. Form partnerships to expand globally.</div>
         ) : (
           <div className="space-y-3 mb-4">
-            {state.internationalPartners.map((ip, i) => {
+            {(state.internationalPartners || []).map((ip, i) => {
               const partnerDef = INTERNATIONAL_PARTNERS.find(p => p.id === ip.partnerId);
               return (
                 <div key={i} className="bg-gray-800 border border-blue-700 rounded-lg p-4">
@@ -7486,6 +9137,370 @@ export default function MovieMogul() {
       </div>
     </div>
   );
+
+  const renderStreaming = () => {
+    const platform = state.streamingPlatform;
+    const airingShows = state.tvShows.filter(s => s.status === 'airing');
+    const inDevShows = state.tvShows.filter(s => s.status === 'development' || s.status === 'production');
+    const cancelledShows = state.tvShows.filter(s => s.status === 'cancelled');
+    const endedShows = state.tvShows.filter(s => s.status === 'ended');
+    const showrunners = state.contracts.filter(t => t.type === 'showrunner');
+
+    return (
+      <div className="space-y-6">
+        <div className="text-2xl font-bold text-purple-400 mb-4">📺 TV & Streaming</div>
+
+        {/* Streaming Platform Section */}
+        <div className="mb-6">
+          <div className="text-lg font-bold text-blue-400 mb-2">Streaming Platform</div>
+          {state.year < 2005 ? (
+            <div className="bg-gray-800 border border-gray-700 rounded-lg p-4">
+              <div className="text-gray-500 text-center py-4">
+                <div className="text-4xl mb-3">📡</div>
+                <div className="text-lg font-bold text-gray-400 mb-2">Streaming Technology Not Yet Available</div>
+                <div className="text-sm text-gray-500">The internet infrastructure for video streaming hasn't been developed yet. Streaming services will become possible around 2005-2010.</div>
+                <div className="text-xs text-gray-600 mt-2">Current year: {state.year} · Streaming era begins: ~2005</div>
+              </div>
+            </div>
+          ) : !platform ? (
+            <div className="bg-gray-800 border border-gray-700 rounded-lg p-4">
+              <div className="text-gray-400 mb-3">Launch your own streaming service to build recurring revenue and distribute content directly to audiences.</div>
+              <div className="text-sm text-gray-500 mb-2">Cost: $100M launch investment | Your entire back catalog ({state.films.filter(f => f.status === 'released').length} films) will be added automatically.</div>
+              {/* Show rival streamers already in the market */}
+              {RIVAL_STREAMERS.filter(s => s.founded <= state.year).length > 0 && (
+                <div className="mb-3">
+                  <div className="text-xs text-gray-500 mb-1">Competing platforms already in the market:</div>
+                  <div className="flex flex-wrap gap-1">
+                    {RIVAL_STREAMERS.filter(s => s.founded <= state.year).map(s => (
+                      <span key={s.name} className="text-xs bg-gray-700 text-gray-300 px-2 py-0.5 rounded">{s.name} (est. {s.founded})</span>
+                    ))}
+                  </div>
+                </div>
+              )}
+              <div className="flex gap-2 items-center mb-3 flex-wrap">
+                <input type="text" placeholder="Platform name..." className="bg-gray-700 border border-gray-600 rounded px-3 py-2 text-white text-sm w-48" value={state._streamingName || ''} onChange={e => dispatch({ type: 'SET_TV_DEV', field: '_streamingName', value: e.target.value })} />
+                <select className="bg-gray-700 border border-gray-600 rounded px-3 py-2 text-white text-sm" value={state._streamingTier || 'standard'} onChange={e => dispatch({ type: 'SET_TV_DEV', field: '_streamingTier', value: e.target.value })}>
+                  {STREAMING_TIERS.map(t => <option key={t.id} value={t.id}>{t.name} (${t.monthlyPrice}/mo)</option>)}
+                </select>
+              </div>
+              <button onClick={() => dispatch({ type: 'LAUNCH_STREAMING' })} className="bg-purple-600 hover:bg-purple-500 text-white font-bold px-6 py-2 rounded-lg transition">
+                Launch Streaming Platform ($100M)
+              </button>
+              {state.errorMsg && <div className="text-red-400 text-sm mt-2">{state.errorMsg}</div>}
+            </div>
+          ) : (
+            <div className="bg-gray-800 border border-purple-700 rounded-lg p-4">
+              <div className="flex justify-between items-center mb-3">
+                <div className="text-xl font-bold text-purple-300">{platform.name}</div>
+                <div className="text-sm text-gray-400">Launched {platform.launchYear}</div>
+              </div>
+              <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mb-4">
+                <div className="bg-gray-900 rounded-lg p-3 text-center">
+                  <div className="text-2xl font-bold text-blue-400">{platform.subscribers >= 1e6 ? `${(platform.subscribers / 1e6).toFixed(1)}M` : `${(platform.subscribers / 1e3).toFixed(0)}K`}</div>
+                  <div className="text-xs text-gray-500">Subscribers</div>
+                </div>
+                <div className="bg-gray-900 rounded-lg p-3 text-center">
+                  <div className="text-2xl font-bold text-green-400">{fmt(platform.monthlyRevenue)}</div>
+                  <div className="text-xs text-gray-500">Monthly Revenue</div>
+                </div>
+                <div className="bg-gray-900 rounded-lg p-3 text-center">
+                  <div className="text-2xl font-bold text-amber-400">{platform.contentLibrary || 0}</div>
+                  <div className="text-xs text-gray-500">Content Library</div>
+                </div>
+                <div className="bg-gray-900 rounded-lg p-3 text-center">
+                  <div className="text-2xl font-bold text-red-400">{Math.round((platform.churnRate || 0.04) * 100)}%</div>
+                  <div className="text-xs text-gray-500">Monthly Churn</div>
+                </div>
+              </div>
+              <div className="flex gap-2 mb-3 flex-wrap">
+                {STREAMING_TIERS.map(t => (
+                  <button key={t.id} onClick={() => dispatch({ type: 'SET_STREAMING_TIER', tier: t.id })} className={`px-3 py-1 rounded text-sm font-bold ${platform.tier === t.id ? 'bg-purple-600 text-white' : 'bg-gray-700 text-gray-400 hover:bg-gray-600'}`}>{t.name}</button>
+                ))}
+                <button onClick={() => dispatch({ type: 'TOGGLE_AD_TIER' })} className={`px-3 py-1 rounded text-sm font-bold ${platform.adTier ? 'bg-amber-600 text-white' : 'bg-gray-700 text-gray-400 hover:bg-gray-600'}`}>
+                  {platform.adTier ? '✓ Ad Tier Active' : 'Add Ad Tier'}
+                </button>
+              </div>
+              <div className="flex gap-2 mb-3">
+                {[5e6, 10e6, 25e6].map(amt => (
+                  <button key={amt} onClick={() => dispatch({ type: 'STREAMING_MARKETING', amount: amt })} className="bg-blue-700 hover:bg-blue-600 text-white text-sm px-3 py-1 rounded">
+                    Market {fmt(amt)}
+                  </button>
+                ))}
+              </div>
+            </div>
+          )}
+        </div>
+
+        {/* Back Catalog Management */}
+        {platform && (() => {
+          const catalogFilmIds = new Set(platform.catalogFilmIds || []);
+          const catalogShowIds = new Set(platform.catalogShowIds || []);
+          const releasedFilms = state.films.filter(f => f.status === 'released');
+          const notInCatalogFilms = releasedFilms.filter(f => !catalogFilmIds.has(f.id));
+          const inCatalogFilms = releasedFilms.filter(f => catalogFilmIds.has(f.id));
+          const availableShows = state.tvShows.filter(s => (s.status === 'airing' || s.status === 'ended') && !catalogShowIds.has(s.id));
+          const inCatalogShows = state.tvShows.filter(s => catalogShowIds.has(s.id));
+          return (
+            <div className="mb-6">
+              <div className="text-lg font-bold text-amber-400 mb-2">Content Catalog ({(platform.catalogFilmIds || []).length + (platform.catalogShowIds || []).length} titles on {platform.name})</div>
+              <div className="bg-gray-800 border border-amber-700/50 rounded-lg p-4">
+                {notInCatalogFilms.length > 0 && (
+                  <div className="mb-3">
+                    <div className="text-sm font-bold text-gray-300 mb-2">Films Not Yet on Platform ({notInCatalogFilms.length})</div>
+                    <div className="max-h-40 overflow-y-auto space-y-1">
+                      {notInCatalogFilms.sort((a, b) => (b.quality || 0) - (a.quality || 0)).map(f => (
+                        <div key={f.id} className="flex justify-between items-center bg-gray-900 rounded px-3 py-1.5 text-sm">
+                          <div>
+                            <span className="text-white">{f.title}</span>
+                            <span className="text-gray-500 text-xs ml-2">{f.genre} · Q:{f.quality} · {f.releasedYear}</span>
+                          </div>
+                          <button onClick={() => dispatch({ type: 'ADD_TO_CATALOG', contentId: f.id, contentType: 'film' })} className="bg-amber-700 hover:bg-amber-600 text-white text-xs px-2 py-0.5 rounded">
+                            + Add
+                          </button>
+                        </div>
+                      ))}
+                    </div>
+                    <button onClick={() => notInCatalogFilms.forEach(f => dispatch({ type: 'ADD_TO_CATALOG', contentId: f.id, contentType: 'film' }))} className="mt-2 bg-amber-600 hover:bg-amber-500 text-white text-xs px-3 py-1 rounded">
+                      Add All Films ({notInCatalogFilms.length})
+                    </button>
+                  </div>
+                )}
+                {availableShows.length > 0 && (
+                  <div className="mb-3">
+                    <div className="text-sm font-bold text-gray-300 mb-2">TV Shows Not Yet on Platform ({availableShows.length})</div>
+                    <div className="space-y-1">
+                      {availableShows.map(s => (
+                        <div key={s.id} className="flex justify-between items-center bg-gray-900 rounded px-3 py-1.5 text-sm">
+                          <div>
+                            <span className="text-white">{s.title}</span>
+                            <span className="text-gray-500 text-xs ml-2">{s.formatName} · S{s.seasons} · Q:{s.quality}</span>
+                          </div>
+                          <button onClick={() => dispatch({ type: 'ADD_TO_CATALOG', contentId: s.id, contentType: 'show' })} className="bg-amber-700 hover:bg-amber-600 text-white text-xs px-2 py-0.5 rounded">
+                            + Add
+                          </button>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+                {(inCatalogFilms.length > 0 || inCatalogShows.length > 0) && (
+                  <div>
+                    <div className="text-sm font-bold text-gray-400 mb-1">On Platform ({inCatalogFilms.length} films, {inCatalogShows.length} shows)</div>
+                    <div className="max-h-32 overflow-y-auto">
+                      {inCatalogFilms.slice(0, 10).map(f => (
+                        <div key={f.id} className="flex justify-between text-xs text-gray-500 py-0.5">
+                          <span>{f.title} ({f.genre}, Q:{f.quality})</span>
+                          <button onClick={() => dispatch({ type: 'REMOVE_FROM_CATALOG', contentId: f.id, contentType: 'film' })} className="text-red-500 hover:text-red-400">remove</button>
+                        </div>
+                      ))}
+                      {inCatalogFilms.length > 10 && <div className="text-xs text-gray-600">...and {inCatalogFilms.length - 10} more films</div>}
+                      {inCatalogShows.map(s => (
+                        <div key={s.id} className="flex justify-between text-xs text-gray-500 py-0.5">
+                          <span>{s.title} ({s.formatName}, S{s.seasons})</span>
+                          <button onClick={() => dispatch({ type: 'REMOVE_FROM_CATALOG', contentId: s.id, contentType: 'show' })} className="text-red-500 hover:text-red-400">remove</button>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+                {notInCatalogFilms.length === 0 && availableShows.length === 0 && (
+                  <div className="text-gray-500 text-sm text-center py-2">All your content is on the platform!</div>
+                )}
+              </div>
+            </div>
+          );
+        })()}
+
+        {/* Rival Streaming Platforms */}
+        {platform && (state.rivalStreamers || []).length > 0 && (
+          <div className="mb-6">
+            <div className="text-lg font-bold text-red-400 mb-2">Competing Platforms</div>
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-2">
+              {(state.rivalStreamers || []).map(rs => (
+                <div key={rs.name} className="bg-gray-800 border border-gray-700 rounded-lg p-3">
+                  <div className="text-white font-bold text-sm">{rs.name}</div>
+                  <div className="text-xs text-gray-400">{rs.desc}</div>
+                  <div className="text-blue-400 text-sm mt-1">{rs.subscribers >= 1e6 ? `${(rs.subscribers / 1e6).toFixed(0)}M` : `${(rs.subscribers / 1e3).toFixed(0)}K`} subs</div>
+                  <div className="text-gray-500 text-xs">{rs.contentCount} titles · Est. {rs.founded}</div>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+
+        {/* TV Show Development */}
+        <div className="mb-6">
+          <div className="text-lg font-bold text-green-400 mb-2">Develop New TV Show</div>
+          <div className="bg-gray-800 border border-gray-700 rounded-lg p-4">
+            {showrunners.length === 0 ? (
+              <div className="text-gray-500 text-sm">No showrunners under contract. Sign one in the Talent tab first.</div>
+            ) : (
+              <>
+                <div className="mb-3">
+                  <div className="text-xs text-gray-500 mb-1">Format</div>
+                  <div className="flex flex-wrap gap-1">
+                    {TV_FORMATS.map(f => (
+                      <button key={f.id} onClick={() => dispatch({ type: 'SET_TV_DEV', field: 'tvDevFormat', value: f.id })} className={`px-2 py-1 rounded text-xs font-bold ${state.tvDevFormat === f.id ? 'bg-green-600 text-white' : 'bg-gray-700 text-gray-400 hover:bg-gray-600'}`}>
+                        {f.name}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+                {state.tvDevFormat && (() => {
+                  const format = TV_FORMATS.find(f => f.id === state.tvDevFormat);
+                  return (
+                    <>
+                      <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mb-3">
+                        <div>
+                          <div className="text-xs text-gray-500 mb-1">Showrunner</div>
+                          <select className="w-full bg-gray-700 border border-gray-600 rounded px-2 py-1 text-sm text-white" value={state.tvDevShowrunnerId || ''} onChange={e => dispatch({ type: 'SET_TV_DEV', field: 'tvDevShowrunnerId', value: Number(e.target.value) })}>
+                            <option value="">Select...</option>
+                            {showrunners.map(s => <option key={s.id} value={s.id}>{s.name} ({s.skill}) — {s.trait}</option>)}
+                          </select>
+                        </div>
+                        <div>
+                          <div className="text-xs text-gray-500 mb-1">Episodes ({format.episodesRange[0]}-{format.episodesRange[1]})</div>
+                          <input type="range" min={format.episodesRange[0]} max={format.episodesRange[1]} value={state.tvDevEpisodes || format.episodesRange[0]} onChange={e => dispatch({ type: 'SET_TV_DEV', field: 'tvDevEpisodes', value: Number(e.target.value) })} className="w-full" />
+                          <div className="text-xs text-center text-white">{state.tvDevEpisodes || format.episodesRange[0]} episodes</div>
+                        </div>
+                        <div>
+                          <div className="text-xs text-gray-500 mb-1">Budget/Episode</div>
+                          <input type="range" min={1} max={15} step={0.5} value={state.tvDevBudgetPerEp || 3} onChange={e => dispatch({ type: 'SET_TV_DEV', field: 'tvDevBudgetPerEp', value: Number(e.target.value) })} className="w-full" />
+                          <div className="text-xs text-center text-white">{fmt((state.tvDevBudgetPerEp || 3) * 1e6)}/ep</div>
+                        </div>
+                        <div>
+                          <div className="text-xs text-gray-500 mb-1">Distribution</div>
+                          <select className="w-full bg-gray-700 border border-gray-600 rounded px-2 py-1 text-sm text-white" value={state.tvDevDistribution || 'streaming_exclusive'} onChange={e => dispatch({ type: 'SET_TV_DEV', field: 'tvDevDistribution', value: e.target.value })}>
+                            {CONTENT_DISTRIBUTION_OPTIONS.filter(o => !o.filmOnly && (!o.requiresStreaming || state.streamingPlatform)).map(o => <option key={o.id} value={o.id}>{o.name}</option>)}
+                            <option value="network">Network TV (no streaming)</option>
+                          </select>
+                        </div>
+                      </div>
+                      <div className="flex justify-between items-center">
+                        <div className="text-sm text-gray-400">
+                          Total cost: <span className="text-white font-bold">{fmt((state.tvDevEpisodes || format.episodesRange[0]) * (state.tvDevBudgetPerEp || 3) * 1e6)}</span>
+                          {' · '}Production: ~{Math.ceil((state.tvDevEpisodes || format.episodesRange[0]) / 3)} months
+                        </div>
+                        <button onClick={() => dispatch({ type: 'GREENLIGHT_TV' })} className="bg-green-600 hover:bg-green-500 text-white font-bold px-6 py-2 rounded-lg transition">
+                          Greenlight Show
+                        </button>
+                      </div>
+                      {state.errorMsg && <div className="text-red-400 text-sm mt-2">{state.errorMsg}</div>}
+                    </>
+                  );
+                })()}
+              </>
+            )}
+          </div>
+        </div>
+
+        {/* Active TV Shows */}
+        <div className="mb-6">
+          <div className="text-lg font-bold text-amber-400 mb-2">TV Shows ({state.tvShows.length})</div>
+          {state.tvShows.length === 0 ? (
+            <div className="text-gray-500 text-sm">No TV shows yet. Greenlight one above!</div>
+          ) : (
+            <div className="space-y-2">
+              {state.tvShows.filter(s => s.status !== 'cancelled').map(show => (
+                <div key={show.id} className={`bg-gray-800 border rounded-lg p-3 ${show.status === 'airing' ? 'border-green-700' : show.status === 'ended' ? 'border-gray-600' : 'border-yellow-700'}`}>
+                  <div className="flex justify-between items-start">
+                    <div>
+                      <div className="font-bold text-white">{show.title}</div>
+                      <div className="text-xs text-gray-400">{show.formatName} · {show.episodes} eps · S{show.currentSeason} · {show.showrunnerName}</div>
+                    </div>
+                    <div className="flex gap-1 items-center">
+                      <span className={`px-2 py-0.5 rounded text-xs font-bold ${
+                        show.status === 'airing' ? 'bg-green-600 text-white' :
+                        show.status === 'production' ? 'bg-yellow-600 text-white' :
+                        show.status === 'development' ? 'bg-blue-600 text-white' :
+                        show.status === 'ended' ? 'bg-gray-600 text-white' : 'bg-red-600 text-white'
+                      }`}>{show.status.toUpperCase()}</span>
+                    </div>
+                  </div>
+                  {show.quality > 0 && (
+                    <div className="flex gap-4 mt-2 text-sm flex-wrap">
+                      <span className="text-gray-400">Quality: <span className="text-white">{show.quality}</span></span>
+                      <span className="text-gray-400">Viewers: <span className="text-white">{show.viewership >= 1e6 ? `${(show.viewership / 1e6).toFixed(1)}M` : `${(show.viewership / 1e3).toFixed(0)}K`}</span></span>
+                      <span className="text-gray-400">Critics: <span className="text-white">{show.criticScore}</span></span>
+                      {show.subscriberImpact > 0 && <span className="text-gray-400">Sub Impact: <span className="text-purple-400">+{(show.subscriberImpact / 1e6).toFixed(1)}M</span></span>}
+                    </div>
+                  )}
+                  {show.criticReviews && show.criticReviews.length > 0 && (
+                    <div className="flex flex-wrap gap-1 mt-2">
+                      {show.criticReviews.slice(0, 4).map((r, i) => (
+                        <span key={i} className={`text-xs px-1.5 py-0.5 rounded ${r.score >= 70 ? 'bg-green-900 text-green-300' : r.score >= 50 ? 'bg-yellow-900 text-yellow-300' : 'bg-red-900 text-red-300'}`}>
+                          {r.name}: {r.score}
+                        </span>
+                      ))}
+                    </div>
+                  )}
+                  {show.status === 'airing' && (
+                    <div className="flex gap-2 mt-2 flex-wrap">
+                      <button onClick={() => dispatch({ type: 'RENEW_SHOW', showId: show.id })} className="bg-green-700 hover:bg-green-600 text-white text-xs px-3 py-1 rounded">
+                        Renew S{show.currentSeason + 1}
+                      </button>
+                      <button onClick={() => dispatch({ type: 'CANCEL_SHOW', showId: show.id })} className="bg-red-700 hover:bg-red-600 text-white text-xs px-3 py-1 rounded">
+                        Cancel
+                      </button>
+                      {state.streamingPlatform && (
+                        <button onClick={() => dispatch({ type: 'LICENSE_CONTENT_OUT', contentId: show.id, contentType: 'show' })} className="bg-blue-700 hover:bg-blue-600 text-white text-xs px-3 py-1 rounded">
+                          License Out
+                        </button>
+                      )}
+                    </div>
+                  )}
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+
+        {/* Content Licensing */}
+        {state.streamingPlatform && (
+          <div className="mb-6">
+            <div className="text-lg font-bold text-cyan-400 mb-2">Content Licensing</div>
+            <div className="bg-gray-800 border border-gray-700 rounded-lg p-4">
+              <div className="grid grid-cols-2 gap-3 mb-3">
+                <div>
+                  <div className="text-sm font-bold text-gray-300 mb-1">License In (buy content)</div>
+                  <button onClick={() => dispatch({ type: 'LICENSE_CONTENT_IN', title: 'Content Package', partner: pick(RIVAL_STREAMERS).name, monthlyFee: randInt(100000, 500000) })} className="bg-cyan-700 hover:bg-cyan-600 text-white text-sm px-3 py-1 rounded w-full">
+                    Buy Content Package
+                  </button>
+                </div>
+                <div>
+                  <div className="text-sm font-bold text-gray-300 mb-1">Windowing Strategy</div>
+                  <select className="w-full bg-gray-700 border border-gray-600 rounded px-2 py-1 text-sm text-white" value={state.windowingStrategy || 'exclusive_45'} onChange={e => dispatch({ type: 'SET_WINDOWING', strategy: e.target.value })}>
+                    {WINDOWING_OPTIONS.map(w => <option key={w.id} value={w.id}>{w.name}</option>)}
+                  </select>
+                </div>
+              </div>
+              {(state.licensingDeals || []).length > 0 && (
+                <div>
+                  <div className="text-sm font-bold text-gray-400 mb-1">Active Deals</div>
+                  {(state.licensingDeals || []).map(d => (
+                    <div key={d.id} className="flex justify-between text-xs text-gray-400 py-1 border-b border-gray-700">
+                      <span>{d.type === 'out' ? '→' : '←'} {d.contentTitle} ({d.partner})</span>
+                      <span className={d.type === 'out' ? 'text-green-400' : 'text-red-400'}>{d.type === 'out' ? '+' : '-'}{fmt(d.monthlyFee)}/mo · {d.monthsLeft}mo left</span>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+          </div>
+        )}
+
+        {/* Cancelled/Ended Shows */}
+        {(cancelledShows.length > 0 || endedShows.length > 0) && (
+          <div>
+            <div className="text-sm font-bold text-gray-500 mb-1">Completed / Cancelled ({cancelledShows.length + endedShows.length})</div>
+            {[...endedShows, ...cancelledShows].map(show => (
+              <div key={show.id} className="text-xs text-gray-500 py-1">{show.title} — {show.seasons}S · Q:{show.quality} · {show.status}</div>
+            ))}
+          </div>
+        )}
+      </div>
+    );
+  };
 
   const renderScreening = () => {
     const playerFilms = (state.allFilmHistory || []).filter(f => !f.isRival);
@@ -7765,6 +9780,7 @@ export default function MovieMogul() {
           {tab === 'studio' && renderStudio()}
           {tab === 'finance' && renderFinance()}
           {tab === 'market' && renderMarket()}
+          {tab === 'streaming' && renderStreaming()}
           {tab === 'press' && renderPress()}
           {tab === 'academy' && renderAcademy()}
           {tab === 'catalog' && renderCatalog()}
