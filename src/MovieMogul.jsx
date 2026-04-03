@@ -79,6 +79,17 @@ const REWRITE_TYPES = [
   { id: 'doctorScript', name: 'Script Doctor', costPct: 0.15, months: 1, qualityMin: 6, qualityMax: 12, desc: 'Bring in an uncredited expert to fix problems.', maxUses: 1 },
 ];
 
+const TEST_SCREENING_OPTIONS = [
+  { id: 'focus_group', name: 'Focus Group', cost: 250000, accuracy: 0.6, desc: 'Small audience panel. Cheap but imprecise.' },
+  { id: 'test_screening', name: 'Test Screening', cost: 750000, accuracy: 0.8, desc: 'Full theater audience with feedback cards.' },
+  { id: 'advanced_analytics', name: 'Advanced Analytics', cost: 1500000, accuracy: 0.95, desc: 'AI-driven audience analysis. Near-perfect prediction.' },
+];
+const RESHOOT_OPTIONS = [
+  { id: 'minor', name: 'Minor Reshoots', costPct: 0.10, months: 1, qualityRange: [2, 6], desc: 'Fix specific scenes. Low cost, modest improvement.' },
+  { id: 'major', name: 'Major Reshoots', costPct: 0.25, months: 2, qualityRange: [5, 15], desc: 'Rebuild key sequences. Expensive but potentially transformative.' },
+  { id: 'ending', name: 'New Ending', costPct: 0.15, months: 1, qualityRange: [3, 10], audienceMod: 8, desc: 'Test audiences hated the ending. Give them what they want.' },
+];
+
 const BANKRUPTCY_THRESHOLD = -5000000;
 
 const getCareerPhase = (age) => CAREER_PHASES.find(p => age >= p.minAge && age <= p.maxAge) || CAREER_PHASES[4];
@@ -471,6 +482,8 @@ const generateNominees = (allFilms, category) => {
     }
     // Add slight randomness so results aren't perfectly deterministic
     score += (Math.random() - 0.5) * 8;
+    // Awards campaign boost
+    if (f._awardsBoost) score += f._awardsBoost;
     return { film: f, score };
   });
   scored.sort((a, b) => b.score - a.score);
@@ -662,6 +675,18 @@ const makeTalent = (id, type, skillRange, ageRange) => {
     trait: trait.name,
     traitDesc: trait.desc,
     traitEffect: trait.effect,
+    // Profit participation demands (high-skill talent demands backend deals)
+    profitParticipation: skill >= 75 ? Math.round((skill - 60) * 0.1 * 10) / 10 : 0, // 0-4% of gross
+    demands: (() => {
+      const d = [];
+      TALENT_DEMANDS.forEach(td => {
+        if (Math.random() < td.weight) {
+          const demand = td.generate(skill, null);
+          if (demand) d.push(demand);
+        }
+      });
+      return d;
+    })(),
   };
 };
 
@@ -676,7 +701,9 @@ const makeScripts = (year) => {
       const others = GENRES.filter(g => g !== genre);
       genre2 = pick(others);
     }
-    return { id: i, genre, genre2, title: tpl.title, logline: tpl.logline, budgetMin: budMin, budgetMax: budMax, marketFit: randInt(40, 95) };
+    const mFit = randInt(40, 95);
+    const isHot = mFit >= 80;
+    return { id: i, genre, genre2, title: tpl.title, logline: tpl.logline, budgetMin: budMin, budgetMax: budMax, marketFit: mFit, isHot, bidPrice: isHot ? randInt(1, 5) * 1e6 : 0, rivalBidder: isHot ? pick(['Paramount', 'Universal', 'Warner Bros.', 'MGM', 'Columbia']) : null };
   });
 };
 
@@ -728,6 +755,38 @@ const RIVAL_PERSONALITIES = [
   { name: 'Disruptor', desc: 'Experimental, boundary-pushing, unpredictable.', genreWeights: { 'Sci-Fi': 0.2, Horror: 0.15, Documentary: 0.15, Mystery: 0.15, Fantasy: 0.15 }, budgetMult: 0.9, qualityBonus: 4, marketingMult: 0.8, aggression: 0.8, riskTolerance: 0.9 },
 ];
 
+// ==================== INDUSTRY CRISES ====================
+const INDUSTRY_CRISES = [
+  { id: 'writers_strike', name: "Writers' Strike", years: [1960, 1988, 2007, 2023], duration: 6, effects: { blockScripts: true, qualityMod: -8, desc: 'No new scripts can be developed. Films in production suffer quality loss.' } },
+  { id: 'actors_strike', name: "Actors' Strike", years: [1980, 2023], duration: 4, effects: { blockProduction: true, desc: 'No new films can start production. Existing productions continue.' } },
+  { id: 'recession', name: 'Economic Recession', years: [1973, 1981, 1990, 2001, 2008, 2020], duration: 12, effects: { boxOfficeMod: -0.25, budgetCostMod: -0.10, desc: 'Audiences shrink 25%. Budgets cheaper but riskier. Horror and comedy thrive.' } },
+  { id: 'tech_boom', name: 'Technology Revolution', years: [1977, 1993, 2009, 2022], duration: 8, effects: { genreBoost: ['Sci-Fi', 'Action', 'Animation'], qualityMod: 3, desc: 'New tech excites audiences. Sci-Fi, Action, and Animation get quality and box office boosts.' } },
+  { id: 'streaming_wars', name: 'Streaming Wars', years: [2015, 2019], duration: 18, effects: { theatricalMod: -0.15, streamingBoost: 2.0, desc: 'Theatrical shrinks 15%. Streaming revenue doubles.' } },
+  { id: 'censorship', name: 'Censorship Crackdown', years: [1970, 1985, 2005], duration: 6, effects: { ratingPenalty: true, desc: 'R and NC-17 films face distribution restrictions. -30% gross for restricted films.' } },
+  { id: 'indie_boom', name: 'Independent Film Renaissance', years: [1989, 1999, 2017], duration: 12, effects: { indieBudgetBoost: true, desc: 'Low-budget films (<$20M) get +20% box office and +5 quality. Audiences crave originality.' } },
+  { id: 'global_pandemic', name: 'Global Pandemic', years: [2020], duration: 12, effects: { boxOfficeMod: -0.60, streamingBoost: 3.0, desc: 'Theaters devastated. Box office drops 60%. Streaming explodes.' } },
+];
+
+// ==================== TALENT DEMANDS ====================
+const TALENT_DEMANDS = [
+  { id: 'genre_refuse', name: 'Genre Refusal', desc: 'Refuses to work in certain genres', weight: 0.3, generate: (skill) => { if (skill < 50) return null; const refused = [pick(GENRES)]; if (skill > 75) refused.push(pick(GENRES.filter(g => g !== refused[0]))); return { type: 'genre_refuse', genres: refused, desc: `Won't do ${refused.join(' or ')}` }; } },
+  { id: 'director_pref', name: 'Director Preference', desc: 'Wants to work with a specific director', weight: 0.15, generate: (skill, contracts) => { if (skill < 60 || !contracts || contracts.length === 0) return null; const dirs = contracts.filter(t => t.type === 'director'); if (dirs.length === 0) return null; const pref = pick(dirs); return { type: 'director_pref', directorId: pref.id, directorName: pref.name, desc: `Wants to work with ${pref.name}` }; } },
+  { id: 'budget_min', name: 'Budget Minimum', desc: 'Only works on big budget films', weight: 0.2, generate: (skill) => { if (skill < 65) return null; const min = Math.round((skill - 40) * 0.5) * 1e6; return { type: 'budget_min', amount: min, desc: `Only films with $${Math.round(min/1e6)}M+ budget` }; } },
+  { id: 'top_billing', name: 'Top Billing', desc: 'Demands highest pay on the project', weight: 0.1, generate: (skill) => { if (skill < 70) return null; return { type: 'top_billing', desc: 'Must be highest-paid talent on film' }; } },
+  { id: 'creative_control', name: 'Creative Control', desc: 'Demands director control be below 40%', weight: 0.15, generate: (skill) => { if (skill < 75) return null; return { type: 'creative_control', maxStudioControl: 40, desc: 'Studio control must be under 40%' }; } },
+  { id: 'no_sequels', name: 'No Sequels', desc: 'Refuses sequel work', weight: 0.1, generate: (skill) => { if (skill < 60) return null; return { type: 'no_sequels', desc: 'Refuses to do sequels' }; } },
+];
+
+// ==================== NAMED CRITICS ====================
+const NAMED_CRITICS = [
+  { id: 'traditional', name: 'Margaret Chen', outlet: 'The Herald', taste: { genres: ['Drama', 'War', 'Documentary'], tones: ['serious', 'inspirational'], minBudget: 0, maxBudget: 80e6 }, weight: 1.2, contrarian: false, desc: 'Classical taste. Loves prestige dramas, dislikes blockbuster excess.' },
+  { id: 'populist', name: 'Rex Morrison', outlet: 'MovieFan Weekly', taste: { genres: ['Action', 'Sci-Fi', 'Comedy', 'Animation'], tones: ['lighthearted'], minBudget: 30e6, maxBudget: 999e6 }, weight: 1.0, contrarian: false, desc: 'Loves crowd-pleasers and spectacle. The voice of mainstream audiences.' },
+  { id: 'indie', name: 'Suki Nakamura', outlet: 'Celluloid & Soul', taste: { genres: ['Drama', 'Romance', 'Documentary', 'Mystery'], tones: ['dark', 'experimental'], minBudget: 0, maxBudget: 30e6 }, weight: 1.3, contrarian: false, desc: 'Champions independent cinema. Suspicious of big budgets.' },
+  { id: 'horror', name: 'Dante Volkov', outlet: 'Fright Night Review', taste: { genres: ['Horror', 'Thriller', 'Mystery'], tones: ['dark'], minBudget: 0, maxBudget: 999e6 }, weight: 0.8, contrarian: true, desc: 'Genre specialist. Loves what others dismiss. Occasionally contrarian.' },
+  { id: 'spectacle', name: 'James Whitfield III', outlet: 'Premiere Magazine', taste: { genres: ['Action', 'Sci-Fi', 'Fantasy', 'Animation'], tones: ['inspirational', 'lighthearted'], minBudget: 50e6, maxBudget: 999e6 }, weight: 1.1, contrarian: false, desc: 'Believes cinema should be larger than life. The bigger the better.' },
+  { id: 'auteur', name: 'Claudette Moreau', outlet: 'Cahiers du Cinema', taste: { genres: ['Drama', 'Fantasy', 'Romance'], tones: ['experimental', 'dark', 'satirical'], minBudget: 0, maxBudget: 60e6 }, weight: 1.4, contrarian: true, desc: 'French new wave devotee. Rewards directorial vision, punishes formula.' },
+];
+
 // ==================== AUDIENCE DEMOGRAPHICS ====================
 const DEMOGRAPHICS = [
   { name: 'Teen', ages: '13-17', share: 0.15, genrePrefs: { Horror: 1.4, Comedy: 1.3, Action: 1.2, Romance: 1.1, Animation: 1.0 }, ratingPrefs: { G: 0.5, PG: 0.8, 'PG-13': 1.4, R: 0.7, 'NC-17': 0.1 }, marketingSensitivity: 1.3 },
@@ -765,6 +824,25 @@ const getAutoRating = (genre, quality, budget) => {
   for (const [rating, w] of entries) { r -= w; if (r <= 0) return rating; }
   return 'PG-13';
 };
+
+// ==================== REMASTER FORMATS ====================
+const REMASTER_FORMATS = [
+  { id: 'vhs', name: 'VHS Release', minYear: 1980, maxYear: 2000, cost: 500000, revenueMult: 0.08, qualityReq: 50, desc: 'Home video release for the VHS era.' },
+  { id: 'dvd', name: 'DVD Special Edition', minYear: 1997, maxYear: 2015, cost: 1000000, revenueMult: 0.12, qualityReq: 55, desc: 'DVD with bonus features and commentary.' },
+  { id: 'bluray', name: 'Blu-ray Remaster', minYear: 2006, maxYear: 2030, cost: 2000000, revenueMult: 0.15, qualityReq: 60, desc: 'HD remaster with improved audio and video.' },
+  { id: 'imax', name: 'IMAX Re-release', minYear: 2010, maxYear: 2060, cost: 5000000, revenueMult: 0.20, qualityReq: 75, desc: 'Theatrical IMAX re-release. Only for beloved classics.' },
+  { id: '4k_hdr', name: '4K HDR Restoration', minYear: 2018, maxYear: 2080, cost: 3000000, revenueMult: 0.18, qualityReq: 65, desc: 'Full 4K restoration with HDR grading.' },
+];
+
+// ==================== STUDIO LOTS ====================
+const STUDIO_LOTS = [
+  { id: 'soundstage_small', name: 'Small Soundstage', cost: 2e6, monthlyUpkeep: 50000, rentalIncome: 80000, capacity: 1, qualityBonus: 1, genres: null, desc: 'Basic indoor filming. Works for any genre.' },
+  { id: 'soundstage_large', name: 'Large Soundstage', cost: 8e6, monthlyUpkeep: 150000, rentalIncome: 250000, capacity: 2, qualityBonus: 2, genres: null, desc: 'Spacious stage for complex sets and action sequences.' },
+  { id: 'backlot_western', name: 'Western Backlot', cost: 5e6, monthlyUpkeep: 80000, rentalIncome: 120000, capacity: 1, qualityBonus: 5, genres: ['Western', 'War', 'Action'], desc: 'Outdoor frontier town. Perfect for Westerns and period pieces.' },
+  { id: 'water_tank', name: 'Water Tank Stage', cost: 12e6, monthlyUpkeep: 200000, rentalIncome: 350000, capacity: 1, qualityBonus: 5, genres: ['Action', 'Sci-Fi', 'Fantasy'], desc: 'Massive water tank for naval battles, underwater scenes, and flooding.' },
+  { id: 'vfx_stage', name: 'VFX Green Screen Stage', cost: 10e6, monthlyUpkeep: 180000, rentalIncome: 300000, capacity: 2, qualityBonus: 4, genres: ['Sci-Fi', 'Fantasy', 'Animation', 'Action'], desc: 'State-of-the-art green screen for visual effects work.' },
+  { id: 'intimate_set', name: 'Intimate Drama Stage', cost: 3e6, monthlyUpkeep: 60000, rentalIncome: 100000, capacity: 1, qualityBonus: 3, genres: ['Drama', 'Romance', 'Thriller', 'Mystery'], desc: 'Carefully designed for close-up work and emotional performances.' },
+];
 
 // ==================== FILMING LOCATIONS ====================
 const FILMING_LOCATIONS = [
@@ -895,6 +973,40 @@ const INTL_REGIONS = [
   { id: 'latam', name: 'Latin America', share: 0.15, genreBonus: { Romance: 0.15, Action: 0.10, Documentary: -0.15 } },
   { id: 'middleEast', name: 'Middle East & Africa', share: 0.10, genreBonus: { Action: 0.10, Drama: 0.05, Horror: -0.10 } },
   { id: 'other', name: 'Rest of World', share: 0.10, genreBonus: {} },
+];
+
+// ==================== PRESS/MEDIA SYSTEM ====================
+const PRESS_EVENTS = [
+  { id: 'tabloidScandal', name: 'Tabloid Scandal', desc: 'Negative press about a cast member', repChange: -8, buzzChange: 5, prestigeChange: -3 },
+  { id: 'magazineCover', name: 'Magazine Cover Feature', desc: 'Film featured on major magazine', repChange: 5, buzzChange: 8, prestigeChange: 5 },
+  { id: 'talkShow', name: 'Talk Show Appearance', desc: 'Lead actor on late-night TV', repChange: 3, buzzChange: 6, prestigeChange: 2 },
+  { id: 'premiereInterview', name: 'Premiere Red Carpet Interview', desc: 'Major media coverage at premiere', repChange: 4, buzzChange: 7, prestigeChange: 3 },
+  { id: 'awardsShowMoment', name: 'Awards Show Moment', desc: 'Memorable speech or performance', repChange: 6, buzzChange: 5, prestigeChange: 8 },
+  { id: 'controversialStatement', name: 'Controversial Statement', desc: 'Actor makes provocative comments', repChange: -5, buzzChange: 10, prestigeChange: -2 },
+];
+
+const PRESS_RESPONSES = [
+  { id: 'ignore', name: 'Ignore', desc: 'Say nothing, let it blow over' },
+  { id: 'deny', name: 'Deny & Refute', desc: 'Issue strong denial (risky if false)' },
+  { id: 'leanIn', name: 'Lean Into It', desc: 'Embrace the controversy for attention' },
+  { id: 'apologize', name: 'Apologize & Clarify', desc: 'Take responsibility and move forward' },
+];
+
+// ==================== FILM SCHOOL PIPELINE ====================
+const FILM_SCHOOLS = [
+  { id: 'community', name: 'Community Film Program', cost: 500000, tier: 'community', monthlyUpkeep: 50000, graduateInterval: 9, talentQualityRange: [40, 65], salaryMult: 0.5, desc: 'Local community college. Cheap but uneven quality.' },
+  { id: 'state', name: 'State Film School', cost: 2000000, tier: 'state', monthlyUpkeep: 150000, graduateInterval: 8, talentQualityRange: [55, 75], salaryMult: 0.65, desc: 'Respected state university. Reliable talent pipeline.' },
+  { id: 'elite', name: 'Elite Academy', cost: 5000000, tier: 'elite', monthlyUpkeep: 300000, graduateInterval: 6, talentQualityRange: [70, 90], salaryMult: 0.75, desc: 'Ivy-league quality. Best talent but expensive.' },
+];
+
+// ==================== INTERNATIONAL STUDIO PARTNERSHIPS ====================
+const INTERNATIONAL_PARTNERS = [
+  { id: 'bollywood', name: 'Bollywood', region: 'India', genres: ['Drama', 'Romance', 'Musical', 'Action'], monthlyFee: 200000, boxOfficeBonus: { India: 0.30, 'Asia Pacific': 0.15 }, talentSalaryBonus: -0.20, desc: 'Access to world\'s largest film industry' },
+  { id: 'koreanCinema', name: 'Korean Cinema', region: 'South Korea', genres: ['Thriller', 'Horror', 'Action', 'Drama'], monthlyFee: 250000, boxOfficeBonus: { 'Asia Pacific': 0.25, Europe: 0.10 }, talentSalaryBonus: -0.15, desc: 'Cutting-edge genre filmmaking' },
+  { id: 'europeanArtHouse', name: 'European Art House', region: 'Europe', genres: ['Drama', 'Documentary', 'Thriller', 'Mystery'], monthlyFee: 300000, boxOfficeBonus: { Europe: 0.35, 'Rest of World': 0.10 }, talentSalaryBonus: -0.10, desc: 'Prestige and festival favor' },
+  { id: 'japaneseAnimation', name: 'Japanese Animation Studios', region: 'Japan', genres: ['Animation', 'Sci-Fi', 'Fantasy'], monthlyFee: 150000, boxOfficeBonus: { 'Asia Pacific': 0.40, 'Rest of World': 0.15 }, talentSalaryBonus: 0, desc: 'Animation excellence and anime fans' },
+  { id: 'nollywood', name: 'Nollywood', region: 'Nigeria', genres: ['Drama', 'Action', 'Comedy', 'Horror'], monthlyFee: 100000, boxOfficeBonus: { 'Middle East & Africa': 0.40, 'Rest of World': 0.08 }, talentSalaryBonus: -0.25, desc: 'Emerging market expertise' },
+  { id: 'latinAmerican', name: 'Latin American Cinema', region: 'Mexico/Brazil', genres: ['Drama', 'Romance', 'Thriller', 'Action'], monthlyFee: 180000, boxOfficeBonus: { 'Latin America': 0.35, 'Rest of World': 0.10 }, talentSalaryBonus: -0.18, desc: 'Growing powerhouse region' },
 ];
 
 // ==================== CREDIT RATINGS ====================
@@ -1147,11 +1259,12 @@ const calcBoxOffice = (quality, budget, marketing, year, genre, film) => {
   }
   // Apply franchise/sequel/reboot bonuses to box office
   if (film && film.franchiseId !== null && film.filmType === 'sequel') {
-    // Sequels get a franchise fanbase boost
-    // franchiseFanBase = 0.1 per film in franchise, capped at 0.5
-    const franchiseFanBase = Math.min(film.sequelNumber * 0.1, 0.5);
-    domestic = domestic * (1 + franchiseFanBase * 0.15);
-    international = international * (1 + franchiseFanBase * 0.15);
+    // Sequel fatigue: diminishing returns as franchise extends
+    const seqNum = film.sequelNumber || 1;
+    const franchiseFanBase = Math.min(seqNum * 0.1, 0.5);
+    const fatigueFactor = seqNum <= 3 ? 1.0 : Math.max(0.5, 1.0 - (seqNum - 3) * 0.12); // drops 12% per sequel after 3rd
+    domestic = domestic * (1 + franchiseFanBase * 0.15) * fatigueFactor;
+    international = international * (1 + franchiseFanBase * 0.15) * fatigueFactor;
   }
   if (film && film.franchiseId !== null && film.filmType === 'reboot') {
     // Reboots get a flat +20% gross
@@ -1249,6 +1362,7 @@ const INIT = {
   cash: 5000000,
   reputation: 20, prestige: 10,
   facilitiesLevel: 1,
+  studioLots: [],             // [{id, name, inUse: boolean}] — owned studio lots
   films: [],
   contracts: [],
   availableTalent: [],
@@ -1310,6 +1424,7 @@ const INIT = {
   totalFilmsReleased: 0,
   // Awards & Legacy
   annualAwards: [],         // [{year, awards: [{category, film, studio}]}]
+  awardsCampaigns: {},        // filmId -> amount spent on awards campaign
   boxOfficeChart: [],       // top films this month across all studios
   legacyScore: 0,
   pendingCeremony: null,    // ceremony data waiting to be viewed
@@ -1323,6 +1438,8 @@ const INIT = {
   unlockedTech: [],         // array of tech ids
   // Cultural movements (auto-calculated, stored for display)
   activeMovements: [],
+  activeCrises: [],           // [{id, name, monthsLeft, effects}]
+  genreFanbase: {},           // genre -> {loyalty: 0-100, films: count} — audience loyalty per genre
   // Film festivals
   festivalSubmissions: [],  // [{filmId, festivalId, year, result}]
   // TV division
@@ -1356,6 +1473,13 @@ const INIT = {
   starPowerCache: {},       // talentId -> power
   // Talent negotiation state
   pendingNegotiation: null, // {talentId, counterOffer, perks, exclusive}
+  // ---- BATCH 4 FEATURES ----
+  // Feature 12: Press/Media System
+  pressEvents: [],          // [{id, type, talentId/filmId, response, repImpact, buzzImpact, prestigeImpact}]
+  // Feature 13: Film School Pipeline
+  filmSchools: [],          // [{id, schoolId, founded: turn, nextGraduate: turn, graduatesQueue: [talent]}]
+  // Feature 14: International Studio Partnerships
+  internationalPartners: [], // [{id, partnerId, formDate: year, active: bool}]
 };
 
 function reducer(state, action) {
@@ -1410,6 +1534,45 @@ function reducer(state, action) {
       };
     }
 
+    case 'BID_SCRIPT': {
+      const script = state.scripts[action.idx];
+      if (!script || !script.isHot) return state;
+      const bidAmount = action.amount || script.bidPrice;
+      if (state.cash < bidAmount) return { ...state, errorMsg: `Need ${fmt(bidAmount)} to win the bidding war.` };
+      // Win chance based on bid amount vs rival + reputation
+      const winChance = Math.min(0.95, 0.4 + (state.reputation / 200) + (bidAmount / (script.bidPrice * 3)));
+      if (Math.random() > winChance) {
+        return {
+          ...state,
+          cash: state.cash, // don't charge if lost
+          scripts: state.scripts.filter((_, i) => i !== action.idx), // script gone
+          gameLog: [...state.gameLog, { text: `Lost bidding war for "${script.title}" to ${script.rivalBidder}! They outbid your ${fmt(bidAmount)}.`, type: 'warning' }],
+          errorMsg: '',
+        };
+      }
+      return {
+        ...state,
+        cash: state.cash - bidAmount,
+        devScriptIdx: action.idx,
+        devBudgetM: Math.round((script.budgetMin + script.budgetMax) / 2),
+        devMarketingM: 0,
+        devDirectorId: state.contracts.find(t => t.type === 'director')?.id ?? null,
+        devActorId: state.contracts.find(t => t.type === 'actor')?.id ?? null,
+        devWriterId: state.contracts.find(t => t.type === 'writer')?.id ?? null,
+        devFilmType: 'original',
+        devGenre2: script.genre2 || null,
+        devTone: 'serious',
+        devThemes: [],
+        devBudgetAlloc: { cast: 20, vfx: 20, production: 20, music: 20, editing: 20 },
+        devStudioControl: 50,
+        devMarketingPhases: [],
+        devInvestor: null,
+        devInsured: false,
+        gameLog: [...state.gameLog, { text: `Won bidding war for "${script.title}"! Paid ${fmt(bidAmount)} to secure it.`, type: 'success' }],
+        errorMsg: '',
+      };
+    }
+
     case 'SELECT_SCRIPT':
       if (action.idx < 0 || action.idx >= state.scripts.length) return { ...state, devScriptIdx: -1, errorMsg: '' };
       return {
@@ -1444,44 +1607,148 @@ function reducer(state, action) {
       return { ...state, [action.key]: action.value, errorMsg: '' };
 
     case 'CREATE_SCRIPT': {
-      const { customScriptGenre, customScriptTitle, customScriptLogline, customScriptWriterId } = state;
-      if (!customScriptGenre) return { ...state, errorMsg: 'Pick a genre for your script.' };
-      if (!customScriptTitle.trim()) return { ...state, errorMsg: 'Give your script a title.' };
-      if (!customScriptLogline.trim()) return { ...state, errorMsg: 'Write a logline for your script.' };
-      const writer = state.contracts.find(t => t.id === customScriptWriterId);
-      if (!writer) return { ...state, errorMsg: 'Assign a writer to write the script.' };
+      const csGenre = state.customScriptGenre;
+      const csTitle = state.customScriptTitle || '';
+      const csLogline = state.customScriptLogline || '';
+      const csWriterId = state.customScriptWriterId;
+      if (!csGenre) return { ...state, errorMsg: 'Pick a genre for your script.' };
+      if (!csTitle.trim()) return { ...state, errorMsg: 'Give your script a title.' };
+      if (!csLogline.trim()) return { ...state, errorMsg: 'Write a logline for your script.' };
+      const csWriter = state.contracts.find(t => t.id === csWriterId);
+      if (!csWriter) return { ...state, errorMsg: 'Assign a writer to write the script.' };
       // Writing cost: writer's monthly salary equivalent
-      const writingCost = Math.round(writer.salary * 0.5);
+      const writingCost = Math.round(csWriter.salary * 0.5);
       if (state.cash < writingCost) return { ...state, errorMsg: `Need ${fmt(writingCost)} to commission this script.` };
       // Market fit based on writer skill + genre match + randomness
-      let baseFit = 30 + Math.round(writer.skill * 0.4); // 30-70 from skill
-      if (writer.genreBonus === customScriptGenre) baseFit += 15; // genre specialist
+      let baseFit = 30 + Math.round(csWriter.skill * 0.4); // 30-70 from skill
+      if (csWriter.genreBonus === csGenre) baseFit += 15; // genre specialist
       baseFit += randInt(-10, 10); // variance
       const marketFit = clamp(baseFit, 20, 98);
-      const [budMin, budMax] = getEraBudgetRange(state.year);
+      const [csBudMin, csBudMax] = getEraBudgetRange(state.year);
       const pendingScript = {
-        genre: customScriptGenre,
-        genre2: state.customScriptGenre2,
-        title: customScriptTitle.trim(),
-        logline: customScriptLogline.trim(),
-        budgetMin: budMin,
-        budgetMax: budMax,
+        genre: csGenre,
+        genre2: state.customScriptGenre2 || null,
+        title: csTitle.trim(),
+        logline: csLogline.trim(),
+        budgetMin: csBudMin,
+        budgetMax: csBudMax,
         marketFit,
         custom: true,
-        writerName: writer.name,
+        writerName: csWriter.name,
         turnsLeft: 1,
       };
       return {
         ...state,
         cash: state.cash - writingCost,
-        pendingCustomScripts: [...state.pendingCustomScripts, pendingScript],
+        pendingCustomScripts: [...(state.pendingCustomScripts || []), pendingScript],
         showScriptCreator: false,
         customScriptGenre: null,
         customScriptGenre2: null,
         customScriptTitle: '',
         customScriptLogline: '',
         customScriptWriterId: null,
-        gameLog: [...state.gameLog, { text: `Commissioned "${pendingScript.title}" (${pendingScript.genre}) from ${writer.name}. Market fit: ${marketFit}%. Cost: ${fmt(writingCost)}. Script arrives next month.`, type: 'info' }],
+        errorMsg: '',
+        gameLog: [...state.gameLog, { text: `Commissioned "${pendingScript.title}" (${pendingScript.genre}) from ${csWriter.name}. Market fit: ${marketFit}%. Cost: ${fmt(writingCost)}. Script arrives next month.`, type: 'info' }],
+      };
+    }
+
+    case 'TEST_SCREEN': {
+      const film = state.films.find(f => f.id === action.filmId);
+      if (!film || film.status !== 'completed') return { ...state, errorMsg: 'Film must be completed to test screen.' };
+      if (film.testScreened) return { ...state, errorMsg: 'Already test screened this film.' };
+      const option = TEST_SCREENING_OPTIONS.find(o => o.id === action.optionId);
+      if (!option) return state;
+      if (state.cash < option.cost) return { ...state, errorMsg: `Need ${fmt(option.cost)} for ${option.name}.` };
+      // Generate preview scores with accuracy-based noise
+      const noise = (1 - option.accuracy) * 30;
+      const previewAudience = clamp(Math.round((film.quality * 0.8 + Math.random() * 20) + (Math.random() - 0.5) * noise), 10, 100);
+      const previewCritic = clamp(Math.round(film.quality + (Math.random() - 0.5) * noise), 10, 100);
+      const sentiment = previewAudience >= 75 ? 'Very Positive' : previewAudience >= 60 ? 'Positive' : previewAudience >= 45 ? 'Mixed' : previewAudience >= 30 ? 'Negative' : 'Very Negative';
+      return {
+        ...state,
+        cash: state.cash - option.cost,
+        films: state.films.map(f => f.id === action.filmId ? {
+          ...f, testScreened: true, testScreenData: { audience: previewAudience, critic: previewCritic, sentiment, method: option.name },
+        } : f),
+        gameLog: [...state.gameLog, { text: `${option.name} for "${film.title}": Audience ${sentiment} (${previewAudience}/100). Critics estimate: ${previewCritic}/100.`, type: previewAudience >= 60 ? 'success' : 'warning' }],
+        errorMsg: '',
+      };
+    }
+
+    case 'RESHOOT': {
+      const film = state.films.find(f => f.id === action.filmId);
+      if (!film || film.status !== 'completed') return { ...state, errorMsg: 'Film must be completed to reshoot.' };
+      const reshoot = RESHOOT_OPTIONS.find(r => r.id === action.reshootId);
+      if (!reshoot) return state;
+      const cost = Math.round(film.budget * reshoot.costPct);
+      if (state.cash < cost) return { ...state, errorMsg: `Need ${fmt(cost)} for ${reshoot.name}.` };
+      const qualityGain = randInt(reshoot.qualityRange[0], reshoot.qualityRange[1]);
+      return {
+        ...state,
+        cash: state.cash - cost,
+        films: state.films.map(f => f.id === action.filmId ? {
+          ...f,
+          status: 'postproduction',
+          turnsInStatus: 0,
+          turnsNeeded: reshoot.months,
+          quality: clamp((f.quality || 50) + qualityGain, 5, 98),
+          testScreened: false,
+          events: [...f.events, `${reshoot.name}: +${qualityGain}q, -${fmt(cost)}, +${reshoot.months}mo`],
+        } : f),
+        gameLog: [...state.gameLog, { text: `${reshoot.name} ordered for "${film.title}": +${qualityGain} quality, cost ${fmt(cost)}, back to post-production for ${reshoot.months} month(s).`, type: 'info' }],
+        errorMsg: '',
+      };
+    }
+
+    case 'SET_AWARDS_CAMPAIGN': {
+      const film = state.films.find(f => f.id === action.filmId);
+      if (!film || film.status !== 'released') return state;
+      const amount = Math.max(0, Math.min(action.amount, state.cash));
+      const prev = state.awardsCampaigns[film.id] || 0;
+      const diff = amount - prev;
+      return {
+        ...state,
+        cash: state.cash - diff,
+        awardsCampaigns: { ...state.awardsCampaigns, [film.id]: amount },
+        errorMsg: '',
+      };
+    }
+
+    case 'BUILD_LOT': {
+      const lot = STUDIO_LOTS.find(l => l.id === action.lotId);
+      if (!lot) return state;
+      if (state.cash < lot.cost) return { ...state, errorMsg: `Need ${fmt(lot.cost)} to build ${lot.name}.` };
+      return {
+        ...state,
+        cash: state.cash - lot.cost,
+        studioLots: [...state.studioLots, { id: lot.id, name: lot.name, inUse: false }],
+        gameLog: [...state.gameLog, { text: `Built ${lot.name} on the studio lot! Cost: ${fmt(lot.cost)}. Upkeep: ${fmt(lot.monthlyUpkeep)}/mo.`, type: 'success' }],
+        errorMsg: '',
+      };
+    }
+
+    case 'REMASTER_FILM': {
+      const film = state.films.find(f => f.id === action.filmId);
+      if (!film || film.status !== 'released') return { ...state, errorMsg: 'Film must be released to remaster.' };
+      const format = REMASTER_FORMATS.find(r => r.id === action.formatId);
+      if (!format) return state;
+      if (state.year < format.minYear || state.year > format.maxYear) return { ...state, errorMsg: `${format.name} not available in ${state.year}.` };
+      if ((film.quality || 0) < format.qualityReq) return { ...state, errorMsg: `Need quality ${format.qualityReq}+ for ${format.name}.` };
+      if (state.cash < format.cost) return { ...state, errorMsg: `Need ${fmt(format.cost)} for ${format.name}.` };
+      const remasters = film.remasters || [];
+      if (remasters.includes(format.id)) return { ...state, errorMsg: `Already remastered as ${format.name}.` };
+      const remasterRevenue = Math.round((film.totalGross || 0) * format.revenueMult);
+      return {
+        ...state,
+        cash: state.cash - format.cost + remasterRevenue,
+        films: state.films.map(f => f.id === action.filmId ? {
+          ...f,
+          remasters: [...(f.remasters || []), format.id],
+          licensingRevenue: (f.licensingRevenue || 0) + remasterRevenue,
+          events: [...(f.events || []), `${format.name}: +${fmt(remasterRevenue)}`],
+        } : f),
+        gameLog: [...state.gameLog, { text: `${format.name} of "${film.title}" earned ${fmt(remasterRevenue)}! Cost: ${fmt(format.cost)}.`, type: 'success' }],
+        errorMsg: '',
       };
     }
 
@@ -1494,6 +1761,42 @@ function reducer(state, action) {
       const act = state.contracts.find(t => t.id === state.devActorId);
       const wri = state.contracts.find(t => t.id === state.devWriterId);
       if (!dir || !act || !wri) return { ...state, errorMsg: 'Assign a director, actor, and writer.' };
+
+      // Validate talent demands
+      const allTalent = [dir, act, wri];
+      for (const t of allTalent) {
+        if (!t.demands) continue;
+        for (const d of t.demands) {
+          if (d.type === 'genre_refuse' && d.genres.includes(script.genre)) {
+            return { ...state, errorMsg: `${t.name} refuses to work on ${script.genre} films.` };
+          }
+          if (d.type === 'director_pref' && t.type !== 'director' && dir.id !== d.directorId) {
+            return { ...state, errorMsg: `${t.name} wants to work with ${d.directorName}.` };
+          }
+          if (d.type === 'budget_min' && state.devBudgetM * 1e6 < d.amount) {
+            return { ...state, errorMsg: `${t.name} only works on films with $${Math.round(d.amount/1e6)}M+ budgets.` };
+          }
+          if (d.type === 'creative_control' && state.devStudioControl > d.maxStudioControl) {
+            return { ...state, errorMsg: `${t.name} demands studio control be under ${d.maxStudioControl}%.` };
+          }
+          if (d.type === 'no_sequels' && state.devFilmType === 'sequel') {
+            return { ...state, errorMsg: `${t.name} refuses to do sequels.` };
+          }
+          if (d.type === 'top_billing') {
+            const others = allTalent.filter(o => o.id !== t.id);
+            if (others.some(o => o.salary > t.salary)) {
+              return { ...state, errorMsg: `${t.name} demands top billing (highest salary).` };
+            }
+          }
+        }
+      }
+
+      // Check for industry crises blocking production
+      const crises = state.activeCrises || [];
+      const writersStrike = crises.find(c => c.effects.blockScripts);
+      if (writersStrike) return { ...state, errorMsg: `${writersStrike.name} in progress! Cannot develop new films.` };
+      const actorsStrike = crises.find(c => c.effects.blockProduction);
+      if (actorsStrike) return { ...state, errorMsg: `${actorsStrike.name} in progress! Cannot start new productions.` };
 
       let budget = state.devBudgetM * 1e6;
       let marketing = state.devMarketingM * 1e6;
@@ -1573,9 +1876,9 @@ function reducer(state, action) {
         id: state.nextId,
         title, genre: script.genre, genre2: state.devGenre2, logline: script.logline,
         budget, marketing,
-        director: { id: dir.id, name: dir.name, skill: dir.skill, genreBonus: dir.genreBonus, trait: dir.trait, traitDesc: dir.traitDesc, traitEffect: dir.traitEffect },
-        actor: { id: act.id, name: act.name, skill: act.skill, popularity: act.popularity, genreBonus: act.genreBonus, trait: act.trait, traitDesc: act.traitDesc, traitEffect: act.traitEffect },
-        writer: { id: wri.id, name: wri.name, skill: wri.skill, genreBonus: wri.genreBonus, trait: wri.trait, traitDesc: wri.traitDesc, traitEffect: wri.traitEffect },
+        director: { id: dir.id, name: dir.name, skill: dir.skill, genreBonus: dir.genreBonus, trait: dir.trait, traitDesc: dir.traitDesc, traitEffect: dir.traitEffect, profitParticipation: dir.profitParticipation || 0 },
+        actor: { id: act.id, name: act.name, skill: act.skill, popularity: act.popularity, genreBonus: act.genreBonus, trait: act.trait, traitDesc: act.traitDesc, traitEffect: act.traitEffect, profitParticipation: act.profitParticipation || 0 },
+        writer: { id: wri.id, name: wri.name, skill: wri.skill, genreBonus: wri.genreBonus, trait: wri.trait, traitDesc: wri.traitDesc, traitEffect: wri.traitEffect, profitParticipation: wri.profitParticipation || 0 },
         status: 'development',
         turnsInStatus: 0,
         turnsNeeded: devTurns, // development turns (0 if Fast Draft writer)
@@ -2087,6 +2390,7 @@ function reducer(state, action) {
       let awards = [...state.awards];
       let streaming = state.streamingPlatform ? { ...state.streamingPlatform } : null;
       let franchises = state.franchises.map(f => ({ ...f, filmIds: [...f.filmIds] }));
+      let genreFanbase = { ...(state.genreFanbase || {}) };
 
       let revenue = 0;
       let expenses = 0;
@@ -2210,6 +2514,13 @@ function reducer(state, action) {
             // Filming location quality bonus
             const loc = FILMING_LOCATIONS.find(l => l.id === (f.location || 'hollywood'));
             if (loc) quality = clamp(quality + loc.qualityBonus, 5, 98);
+            // Studio lot genre bonus
+            (state.studioLots || []).forEach(owned => {
+              const lotDef = STUDIO_LOTS.find(l => l.id === owned.id);
+              if (lotDef && lotDef.genres && lotDef.genres.includes(f.genre)) {
+                quality = clamp(quality + lotDef.qualityBonus, 5, 98);
+              }
+            });
             f.quality = quality;
             // Assign rating — use player's target if set, auto-assign otherwise
             if (f.targetRating) {
@@ -2256,6 +2567,13 @@ function reducer(state, action) {
         box.totalGross = box.domestic + box.international;
         box.profit = Math.round(box.domestic * 0.50 + box.international * 0.25 - f.budget - f.marketing);
 
+        // Fanbase loyalty boost
+        const fanbase = (genreFanbase || {})[f.genre];
+        if (fanbase && fanbase.loyalty > 20) {
+          const fanBoost = 1 + (fanbase.loyalty / 100) * 0.25; // up to +25% for max loyalty
+          box.domestic = Math.round(box.domestic * fanBoost);
+        }
+
         // Demographic audience reach based on rating
         const filmRating = f.rating || 'PG-13';
         const ratingData = FILM_RATINGS.find(r => r.rating === filmRating);
@@ -2275,6 +2593,21 @@ function reducer(state, action) {
             else log.push({ text: `"${f.title}" generated buzz from its ${filmRating} controversy! +15% domestic.`, type: 'info' });
           }
         }
+
+        // Named critic reviews
+        const criticReviews = [];
+        NAMED_CRITICS.forEach(critic => {
+          let liking = 0;
+          if (critic.taste.genres.includes(f.genre)) liking += 15;
+          if (critic.taste.tones && critic.taste.tones.includes(f.tone)) liking += 10;
+          if (f.budget >= critic.taste.minBudget && f.budget <= critic.taste.maxBudget) liking += 5;
+          if (critic.contrarian) liking += (box.criticScore < 50 ? 10 : -5);
+          const criticRating = clamp(Math.round(box.criticScore + liking + (Math.random() - 0.5) * 20), 5, 100);
+          criticReviews.push({ name: critic.name, outlet: critic.outlet, rating: criticRating, weight: critic.weight });
+          // Weighted influence on final critic score
+          box.criticScore = Math.round(box.criticScore * 0.85 + criticRating * critic.weight * 0.15 / NAMED_CRITICS.length * NAMED_CRITICS.length);
+        });
+        f.criticReviews = criticReviews;
 
         // Star power opening weekend boost
         const starPow = calcStarPower(f.actor);
@@ -2385,6 +2718,28 @@ function reducer(state, action) {
           box.profit = Math.round(box.totalGross * 0.45 - f.budget - f.marketing);
         }
 
+        // Apply industry crisis effects
+        (state.activeCrises || []).forEach(crisis => {
+          if (crisis.effects.boxOfficeMod) {
+            box.domestic = Math.round(box.domestic * (1 + crisis.effects.boxOfficeMod));
+            box.international = Math.round(box.international * (1 + crisis.effects.boxOfficeMod));
+          }
+          if (crisis.effects.ratingPenalty && (f.rating === 'R' || f.rating === 'NC-17')) {
+            box.domestic = Math.round(box.domestic * 0.7);
+            box.international = Math.round(box.international * 0.7);
+          }
+          if (crisis.effects.indieBudgetBoost && f.budget < 20e6) {
+            box.domestic = Math.round(box.domestic * 1.2);
+            box.international = Math.round(box.international * 1.2);
+          }
+          if (crisis.effects.genreBoost && crisis.effects.genreBoost.includes(f.genre)) {
+            box.domestic = Math.round(box.domestic * 1.15);
+            box.international = Math.round(box.international * 1.15);
+          }
+        });
+        box.totalGross = box.domestic + box.international;
+        box.profit = Math.round(box.totalGross * 0.45 - f.budget - f.marketing);
+
         f.criticScore = box.criticScore;
         f.audienceScore = box.audienceScore;
         f.domestic = box.domestic;
@@ -2392,6 +2747,18 @@ function reducer(state, action) {
         f.totalGross = box.totalGross;
         f.profit = box.profit;
         f.regionBreakdown = box.regionBreakdown || {};
+
+        // Deduct talent profit participation
+        let talentParticipation = 0;
+        [f.director, f.actor, f.writer].forEach(t => {
+          if (t && t.profitParticipation && t.profitParticipation > 0 && f.totalGross > 0) {
+            talentParticipation += Math.round(f.totalGross * t.profitParticipation / 100);
+          }
+        });
+        if (talentParticipation > 0) {
+          f.profit -= talentParticipation;
+          f.events.push(`Talent backend: -${fmt(talentParticipation)}`);
+        }
 
         // Investor revenue share
         if (f.investor) {
@@ -2409,6 +2776,16 @@ function reducer(state, action) {
         revenue += f.profit;
         tGross += box.totalGross;
         totalFilmsReleased += 1;
+
+        // Update genre fanbase
+        const gf = { ...(genreFanbase[f.genre] || { loyalty: 0, films: 0 }) };
+        gf.films += 1;
+        if (f.quality >= 70) {
+          gf.loyalty = Math.min(100, gf.loyalty + Math.round((f.quality - 50) * 0.3));
+        } else if (f.quality < 40) {
+          gf.loyalty = Math.max(0, gf.loyalty - 15);
+        }
+        genreFanbase[f.genre] = gf;
 
         const windowName = window ? window.name : 'Unknown';
         const multPct = Math.round((windowMult - 1) * 100);
@@ -2442,6 +2819,19 @@ function reducer(state, action) {
       const salaryExpense = state.contracts.reduce((sum, t) => sum + Math.round(t.salary / 12), 0);
       const overhead = 50000 + state.facilitiesLevel * 30000; // scales: $80K at lvl1, $230K at lvl6
       expenses = salaryExpense + overhead;
+
+      // Studio lot upkeep and rental income
+      const ownedLots = state.studioLots || [];
+      let lotUpkeep = 0, lotRental = 0;
+      ownedLots.forEach(owned => {
+        const lot = STUDIO_LOTS.find(l => l.id === owned.id);
+        if (lot) {
+          lotUpkeep += lot.monthlyUpkeep;
+          if (!owned.inUse) lotRental += lot.rentalIncome; // only earn rent if not using it
+        }
+      });
+      expenses += lotUpkeep;
+      revenue += lotRental;
 
       // 4. Streaming revenue
       if (streaming) {
@@ -2611,9 +3001,21 @@ function reducer(state, action) {
         const missingPlayerFilms = playerYearFilms.filter(f => !historyTitles.has(f.title + '|' + f.studio));
         const combinedYearFilms = [...allYearFilms, ...missingPlayerFilms];
         if (combinedYearFilms.length > 0) {
+          // Apply awards campaign spending boosts
+          const campaignBoostedFilms = combinedYearFilms.map(f => {
+            if (f.isRival) {
+              // Rivals spend on campaigns too (proportional to their budget)
+              const rivalCampaign = f.quality >= 75 ? Math.round(f.budget * 0.05 * Math.random()) : 0;
+              const rivalBoost = Math.min(Math.sqrt(rivalCampaign / 1e6) * 3, 8);
+              return { ...f, _awardsBoost: rivalBoost };
+            }
+            const campaign = (state.awardsCampaigns || {})[f.id] || 0;
+            const boost = Math.min(Math.sqrt(campaign / 1e6) * 5, 12); // diminishing returns, max +12
+            return { ...f, _awardsBoost: boost };
+          });
           const ceremonyData = { year: prevYear, categories: [] };
           ANNUAL_AWARD_CATEGORIES.forEach(cat => {
-            const nominees = generateNominees(combinedYearFilms, cat);
+            const nominees = generateNominees(campaignBoostedFilms, cat);
             if (nominees.length > 0) {
               const winner = nominees[0];
               ceremonyData.categories.push({
@@ -2900,6 +3302,26 @@ function reducer(state, action) {
       // 11e. Update active movements & chemistry
       const activeMovements = getActiveMovements(state.year);
 
+      // 11f. Industry crises check
+      let activeCrises = (state.activeCrises || []).map(c => ({ ...c, monthsLeft: c.monthsLeft - 1 }));
+      activeCrises = activeCrises.filter(c => c.monthsLeft > 0);
+      // Check for new crises
+      INDUSTRY_CRISES.forEach(crisis => {
+        if (crisis.years.includes(state.year) && state.month === 1 && !activeCrises.find(c => c.id === crisis.id)) {
+          activeCrises.push({ id: crisis.id, name: crisis.name, monthsLeft: crisis.duration, effects: crisis.effects });
+          log.push({ text: `INDUSTRY CRISIS: ${crisis.name}! ${crisis.effects.desc}`, type: 'warning' });
+        }
+      });
+      // Apply crisis effects to this turn's revenue
+      activeCrises.forEach(crisis => {
+        if (crisis.effects.boxOfficeMod) {
+          // Already-released films this month get reduced box office (handled in release section)
+        }
+        if (crisis.effects.streamingBoost && streaming) {
+          revenue += Math.round((streaming.subscribers || 0) * crisis.effects.streamingBoost * 0.5);
+        }
+      });
+
       // Deactivate used co-productions
       let coProductions = state.coProductions.map(cp => ({ ...cp, active: false }));
 
@@ -3020,7 +3442,7 @@ function reducer(state, action) {
       });
 
       // Process pending custom scripts
-      let updatedPending = state.pendingCustomScripts.map(s => ({ ...s, turnsLeft: s.turnsLeft - 1 }));
+      let updatedPending = (state.pendingCustomScripts || []).map(s => ({ ...s, turnsLeft: s.turnsLeft - 1 }));
       const deliveredScripts = updatedPending.filter(s => s.turnsLeft <= 0).map((s, i) => ({
         id: 100 + i, genre: s.genre, genre2: s.genre2, title: s.title, logline: s.logline,
         budgetMin: s.budgetMin, budgetMax: s.budgetMax, marketFit: s.marketFit, custom: true,
@@ -3036,6 +3458,72 @@ function reducer(state, action) {
         .map(f => ({ ...f, studio: state.studioName, isRival: false, historyId: f.id }));
       const newRivalReleases = rivalFilmsThisQ.map((rf, i) => ({ ...rf, historyId: `rival_${state.turn}_${i}` }));
       const allFilmHistory = [...(state.allFilmHistory || []), ...newPlayerReleases, ...newRivalReleases];
+
+      // ==================== BATCH 4: FEATURE END_TURN LOGIC ====================
+
+      // Feature 12: Press Events - randomly generate based on released films and talent
+      let pressEvents = [...state.pressEvents];
+      if (state.films.filter(f => f.status === 'released').length > 0 || Math.random() < 0.15) {
+        if (Math.random() < 0.25) {
+          const event = pick(PRESS_EVENTS);
+          const newEvent = {
+            id: state.nextId + 100 + pressEvents.length,
+            type: event.id,
+            name: event.name,
+            desc: event.desc,
+            repChange: event.repChange,
+            buzzChange: event.buzzChange,
+            prestigeChange: event.prestigeChange,
+            turnCreated: state.turn,
+          };
+          pressEvents.push(newEvent);
+          log.push({ text: `PRESS: ${event.name} — ${event.desc}`, type: 'info' });
+        }
+      }
+
+      // Feature 13: Film School Pipeline - check for graduates
+      let filmSchools = state.filmSchools.map(fs => {
+        const schoolDef = FILM_SCHOOLS.find(s => s.id === fs.schoolId);
+        if (!schoolDef) return fs;
+
+        // Deduct monthly upkeep
+        cash -= schoolDef.monthlyUpkeep;
+
+        // Check if graduate is ready
+        if (state.turn >= fs.nextGraduate && Math.random() < 0.7) {
+          // Chance for graduate to appear - mark for creation
+          fs._pendingGraduate = true;
+          return { ...fs, nextGraduate: state.turn + schoolDef.graduateInterval };
+        }
+        return fs;
+      });
+
+      // Collect graduates to add to talent pool
+      let schoolGraduates = [];
+      filmSchools.forEach((fs, idx) => {
+        if (fs._pendingGraduate) {
+          const schoolDef = FILM_SCHOOLS.find(s => s.id === fs.schoolId);
+          const talentType = pick(['director', 'actor', 'writer']);
+          const qualityRange = schoolDef.talentQualityRange;
+          const skill = Math.round(qualityRange[0] + Math.random() * (qualityRange[1] - qualityRange[0]));
+          const talentId = state.nextId + 200 + pressEvents.length + idx;
+          const graduate = makeTalent(talentId, talentType, [skill, skill], [22, 30]); // young graduates
+          // Apply salary discount from school tier
+          graduate.salary = Math.round(graduate.salary * schoolDef.salaryMult);
+          schoolGraduates.push(graduate);
+          log.push({ text: `${schoolDef.name} graduate: ${graduate.name} (${talentType}, skill ${skill})`, type: 'success' });
+          delete fs._pendingGraduate;
+        }
+      });
+
+      // Feature 14: International Partnerships - deduct monthly fees, provide bonuses to relevant films
+      let intlPartners = state.internationalPartners || [];
+      intlPartners.forEach(ip => {
+        const partnerDef = INTERNATIONAL_PARTNERS.find(p => p.id === ip.partnerId);
+        if (partnerDef && ip.active) {
+          cash -= partnerDef.monthlyFee;
+        }
+      });
 
       return {
         ...state,
@@ -3068,10 +3556,11 @@ function reducer(state, action) {
         legacyScore,
         pendingCeremony,
         showCeremony: pendingCeremony !== null,
-        availableTalent: newAvail,
+        availableTalent: [...newAvail, ...schoolGraduates],
         scripts: newScripts,
         pendingCustomScripts: updatedPending,
         genreTrends: trends,
+        genreFanbase,
         nextId: newNextId,
         devScriptIdx: -1,
         errorMsg: '',
@@ -3087,10 +3576,142 @@ function reducer(state, action) {
         shareholderDemand,
         hostileTakeoverOffer,
         activeMovements,
+        activeCrises,
         coProductions,
         merchandiseRevenue: state.merchandiseRevenue + merchRev,
         soundtrackRevenue: state.soundtrackRevenue + soundtrackRev,
         scenarioWon,
+        // Batch 4 features
+        pressEvents,
+        filmSchools,
+        internationalPartners: intlPartners,
+      };
+    }
+
+    // ==================== BATCH 4 FEATURE ACTIONS ====================
+
+    case 'HANDLE_PRESS': {
+      const event = state.pressEvents.find(e => e.id === action.eventId);
+      if (!event) return state;
+      const response = PRESS_RESPONSES.find(r => r.id === action.response);
+      if (!response) return state;
+
+      let repChange = event.repChange || 0;
+      let buzzChange = event.buzzChange || 0;
+      let presChange = event.prestigeChange || 0;
+
+      // Response modifiers
+      if (action.response === 'ignore') {
+        repChange = Math.round(repChange * 0.3);
+        buzzChange = Math.round(buzzChange * 0.5);
+        presChange = Math.round(presChange * 0.2);
+      } else if (action.response === 'deny') {
+        if (Math.random() < 0.4) {
+          repChange = repChange * 2; // backfire
+          buzzChange = Math.round(buzzChange * 1.5);
+        } else {
+          repChange = Math.round(repChange * 0.6);
+        }
+      } else if (action.response === 'leanIn') {
+        buzzChange = Math.round(buzzChange * 1.8);
+        presChange = Math.round(presChange * 0.7);
+        repChange = Math.round(repChange * 0.5);
+      } else if (action.response === 'apologize') {
+        repChange = Math.round(repChange * 0.3);
+        buzzChange = Math.round(buzzChange * 0.4);
+        presChange = Math.round(presChange * 1.2);
+      }
+
+      return {
+        ...state,
+        reputation: clamp(state.reputation + repChange, 0, 100),
+        prestige: clamp(state.prestige + presChange, 0, 100),
+        pressEvents: state.pressEvents.filter(e => e.id !== action.eventId),
+        gameLog: [...state.gameLog, {
+          text: `Press event: ${event.name} — Response: ${response.name}. Rep ${repChange > 0 ? '+' : ''}${repChange}, Pres ${presChange > 0 ? '+' : ''}${presChange}`,
+          type: repChange > 0 ? 'success' : 'warning',
+        }],
+      };
+    }
+
+    case 'FUND_SCHOOL': {
+      const school = FILM_SCHOOLS.find(s => s.id === action.schoolId);
+      if (!school) return state;
+      if (state.cash < school.cost) return { ...state, errorMsg: `Not enough cash to fund ${school.name}!` };
+      if (state.filmSchools.some(fs => fs.schoolId === action.schoolId)) return { ...state, errorMsg: 'Already operating this school!' };
+
+      const newSchool = {
+        id: state.nextId,
+        schoolId: action.schoolId,
+        founded: state.turn,
+        nextGraduate: state.turn + school.graduateInterval,
+        graduatesQueue: [],
+      };
+
+      return {
+        ...state,
+        cash: state.cash - school.cost,
+        filmSchools: [...state.filmSchools, newSchool],
+        nextId: state.nextId + 1,
+        gameLog: [...state.gameLog, { text: `Funded ${school.name}! Graduates arrive in ~${school.graduateInterval} months.`, type: 'success' }],
+      };
+    }
+
+    case 'GRADUATE_TALENT': {
+      const school = state.filmSchools.find(fs => fs.id === action.schoolId);
+      const schoolDef = school ? FILM_SCHOOLS.find(s => s.id === school.schoolId) : null;
+      if (!school || !schoolDef) return state;
+
+      // Generate graduate talent
+      const talentType = pick(['director', 'actor', 'writer']);
+      const qualityRange = schoolDef.talentQualityRange;
+      const skill = Math.round(qualityRange[0] + Math.random() * (qualityRange[1] - qualityRange[0]));
+      const salary = Math.round(1000000 * schoolDef.salaryMult * (skill / 60)); // scale with skill
+
+      const talent = makeTalent(state.nextId, talentType, [skill, skill], salary);
+
+      return {
+        ...state,
+        availableTalent: [...state.availableTalent, talent],
+        filmSchools: state.filmSchools.map(fs =>
+          fs.id === action.schoolId
+            ? { ...fs, nextGraduate: state.turn + schoolDef.graduateInterval }
+            : fs
+        ),
+        nextId: state.nextId + 1,
+        gameLog: [...state.gameLog, { text: `${schoolDef.name} graduate: ${talent.name} (${talent.type}, skill ${skill}). Salary: ${fmt(talent.salary)}`, type: 'info' }],
+      };
+    }
+
+    case 'FORM_PARTNERSHIP': {
+      const partner = INTERNATIONAL_PARTNERS.find(p => p.id === action.partnerId);
+      if (!partner) return state;
+      if (state.internationalPartners.some(ip => ip.partnerId === action.partnerId)) return { ...state, errorMsg: 'Already in partnership with this studio!' };
+
+      const newPartner = {
+        id: state.nextId,
+        partnerId: action.partnerId,
+        formDate: state.year,
+        active: true,
+      };
+
+      return {
+        ...state,
+        internationalPartners: [...state.internationalPartners, newPartner],
+        nextId: state.nextId + 1,
+        gameLog: [...state.gameLog, { text: `Formed partnership with ${partner.name}! Monthly fee: ${fmt(partner.monthlyFee)}. Bonuses for ${partner.genres.join(', ')}`, type: 'success' }],
+      };
+    }
+
+    case 'DISSOLVE_PARTNERSHIP': {
+      const partner = state.internationalPartners.find(ip => ip.id === action.partnerId);
+      if (!partner) return state;
+      const partnerDef = INTERNATIONAL_PARTNERS.find(p => p.id === partner.partnerId);
+
+      return {
+        ...state,
+        internationalPartners: state.internationalPartners.filter(ip => ip.id !== action.partnerId),
+        gameLog: [...state.gameLog, { text: `Dissolved partnership with ${partnerDef?.name}. No more monthly fees or bonuses.`, type: 'warning' }],
       };
     }
 
@@ -3141,7 +3762,7 @@ function FilmCard({ film }) {
   );
 }
 
-function ReleasedCard({ film, onCreateFranchise }) {
+function ReleasedCard({ film, onCreateFranchise, onRemaster, currentYear, currentCash, state }) {
   return (
     <div className="bg-gray-800 border border-gray-700 rounded-lg p-4">
       <div className="flex justify-between items-start mb-3">
@@ -3207,6 +3828,22 @@ function ReleasedCard({ film, onCreateFranchise }) {
               <Line type="monotone" dataKey="cumulative" stroke="#10B981" strokeWidth={2} dot={false} name="cumulative" />
             </ComposedChart>
           </ResponsiveContainer>
+        </div>
+      )}
+
+      {film.status === 'released' && (film.quality || 0) >= 50 && (
+        <div className="mt-2 border-t border-gray-700 pt-2">
+          <div className="text-xs text-gray-400 font-bold mb-1">Remaster / Re-release</div>
+          <div className="flex flex-wrap gap-1">
+            {REMASTER_FORMATS.filter(r => currentYear >= r.minYear && currentYear <= r.maxYear && (film.quality || 0) >= r.qualityReq && !(film.remasters || []).includes(r.id)).map(r => (
+              <button key={r.id} onClick={() => onRemaster(film.id, r.id)}
+                disabled={currentCash < r.cost}
+                className="bg-purple-800 hover:bg-purple-700 disabled:bg-gray-800 disabled:text-gray-600 text-white text-xs px-2 py-1 rounded transition">
+                {r.name} ({fmt(r.cost)})
+              </button>
+            ))}
+            {(film.remasters || []).length > 0 && <span className="text-xs text-purple-400">Remastered: {(film.remasters || []).join(', ')}</span>}
+          </div>
         </div>
       )}
 
@@ -3284,6 +3921,7 @@ export default function MovieMogul() {
   const [specIdx, setSpecIdx] = useState(0);
   const [mottoInput, setMottoInput] = useState('');
   const [scenarioIdx, setScenarioIdx] = useState(0);
+  const [screeningSortBy, setScreeningSortBy] = useState('year');
 
   // ---- Title Screen ----
   if (state.phase === 'title') {
@@ -3459,8 +4097,8 @@ export default function MovieMogul() {
   const inPipeline = state.films.filter(f => ['development', 'production', 'postproduction'].includes(f.status));
   const released = state.films.filter(f => f.status === 'released').slice().reverse();
   const awaitingRelease = state.films.filter(f => f.status === 'completed' || f.status === 'scheduled');
-  const tabs = ['dashboard', 'develop', 'production', 'release', 'talent', 'studio', 'finance', 'market'];
-  const tabIcons = { dashboard: '📊', develop: '🎬', production: '🎥', release: '🎞', talent: '⭐', studio: '🏢', finance: '💰', market: '📈' };
+  const tabs = ['dashboard', 'develop', 'production', 'release', 'talent', 'studio', 'finance', 'market', 'press', 'academy', 'partners', 'screening'];
+  const tabIcons = { dashboard: '📊', develop: '🎬', production: '🎥', release: '🎞', talent: '⭐', studio: '🏢', finance: '💰', market: '📈', press: '📰', academy: '🎓', partners: '🌍', screening: '🎬' };
 
   const facilityCosts = [0, 500000, 2000000, 5000000, 15000000, 50000000];
   const facilityNames = ['Garage Studio', 'Small Lot', 'Soundstages', 'VFX Lab', 'Backlot Complex', 'Premier Facilities'];
@@ -3568,6 +4206,21 @@ export default function MovieMogul() {
           ))}
         </div>
       </div>
+
+      {Object.keys(state.genreFanbase || {}).length > 0 && (
+        <div>
+          <div className="text-white font-bold text-sm mb-2">Your Genre Fanbase</div>
+          <div className="grid grid-cols-3 md:grid-cols-5 gap-1.5">
+            {Object.entries(state.genreFanbase || {}).filter(([,v]) => v.films > 0).sort((a,b) => b[1].loyalty - a[1].loyalty).map(([genre, data]) => (
+              <div key={genre} className="bg-gray-800 border border-gray-700 rounded p-2 text-center">
+                <div className="text-amber-400 text-xs font-bold">{genre}</div>
+                <div className="text-white text-sm font-bold">{data.loyalty}%</div>
+                <div className="text-xs text-gray-500">{data.films} films</div>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
 
       {state.scenarioGoal && !state.scenarioWon && state.scenario !== 'sandbox' && (
         <div className={`rounded-lg p-4 border ${state.scenarioWon ? 'bg-amber-500 border-amber-400 text-gray-900' : 'bg-blue-900 border-blue-600 text-white'}`}>
@@ -3743,10 +4396,10 @@ export default function MovieMogul() {
               </div>
             </div>
 
-            {state.pendingCustomScripts.length > 0 && (
+            {(state.pendingCustomScripts || []).length > 0 && (
               <div className="bg-gray-800 border border-blue-600 rounded-lg p-3">
                 <div className="text-blue-400 font-bold text-xs mb-1">Scripts In Progress</div>
-                {state.pendingCustomScripts.map((s, i) => (
+                {(state.pendingCustomScripts || []).map((s, i) => (
                   <div key={i} className="text-xs text-gray-300">"{s.title}" ({s.genre}) by {s.writerName} — {s.turnsLeft} month(s) left</div>
                 ))}
               </div>
@@ -3760,7 +4413,7 @@ export default function MovieMogul() {
             )}
 
             <button onClick={() => dispatch({ type: 'CREATE_SCRIPT' })}
-              disabled={!state.customScriptGenre || !state.customScriptTitle.trim() || !state.customScriptLogline.trim() || !state.customScriptWriterId}
+              disabled={!state.customScriptGenre || !(state.customScriptTitle || '').trim() || !(state.customScriptLogline || '').trim() || !state.customScriptWriterId}
               className="w-full bg-amber-600 hover:bg-amber-500 disabled:bg-gray-700 disabled:text-gray-500 text-white font-bold py-3 rounded-lg transition text-sm">
               Commission Script ({csWriter ? fmt(writingCost) : '—'})
             </button>
@@ -3778,18 +4431,18 @@ export default function MovieMogul() {
             </button>
           </div>
           <div className="text-gray-400 text-sm mb-4">Choose a script to develop, or write your own.</div>
-          {state.pendingCustomScripts.length > 0 && (
+          {(state.pendingCustomScripts || []).length > 0 && (
             <div className="bg-gray-800 border border-blue-600 rounded-lg p-3 mb-4">
               <div className="text-blue-400 font-bold text-xs mb-1">Scripts Being Written</div>
-              {state.pendingCustomScripts.map((s, i) => (
+              {(state.pendingCustomScripts || []).map((s, i) => (
                 <div key={i} className="text-xs text-gray-300">"{s.title}" ({s.genre}) by {s.writerName} — {s.turnsLeft} month(s) until delivery</div>
               ))}
             </div>
           )}
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             {state.scripts.map((s, i) => (
-              <div key={i} onClick={() => dispatch({ type: 'SELECT_SCRIPT', idx: i })}
-                className={`bg-gray-800 border ${s.custom ? 'border-amber-500' : 'border-gray-700'} hover:border-amber-400 rounded-lg p-5 cursor-pointer transition`}>
+              <div key={i} onClick={() => !s.isHot ? dispatch({ type: 'SELECT_SCRIPT', idx: i }) : null}
+                className={`bg-gray-800 border ${s.isHot ? 'border-red-500' : s.custom ? 'border-amber-500' : 'border-gray-700'} hover:border-amber-400 rounded-lg p-5 ${s.isHot ? '' : 'cursor-pointer'} transition`}>
                 <div className="flex justify-between items-start mb-2">
                   <div>
                     <span className="text-amber-400 text-xs font-bold uppercase">{s.genre}</span>
@@ -3801,6 +4454,16 @@ export default function MovieMogul() {
                 <div className="text-white font-bold text-lg mb-2">{s.title}</div>
                 <div className="text-gray-300 text-sm mb-3">{s.logline}</div>
                 <div className="text-xs text-gray-500">Budget range: ${s.budgetMin}M — ${s.budgetMax}M</div>
+                {s.isHot && (
+                  <div className="mt-2 border-t border-red-800 pt-2">
+                    <div className="text-red-400 text-xs font-bold mb-1">🔥 Bidding War! {s.rivalBidder} wants this script.</div>
+                    <button onClick={(e) => { e.stopPropagation(); dispatch({ type: 'BID_SCRIPT', idx: i, amount: s.bidPrice }); }}
+                      className="bg-red-700 hover:bg-red-600 text-white text-xs px-3 py-1 rounded font-bold transition">
+                      Bid {fmt(s.bidPrice)} to Secure
+                    </button>
+                    <div className="text-xs text-gray-500 mt-1">Win chance depends on bid amount and your reputation.</div>
+                  </div>
+                )}
               </div>
             ))}
           </div>
@@ -3877,12 +4540,22 @@ export default function MovieMogul() {
                 className="w-full bg-gray-700 text-white text-sm rounded p-2 border border-gray-600">
                 <option value="">— Select —</option>
                 {state.contracts.filter(t => t.type === type).map(t => (
-                  <option key={t.id} value={t.id}>{t.name} (Skill:{t.skill}) — {t.trait || 'No trait'}</option>
+                  <option key={t.id} value={t.id}>{t.name} (Skill:{t.skill}{t.profitParticipation > 0 ? `, ${t.profitParticipation}%` : ''}) {t.demands && t.demands.length > 0 ? `⚠${t.demands.length}` : ''} — {t.trait || 'No trait'}</option>
                 ))}
               </select>
             </div>
           ))}
         </div>
+
+        {/* Talent Demands Warning */}
+        {[dir, act, wri].filter(Boolean).some(t => t.demands && t.demands.length > 0) && (
+          <div className="bg-yellow-900/30 border border-yellow-700 rounded-lg p-3">
+            <div className="text-yellow-400 font-bold text-xs mb-1">Talent Demands</div>
+            {[dir, act, wri].filter(Boolean).map(t => t.demands && t.demands.length > 0 ? (
+              <div key={t.id} className="text-xs text-yellow-300 mb-0.5">{t.name}: {t.demands.map(d => d.desc).join('; ')}</div>
+            ) : null)}
+          </div>
+        )}
 
         {/* Filming Location */}
         <div className="bg-gray-800 border border-gray-700 rounded-lg p-3">
@@ -4177,6 +4850,43 @@ export default function MovieMogul() {
                     </div>
                   );
                 })}
+
+                {!film.testScreened && (
+                  <div className="mt-4 border-t border-gray-700 pt-4">
+                    <div className="text-xs text-gray-400 font-bold mb-2">Test Screening</div>
+                    <div className="grid grid-cols-1 md:grid-cols-3 gap-2">
+                      {TEST_SCREENING_OPTIONS.map(opt => (
+                        <button key={opt.id} onClick={() => dispatch({ type: 'TEST_SCREEN', filmId: film.id, optionId: opt.id })}
+                          disabled={state.cash < opt.cost}
+                          className="flex-1 bg-blue-800 hover:bg-blue-700 disabled:bg-gray-800 disabled:text-gray-600 text-white text-xs py-2 px-2 rounded transition">
+                          <div className="font-bold">{opt.name}</div>
+                          <div className="text-xs opacity-70">{fmt(opt.cost)}</div>
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                )}
+                {film.testScreenData && (
+                  <div className="mt-4 border-t border-gray-700 pt-4">
+                    <div className="text-xs font-bold text-blue-400 mb-2">Screening Results ({film.testScreenData.method})</div>
+                    <div className="text-xs text-gray-300 mb-1">Audience: <span className={film.testScreenData.audience >= 60 ? 'text-green-400' : 'text-red-400'}>{film.testScreenData.sentiment} ({film.testScreenData.audience}/100)</span></div>
+                    <div className="text-xs text-gray-300 mb-3">Critics est: <span className="text-amber-400">{film.testScreenData.critic}/100</span></div>
+                    <div className="text-xs text-gray-500 font-bold mb-2">Reshoot Options:</div>
+                    <div className="space-y-2">
+                      {RESHOOT_OPTIONS.map(r => {
+                        const cost = Math.round(film.budget * r.costPct);
+                        return (
+                          <button key={r.id} onClick={() => dispatch({ type: 'RESHOOT', filmId: film.id, reshootId: r.id })}
+                            disabled={state.cash < cost}
+                            className="w-full text-left bg-orange-900 hover:bg-orange-800 disabled:bg-gray-800 disabled:text-gray-600 text-white text-xs p-2 rounded transition">
+                            <div className="flex justify-between"><span className="font-bold">{r.name}</span><span>{fmt(cost)}</span></div>
+                            <div className="opacity-70 text-xs">{r.desc}</div>
+                          </button>
+                        );
+                      })}
+                    </div>
+                  </div>
+                )}
               </div>
             ))}
           </div>
@@ -4238,6 +4948,34 @@ export default function MovieMogul() {
           </div>
         )}
 
+        {/* AWARDS CAMPAIGN */}
+        {released.filter(f => f.releasedYear === state.year).length > 0 && (
+          <div>
+            <div className="text-white font-bold text-lg mb-1">Awards Campaign</div>
+            <div className="text-gray-400 text-sm mb-3">Spend money lobbying for awards. Higher spending increases your chances of winning nominations and awards.</div>
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
+              {released.filter(f => f.releasedYear === state.year).map(f => {
+                const spent = state.awardsCampaigns[f.id] || 0;
+                return (
+                  <div key={f.id} className="bg-gray-800 border border-purple-600 rounded-lg p-3">
+                    <div className="text-white font-bold text-sm">{f.title}</div>
+                    <div className="text-gray-400 text-xs mb-2">Quality: {f.quality} | Awards: {state.awards.filter(a => a.film === f.title).length}</div>
+                    <div className="text-purple-400 text-xs mb-2">Campaign spending: {fmt(spent)}</div>
+                    <input type="range" min="0" max={Math.round(state.cash)} step="50000" value={spent}
+                      onChange={(e) => dispatch({ type: 'SET_AWARDS_CAMPAIGN', filmId: f.id, amount: parseInt(e.target.value) })}
+                      className="w-full mb-2" />
+                    <div className="text-xs text-gray-400 flex justify-between">
+                      <span>$0</span>
+                      <span>{fmt(spent)}</span>
+                      <span>{fmt(Math.round(state.cash))}</span>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+        )}
+
         {/* DIRECTOR'S CUT / RE-RELEASES */}
         {released.filter(f => !state.reReleases.some(r => r.filmId === f.id)).length > 0 && (
           <div>
@@ -4271,7 +5009,7 @@ export default function MovieMogul() {
             <div className="text-gray-500 text-center py-8">No films released yet.</div>
           ) : (
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              {released.map(f => <ReleasedCard key={f.id} film={f} onCreateFranchise={id => dispatch({ type: 'CREATE_FRANCHISE', filmId: id })} />)}
+              {released.map(f => <ReleasedCard key={f.id} film={f} onCreateFranchise={id => dispatch({ type: 'CREATE_FRANCHISE', filmId: id })} onRemaster={(filmId, formatId) => dispatch({ type: 'REMASTER_FILM', filmId, formatId })} currentYear={state.year} currentCash={state.cash} state={state} />)}
             </div>
           )}
         </div>
@@ -4410,6 +5148,38 @@ export default function MovieMogul() {
                   </button>
                 )}
                 {!owned && !isNext && <div className="text-gray-500 text-xs">{fmt(cost)}</div>}
+              </div>
+            );
+          })}
+        </div>
+      </div>
+
+      <div>
+        <div className="text-white font-bold text-lg mb-3">Studio Lots</div>
+        <div className="text-gray-400 text-sm mb-3">Build stages and backlots. Unused lots earn rental income. Genre-matched lots boost quality.</div>
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
+          {STUDIO_LOTS.map(lot => {
+            const owned = (state.studioLots || []).filter(l => l.id === lot.id).length;
+            return (
+              <div key={lot.id} className="bg-gray-800 border border-gray-700 rounded-lg p-3">
+                <div className="flex justify-between items-start">
+                  <div>
+                    <div className="text-white font-bold text-sm">{lot.name}</div>
+                    <div className="text-xs text-gray-400">{lot.desc}</div>
+                  </div>
+                  {owned > 0 && <span className="text-green-400 text-xs font-bold">×{owned}</span>}
+                </div>
+                <div className="flex gap-3 text-xs text-gray-500 mt-1">
+                  <span>Cost: {fmt(lot.cost)}</span>
+                  <span>Upkeep: {fmt(lot.monthlyUpkeep)}/mo</span>
+                  <span>Rent: {fmt(lot.rentalIncome)}/mo</span>
+                  {lot.genres && <span className="text-amber-400">+{lot.qualityBonus}q: {lot.genres.join(', ')}</span>}
+                </div>
+                <button onClick={() => dispatch({ type: 'BUILD_LOT', lotId: lot.id })}
+                  disabled={state.cash < lot.cost}
+                  className="mt-2 bg-blue-700 hover:bg-blue-600 disabled:bg-gray-700 disabled:text-gray-500 text-white text-xs px-3 py-1 rounded font-bold transition">
+                  Build ({fmt(lot.cost)})
+                </button>
               </div>
             );
           })}
@@ -5024,6 +5794,22 @@ export default function MovieMogul() {
           </div>
         </div>
 
+        {/* INDUSTRY CRISES */}
+        {(state.activeCrises || []).length > 0 && (
+          <div>
+            <div className="text-white font-bold text-lg mb-3">Active Industry Crises</div>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
+              {state.activeCrises.map((c, i) => (
+                <div key={i} className="bg-red-900/30 border border-red-700 rounded-lg p-3">
+                  <div className="text-red-400 font-bold text-sm">{c.name}</div>
+                  <div className="text-xs text-red-300 mt-1">{c.effects.desc}</div>
+                  <div className="text-xs text-red-400 mt-1">{c.monthsLeft} months remaining</div>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+
         {/* AUDIENCE DEMOGRAPHICS */}
         <div>
           <div className="text-white font-bold text-lg mb-3">Audience Demographics</div>
@@ -5162,6 +5948,285 @@ export default function MovieMogul() {
     );
   };
 
+  // ==================== BATCH 4 RENDER FUNCTIONS ====================
+
+  const renderPress = () => (
+    <div className="space-y-6">
+      <div>
+        <div className="text-white font-bold text-lg mb-3">Active Press Events</div>
+        {state.pressEvents.length === 0 ? (
+          <div className="bg-gray-800 border border-gray-700 rounded-lg p-4 text-gray-400 text-sm">No active press events. Check back next month!</div>
+        ) : (
+          <div className="space-y-3">
+            {state.pressEvents.map((evt, i) => {
+              const template = PRESS_EVENTS.find(e => e.id === evt.type);
+              return (
+                <div key={i} className="bg-gray-800 border border-gray-700 rounded-lg p-4">
+                  <div className="flex justify-between items-start mb-2">
+                    <div>
+                      <div className="text-white font-bold">{evt.name}</div>
+                      <div className="text-gray-400 text-sm">{evt.desc}</div>
+                    </div>
+                  </div>
+                  <div className="text-xs text-gray-500 mb-3 space-y-0.5">
+                    <div>Rep Impact: {evt.repChange > 0 ? '+' : ''}{evt.repChange} | Pres Impact: {evt.prestigeChange > 0 ? '+' : ''}{evt.prestigeChange}</div>
+                  </div>
+                  <div className="flex gap-2 flex-wrap">
+                    {PRESS_RESPONSES.map(r => (
+                      <button key={r.id} onClick={() => dispatch({ type: 'HANDLE_PRESS', eventId: evt.id, response: r.id })}
+                        className="bg-blue-700 hover:bg-blue-600 text-white text-xs px-3 py-1 rounded transition">
+                        {r.name}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        )}
+      </div>
+
+      <div>
+        <div className="text-white font-bold text-lg mb-3">How Press Events Work</div>
+        <div className="bg-gray-800 border border-gray-700 rounded-lg p-4 text-gray-400 text-sm space-y-2">
+          <p>Random press events occur throughout your studio's history. How you respond affects your reputation and prestige!</p>
+          <p><strong>Ignore:</strong> Minimal impact, quickly forgotten.</p>
+          <p><strong>Deny:</strong> Risk backfiring with angry press. 40% chance of worse outcome.</p>
+          <p><strong>Lean In:</strong> Maximize buzz but sacrifice prestige.</p>
+          <p><strong>Apologize:</strong> Sacrifice rep but gain prestige and move on cleanly.</p>
+        </div>
+      </div>
+    </div>
+  );
+
+  const renderAcademy = () => (
+    <div className="space-y-6">
+      <div>
+        <div className="text-white font-bold text-lg mb-3">Film School Pipeline</div>
+        <div className="text-gray-400 text-sm mb-4">Fund film schools to develop cheaper but riskier talent. Schools produce graduates regularly!</div>
+
+        {state.filmSchools.length === 0 ? (
+          <div className="text-gray-400 text-sm mb-4">No schools funded yet. Start investing to build your talent pipeline.</div>
+        ) : (
+          <div className="space-y-3 mb-4">
+            {state.filmSchools.map((fs, i) => {
+              const schoolDef = FILM_SCHOOLS.find(s => s.id === fs.schoolId);
+              const turnsToGraduate = Math.max(0, fs.nextGraduate - state.turn);
+              return (
+                <div key={i} className="bg-gray-800 border border-gray-700 rounded-lg p-4">
+                  <div className="flex justify-between items-start mb-2">
+                    <div>
+                      <div className="text-white font-bold">{schoolDef?.name}</div>
+                      <div className="text-gray-400 text-xs">Founded {state.year - Math.floor(fs.founded / 12)} | {schoolDef?.desc}</div>
+                    </div>
+                    <div className="text-right">
+                      <div className="text-amber-400 text-sm font-bold">{turnsToGraduate} months</div>
+                      <div className="text-gray-500 text-xs">until graduate</div>
+                    </div>
+                  </div>
+                  <div className="text-xs text-gray-400">Quality range: {schoolDef?.talentQualityRange[0]}–{schoolDef?.talentQualityRange[1]} | Salary: {(schoolDef?.salaryMult || 0).toFixed(1)}x base</div>
+                  <div className="text-xs text-gray-500 mt-1">Monthly upkeep: {fmt(schoolDef?.monthlyUpkeep || 0)}</div>
+                </div>
+              );
+            })}
+          </div>
+        )}
+
+        <div>
+          <div className="text-white font-bold text-sm mb-2">Available Schools to Fund</div>
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+            {FILM_SCHOOLS.map((school, i) => {
+              const alreadyHas = state.filmSchools.some(fs => fs.schoolId === school.id);
+              return (
+                <div key={i} className={`bg-gray-800 border border-gray-700 rounded-lg p-3 ${alreadyHas ? 'opacity-50' : ''}`}>
+                  <div className="text-white font-bold text-sm mb-1">{school.name}</div>
+                  <div className="text-gray-400 text-xs mb-2">{school.desc}</div>
+                  <div className="text-xs text-gray-500 space-y-0.5 mb-2">
+                    <div>Initial cost: {fmt(school.cost)}</div>
+                    <div>Monthly upkeep: {fmt(school.monthlyUpkeep)}</div>
+                    <div>Grad interval: {school.graduateInterval} months</div>
+                    <div>Talent quality: {school.talentQualityRange[0]}–{school.talentQualityRange[1]}</div>
+                  </div>
+                  <button onClick={() => dispatch({ type: 'FUND_SCHOOL', schoolId: school.id })}
+                    disabled={alreadyHas || state.cash < school.cost}
+                    className="w-full bg-blue-700 hover:bg-blue-600 disabled:bg-gray-600 text-white text-xs px-3 py-1 rounded transition">
+                    {alreadyHas ? 'Operating' : state.cash < school.cost ? 'Not Enough Cash' : 'Fund'}
+                  </button>
+                </div>
+              );
+            })}
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+
+  const renderPartners = () => (
+    <div className="space-y-6">
+      <div>
+        <div className="text-white font-bold text-lg mb-3">International Studio Partnerships</div>
+        <div className="text-gray-400 text-sm mb-4">Partner with regional studios to access new markets, genres, and talent!</div>
+
+        {state.internationalPartners.length === 0 ? (
+          <div className="text-gray-400 text-sm mb-4">No partnerships yet. Form partnerships to expand globally.</div>
+        ) : (
+          <div className="space-y-3 mb-4">
+            {state.internationalPartners.map((ip, i) => {
+              const partnerDef = INTERNATIONAL_PARTNERS.find(p => p.id === ip.partnerId);
+              return (
+                <div key={i} className="bg-gray-800 border border-blue-700 rounded-lg p-4">
+                  <div className="flex justify-between items-start mb-2">
+                    <div>
+                      <div className="text-blue-400 font-bold">{partnerDef?.name}</div>
+                      <div className="text-gray-400 text-xs">{partnerDef?.region} | Formed {ip.formDate}</div>
+                    </div>
+                    <button onClick={() => dispatch({ type: 'DISSOLVE_PARTNERSHIP', partnerId: ip.id })}
+                      className="bg-red-700 hover:bg-red-600 text-white text-xs px-2 py-1 rounded transition">
+                      End
+                    </button>
+                  </div>
+                  <div className="text-xs text-gray-400 space-y-1">
+                    <div>Genres: {partnerDef?.genres.join(', ')}</div>
+                    <div>Monthly fee: {fmt(partnerDef?.monthlyFee || 0)}</div>
+                    <div className="text-green-400">Regional bonuses active for these genres on international markets</div>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        )}
+
+        <div>
+          <div className="text-white font-bold text-sm mb-2">Available Partners</div>
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
+            {INTERNATIONAL_PARTNERS.map((partner, i) => {
+              const hasPartner = state.internationalPartners.some(ip => ip.partnerId === partner.id);
+              return (
+                <div key={i} className={`bg-gray-800 border border-gray-700 rounded-lg p-3 ${hasPartner ? 'opacity-50' : ''}`}>
+                  <div className="text-white font-bold text-sm mb-1">{partner.name}</div>
+                  <div className="text-gray-400 text-xs mb-2">{partner.region} | {partner.desc}</div>
+                  <div className="text-xs text-gray-500 space-y-0.5 mb-2">
+                    <div>Monthly fee: {fmt(partner.monthlyFee)}</div>
+                    <div>Genres: {partner.genres.join(', ')}</div>
+                    <div>Talent discount: {Math.round(partner.talentSalaryBonus * 100)}%</div>
+                  </div>
+                  <button onClick={() => dispatch({ type: 'FORM_PARTNERSHIP', partnerId: partner.id })}
+                    disabled={hasPartner}
+                    className="w-full bg-blue-700 hover:bg-blue-600 disabled:bg-gray-600 text-white text-xs px-3 py-1 rounded transition">
+                    {hasPartner ? 'Partner' : 'Form Partnership'}
+                  </button>
+                </div>
+              );
+            })}
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+
+  const renderScreening = () => {
+    const playerFilms = (state.allFilmHistory || []).filter(f => !f.isRival);
+
+    let sortedFilms = [...playerFilms];
+    if (screeningSortBy === 'year') sortedFilms.sort((a, b) => (b.releasedYear || 0) - (a.releasedYear || 0) || (b.releasedMonth || 0) - (a.releasedMonth || 0));
+    else if (screeningSortBy === 'quality') sortedFilms.sort((a, b) => (b.quality || 0) - (a.quality || 0));
+    else if (screeningSortBy === 'box office') sortedFilms.sort((a, b) => (b.totalGross || 0) - (a.totalGross || 0));
+    else if (screeningSortBy === 'awards') sortedFilms.sort((a, b) => (state.awards.filter(aw => aw.filmId === b.id).length || 0) - (state.awards.filter(aw => aw.filmId === a.id).length || 0));
+
+    const totalGross = playerFilms.reduce((s, f) => s + (f.totalGross || 0), 0);
+    const totalAwards = state.awards.filter(a => playerFilms.some(f => f.id === a.filmId)).length;
+    const avgQuality = playerFilms.length > 0 ? Math.round(playerFilms.reduce((s, f) => s + (f.quality || 0), 0) / playerFilms.length) : 0;
+    const bestFilm = playerFilms.length > 0 ? playerFilms.reduce((best, f) => (f.quality || 0) > (best.quality || 0) ? f : best) : null;
+    const worstFilm = playerFilms.length > 0 ? playerFilms.reduce((worst, f) => (f.quality || 0) < (worst.quality || 0) ? f : worst) : null;
+
+    return (
+      <div className="space-y-6">
+        {/* Studio Stats */}
+        <div>
+          <div className="text-white font-bold text-lg mb-3">Your Legacy</div>
+          <div className="grid grid-cols-2 lg:grid-cols-5 gap-3">
+            <div className="bg-gray-800 border border-gray-700 rounded-lg p-4">
+              <div className="text-gray-400 text-xs">Total Films</div>
+              <div className="text-white font-bold text-xl">{playerFilms.length}</div>
+            </div>
+            <div className="bg-gray-800 border border-gray-700 rounded-lg p-4">
+              <div className="text-gray-400 text-xs">Total Gross</div>
+              <div className="text-green-400 font-bold text-lg">{fmt(totalGross)}</div>
+            </div>
+            <div className="bg-gray-800 border border-gray-700 rounded-lg p-4">
+              <div className="text-gray-400 text-xs">Awards Won</div>
+              <div className="text-amber-400 font-bold text-xl">{totalAwards}</div>
+            </div>
+            <div className="bg-gray-800 border border-gray-700 rounded-lg p-4">
+              <div className="text-gray-400 text-xs">Avg Quality</div>
+              <div className="text-blue-400 font-bold text-lg">{avgQuality}</div>
+            </div>
+            <div className="bg-gray-800 border border-gray-700 rounded-lg p-4">
+              <div className="text-gray-400 text-xs">Studios</div>
+              <div className="text-white font-bold text-lg">{new Set(playerFilms.map(f => f.studio)).size}</div>
+            </div>
+          </div>
+        </div>
+
+        {/* Best/Worst Films */}
+        {bestFilm && worstFilm && (
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div className="bg-green-900/30 border border-green-700 rounded-lg p-4">
+              <div className="text-green-400 font-bold text-sm mb-2">Best Film</div>
+              <div className="text-white font-bold">{bestFilm.title}</div>
+              <div className="text-gray-400 text-xs">Q: {bestFilm.quality} | {fmt(bestFilm.totalGross)} gross</div>
+            </div>
+            <div className="bg-red-900/30 border border-red-700 rounded-lg p-4">
+              <div className="text-red-400 font-bold text-sm mb-2">Lowest Quality</div>
+              <div className="text-white font-bold">{worstFilm.title}</div>
+              <div className="text-gray-400 text-xs">Q: {worstFilm.quality} | {fmt(worstFilm.totalGross)} gross</div>
+            </div>
+          </div>
+        )}
+
+        {/* Filmography */}
+        <div>
+          <div className="flex justify-between items-center mb-3">
+            <div className="text-white font-bold text-lg">Filmography</div>
+            <select value={screeningSortBy} onChange={(e) => setScreeningSortBy(e.target.value)}
+              className="bg-gray-800 border border-gray-700 text-white text-xs px-2 py-1 rounded">
+              <option value="year">Sort by: Year</option>
+              <option value="quality">Sort by: Quality</option>
+              <option value="box office">Sort by: Box Office</option>
+              <option value="awards">Sort by: Awards</option>
+            </select>
+          </div>
+
+          {playerFilms.length === 0 ? (
+            <div className="bg-gray-800 border border-gray-700 rounded-lg p-4 text-gray-400 text-sm">You haven't released any films yet!</div>
+          ) : (
+            <div className="space-y-2 max-h-[600px] overflow-y-auto">
+              {sortedFilms.map((film, i) => {
+                const filmAwards = state.awards.filter(a => a.filmId === film.id).length;
+                return (
+                  <div key={i} className="bg-gray-800 border border-gray-700 rounded-lg p-3">
+                    <div className="flex justify-between items-start">
+                      <div className="flex-1">
+                        <div className="text-white font-bold">{film.title}</div>
+                        <div className="text-gray-400 text-xs">{film.genre}{film.genre2 ? ` / ${film.genre2}` : ''} · {film.releasedYear}</div>
+                      </div>
+                      <div className="text-right text-xs text-gray-400">
+                        <div className={`font-bold ${film.quality >= 80 ? 'text-green-400' : film.quality >= 60 ? 'text-yellow-400' : film.quality >= 40 ? 'text-orange-400' : 'text-red-400'}`}>Q: {film.quality}</div>
+                        <div className="text-green-400">{fmt(film.totalGross)}</div>
+                        {filmAwards > 0 && <div className="text-amber-400">{filmAwards} award{filmAwards > 1 ? 's' : ''}</div>}
+                      </div>
+                    </div>
+                    <div className="text-xs text-gray-500 mt-1">Budget: {fmt(film.budget)} | Critics: {film.criticScore || '?'} | Audience: {film.audienceScore || '?'}</div>
+                  </div>
+                );
+              })}
+            </div>
+          )}
+        </div>
+      </div>
+    );
+  };
+
   // Awards ceremony modal
   const renderCeremony = () => {
     if (!state.showCeremony || !state.pendingCeremony) return null;
@@ -5262,6 +6327,10 @@ export default function MovieMogul() {
           {tab === 'studio' && renderStudio()}
           {tab === 'finance' && renderFinance()}
           {tab === 'market' && renderMarket()}
+          {tab === 'press' && renderPress()}
+          {tab === 'academy' && renderAcademy()}
+          {tab === 'partners' && renderPartners()}
+          {tab === 'screening' && renderScreening()}
         </div>
       </div>
     </div>
