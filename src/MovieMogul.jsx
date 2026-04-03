@@ -272,48 +272,212 @@ const calcLegacyScore = (state) => {
   return score;
 };
 
-const ANNUAL_AWARD_CATEGORIES = [
-  { name: 'Best Picture', weight: 'quality', icon: '🏆' },
-  { name: 'Best Director', weight: 'directorSkill', icon: '🎬' },
-  { name: 'Best Actor/Actress', weight: 'actorSkill', icon: '⭐' },
-  { name: 'Best Screenplay', weight: 'writerSkill', icon: '📜' },
-  { name: 'Best Cinematography', weight: 'visual', icon: '📷' },
-  { name: 'Best Score/Music', weight: 'artistry', icon: '🎵' },
-  { name: 'Best Visual Effects', weight: 'vfx', icon: '✨' },
-  { name: 'Box Office Champion', weight: 'gross', icon: '💰' },
-  { name: 'Audience Favorite', weight: 'audience', icon: '❤️' },
-  { name: 'Critics Choice', weight: 'critics', icon: '🎭' },
+// ==================== AWARD CEREMONIES ====================
+const AWARD_SHOWS = [
+  {
+    id: 'oscars', name: 'Academy Awards (Oscars)', shortName: 'Oscars', icon: '🏆',
+    month: 3, // March ceremony
+    prestigeBonus: 5, reputationBonus: 3, grossBonus: 0.08,
+    desc: 'The most prestigious film awards in the world.',
+    categories: [
+      { name: 'Best Picture', weight: 'quality', icon: '🏆', prestigeBonus: 8 },
+      { name: 'Best Director', weight: 'directorSkill', icon: '🎬', prestigeBonus: 5 },
+      { name: 'Best Actor', weight: 'actorSkill', icon: '⭐', prestigeBonus: 4 },
+      { name: 'Best Actress', weight: 'actressSkill', icon: '⭐', prestigeBonus: 4 },
+      { name: 'Best Original Screenplay', weight: 'writerSkill', icon: '📜', prestigeBonus: 3 },
+      { name: 'Best Adapted Screenplay', weight: 'adaptedWriterSkill', icon: '📜', prestigeBonus: 3 },
+      { name: 'Best Cinematography', weight: 'visual', icon: '📷', prestigeBonus: 2 },
+      { name: 'Best Original Score', weight: 'artistry', icon: '🎵', prestigeBonus: 2 },
+      { name: 'Best Visual Effects', weight: 'vfx', icon: '✨', prestigeBonus: 2 },
+      { name: 'Best Animated Feature', weight: 'animated', icon: '🎨', prestigeBonus: 3 },
+      { name: 'Best International Film', weight: 'international', icon: '🌍', prestigeBonus: 3 },
+      { name: 'Best Film Editing', weight: 'editing', icon: '✂️', prestigeBonus: 1 },
+    ],
+  },
+  {
+    id: 'golden_globes', name: 'Golden Globe Awards', shortName: 'Golden Globes', icon: '🌐',
+    month: 1, // January ceremony (precursor to Oscars)
+    prestigeBonus: 3, reputationBonus: 2, grossBonus: 0.05,
+    desc: 'Awarded by the Hollywood Foreign Press. Often a precursor to the Oscars.',
+    categories: [
+      { name: 'Best Motion Picture - Drama', weight: 'qualityDrama', icon: '🎭', prestigeBonus: 4 },
+      { name: 'Best Motion Picture - Musical/Comedy', weight: 'qualityComedy', icon: '😂', prestigeBonus: 4 },
+      { name: 'Best Director', weight: 'directorSkill', icon: '🎬', prestigeBonus: 3 },
+      { name: 'Best Actor - Drama', weight: 'actorSkill', icon: '⭐', prestigeBonus: 2 },
+      { name: 'Best Actress - Drama', weight: 'actressSkill', icon: '⭐', prestigeBonus: 2 },
+      { name: 'Best Actor - Musical/Comedy', weight: 'actorComedy', icon: '😄', prestigeBonus: 2 },
+      { name: 'Best Screenplay', weight: 'writerSkill', icon: '📜', prestigeBonus: 2 },
+      { name: 'Best Original Score', weight: 'artistry', icon: '🎵', prestigeBonus: 1 },
+      { name: 'Best Animated Film', weight: 'animated', icon: '🎨', prestigeBonus: 2 },
+    ],
+  },
+  {
+    id: 'bafta', name: 'BAFTA Awards', shortName: 'BAFTAs', icon: '🇬🇧',
+    month: 2, // February ceremony
+    prestigeBonus: 4, reputationBonus: 2, grossBonus: 0.04,
+    desc: 'The British Academy Film Awards — prestige from across the pond.',
+    categories: [
+      { name: 'Best Film', weight: 'quality', icon: '🏆', prestigeBonus: 5 },
+      { name: 'Best Director', weight: 'directorSkill', icon: '🎬', prestigeBonus: 3 },
+      { name: 'Best Leading Actor', weight: 'actorSkill', icon: '⭐', prestigeBonus: 2 },
+      { name: 'Best Leading Actress', weight: 'actressSkill', icon: '⭐', prestigeBonus: 2 },
+      { name: 'Best Original Screenplay', weight: 'writerSkill', icon: '📜', prestigeBonus: 2 },
+      { name: 'Best Cinematography', weight: 'visual', icon: '📷', prestigeBonus: 2 },
+      { name: 'Best Film Not in English', weight: 'international', icon: '🌍', prestigeBonus: 2 },
+      { name: 'Best Animated Film', weight: 'animated', icon: '🎨', prestigeBonus: 2 },
+      { name: 'Best Visual Effects', weight: 'vfx', icon: '✨', prestigeBonus: 1 },
+    ],
+  },
+  {
+    id: 'sag', name: 'SAG Awards', shortName: 'SAG Awards', icon: '🎭',
+    month: 2, // February
+    prestigeBonus: 2, reputationBonus: 2, grossBonus: 0.03,
+    desc: 'Screen Actors Guild — voted on by actors, the strongest predictor of Oscar acting wins.',
+    categories: [
+      { name: 'Outstanding Cast in a Film', weight: 'ensemble', icon: '👥', prestigeBonus: 3 },
+      { name: 'Outstanding Actor', weight: 'actorSkill', icon: '⭐', prestigeBonus: 2 },
+      { name: 'Outstanding Actress', weight: 'actressSkill', icon: '⭐', prestigeBonus: 2 },
+    ],
+  },
+  {
+    id: 'dga', name: 'Directors Guild Awards', shortName: 'DGA Awards', icon: '🎥',
+    month: 2,
+    prestigeBonus: 2, reputationBonus: 1, grossBonus: 0.02,
+    desc: 'Voted by directors — the strongest predictor of Best Director at the Oscars.',
+    categories: [
+      { name: 'Outstanding Director', weight: 'directorSkill', icon: '🎬', prestigeBonus: 3 },
+      { name: 'Outstanding First-Time Director', weight: 'firstTimeDirector', icon: '🌟', prestigeBonus: 2 },
+    ],
+  },
+  {
+    id: 'critics_choice', name: 'Critics Choice Awards', shortName: 'Critics Choice', icon: '📝',
+    month: 1,
+    prestigeBonus: 2, reputationBonus: 2, grossBonus: 0.03,
+    desc: 'Voted by critics — often aligns with Oscar results.',
+    categories: [
+      { name: 'Best Picture', weight: 'critics', icon: '🏆', prestigeBonus: 3 },
+      { name: 'Best Director', weight: 'directorCritic', icon: '🎬', prestigeBonus: 2 },
+      { name: 'Best Actor', weight: 'actorCritic', icon: '⭐', prestigeBonus: 1 },
+      { name: 'Best Actress', weight: 'actressCritic', icon: '⭐', prestigeBonus: 1 },
+      { name: 'Best Screenplay', weight: 'writerSkill', icon: '📜', prestigeBonus: 1 },
+      { name: 'Best Visual Effects', weight: 'vfx', icon: '✨', prestigeBonus: 1 },
+      { name: 'Best Comedy', weight: 'qualityComedy', icon: '😂', prestigeBonus: 1 },
+      { name: 'Best Sci-Fi/Horror', weight: 'qualityGenre', icon: '👾', prestigeBonus: 1 },
+    ],
+  },
+  {
+    id: 'spirit', name: 'Independent Spirit Awards', shortName: 'Spirit Awards', icon: '🕊️',
+    month: 2,
+    prestigeBonus: 3, reputationBonus: 3, grossBonus: 0.02,
+    desc: 'Celebrating the best in independent film — budget under $30M preferred.',
+    categories: [
+      { name: 'Best Feature', weight: 'qualityIndie', icon: '🏆', prestigeBonus: 4 },
+      { name: 'Best Director', weight: 'directorIndie', icon: '🎬', prestigeBonus: 2 },
+      { name: 'Best First Feature', weight: 'firstTimeDirector', icon: '🌟', prestigeBonus: 2 },
+      { name: 'Best Screenplay', weight: 'writerSkill', icon: '📜', prestigeBonus: 2 },
+    ],
+  },
+  {
+    id: 'peoples_choice', name: "People's Choice Awards", shortName: "People's Choice", icon: '❤️',
+    month: 12,
+    prestigeBonus: 0, reputationBonus: 4, grossBonus: 0.06,
+    desc: 'Voted by fans — pure audience popularity.',
+    categories: [
+      { name: 'Favorite Movie', weight: 'audience', icon: '❤️', prestigeBonus: 0 },
+      { name: 'Favorite Action Movie', weight: 'audienceAction', icon: '💥', prestigeBonus: 0 },
+      { name: 'Favorite Comedy Movie', weight: 'audienceComedy', icon: '😂', prestigeBonus: 0 },
+      { name: 'Favorite Drama Movie', weight: 'audienceDrama', icon: '🎭', prestigeBonus: 0 },
+      { name: 'Favorite Movie Actor', weight: 'actorPopularity', icon: '⭐', prestigeBonus: 0 },
+    ],
+  },
+  {
+    id: 'razzie', name: 'Golden Raspberry Awards (Razzies)', shortName: 'Razzies', icon: '🍿',
+    month: 3, // Night before Oscars
+    prestigeBonus: -3, reputationBonus: -2, grossBonus: 0,
+    desc: 'Dishonoring the worst in film — pray your studio isn\'t nominated.',
+    isNegative: true,
+    categories: [
+      { name: 'Worst Picture', weight: 'worstQuality', icon: '💩', prestigeBonus: -3 },
+      { name: 'Worst Director', weight: 'worstDirector', icon: '🤦', prestigeBonus: -2 },
+      { name: 'Worst Actor', weight: 'worstActor', icon: '😬', prestigeBonus: -1 },
+      { name: 'Worst Screenplay', weight: 'worstScreenplay', icon: '🗑️', prestigeBonus: -2 },
+    ],
+  },
 ];
 
-const generateNominees = (allFilms, category) => {
+// Flatten for backward compat — primary ceremony categories (Oscars) used for generic scoring
+const ANNUAL_AWARD_CATEGORIES = AWARD_SHOWS[0].categories;
+
+const generateNominees = (allFilms, category, showId) => {
   if (allFilms.length === 0) return [];
-  // Score each film for this category
-  const scored = allFilms.map(f => {
+  // Filter films based on category requirements
+  let eligible = allFilms;
+  // Genre-specific categories only consider matching films
+  if (category.weight === 'animated') eligible = allFilms.filter(f => f.genre === 'Animation');
+  if (category.weight === 'qualityDrama') eligible = allFilms.filter(f => ['Drama', 'War', 'Thriller', 'Mystery', 'Western'].includes(f.genre));
+  if (category.weight === 'qualityComedy') eligible = allFilms.filter(f => ['Comedy', 'Musical', 'Romance', 'Animation'].includes(f.genre));
+  if (category.weight === 'qualityGenre') eligible = allFilms.filter(f => ['Sci-Fi', 'Horror', 'Fantasy', 'Action'].includes(f.genre));
+  if (category.weight === 'audienceAction') eligible = allFilms.filter(f => ['Action', 'Sci-Fi', 'Fantasy', 'War'].includes(f.genre));
+  if (category.weight === 'audienceComedy') eligible = allFilms.filter(f => ['Comedy', 'Musical', 'Romance', 'Animation'].includes(f.genre));
+  if (category.weight === 'audienceDrama') eligible = allFilms.filter(f => ['Drama', 'Thriller', 'Mystery', 'Western'].includes(f.genre));
+  if (category.weight === 'international') eligible = allFilms.filter(f => (f.internationalPartner || f.isRival) && Math.random() < 0.5);
+  if (category.weight === 'adaptedWriterSkill') eligible = allFilms.filter(f => f.filmType === 'adaptation' || f.filmType === 'sequel' || f.filmType === 'reboot');
+  // Spirit Awards: prefer lower budgets
+  if (category.weight === 'qualityIndie' || category.weight === 'directorIndie') eligible = allFilms.filter(f => (f.budget || 100e6) < 30e6);
+  // First-time directors
+  if (category.weight === 'firstTimeDirector') eligible = allFilms.filter(f => (f.director?.filmography || 5) <= 2);
+  // If not enough eligible, fall back to all
+  if (eligible.length < 3) eligible = allFilms;
+
+  const scored = eligible.map(f => {
     let score = 0;
     switch (category.weight) {
-      case 'quality': score = (f.quality || 0); break;
-      case 'directorSkill': score = (f.director?.skill || 0) + (f.quality || 0) * 0.3; break;
-      case 'actorSkill': score = (f.actor?.skill || 0) + (f.quality || 0) * 0.2 + (f.audienceScore || 0) * 0.1; break;
-      case 'writerSkill': score = (f.writer?.skill || 0) + (f.criticScore || 0) * 0.2; break;
-      case 'visual': score = (f.quality || 0) + (f.budget || 0) / 1e7; break;
-      case 'artistry': score = (f.quality || 0) * 0.6 + (f.criticScore || 0) * 0.4; break;
+      case 'quality': case 'qualityDrama': case 'qualityComedy': case 'qualityGenre':
+      case 'qualityIndie': case 'animated':
+        score = (f.quality || 0); break;
+      case 'directorSkill': case 'directorCritic': case 'directorIndie':
+        score = (f.director?.skill || 0) + (f.quality || 0) * 0.3; break;
+      case 'firstTimeDirector':
+        score = (f.quality || 0) + (f.director?.skill || 0) * 0.3; break;
+      case 'actorSkill': case 'actorCritic': case 'actorComedy':
+        score = (f.actor?.skill || 0) + (f.quality || 0) * 0.2 + (f.audienceScore || 0) * 0.1; break;
+      case 'actressSkill': case 'actressCritic':
+        // Simulate actress category — use actor skill with slight variation
+        score = (f.actor?.skill || 0) * 0.9 + (f.quality || 0) * 0.3 + (Math.random() * 10); break;
+      case 'actorPopularity':
+        score = (f.actor?.popularity || 0) + (f.audienceScore || 0) * 0.3; break;
+      case 'writerSkill': case 'adaptedWriterSkill':
+        score = (f.writer?.skill || 0) + (f.criticScore || 0) * 0.2; break;
+      case 'visual': case 'editing':
+        score = (f.quality || 0) + (f.budget || 0) / 1e7; break;
+      case 'artistry':
+        score = (f.quality || 0) * 0.6 + (f.criticScore || 0) * 0.4; break;
       case 'vfx': {
         const vfxGenres = ['Sci-Fi', 'Fantasy', 'Animation', 'Action'];
         score = (f.quality || 0) + (vfxGenres.includes(f.genre) ? 20 : 0) + (f.budget || 0) / 1e7;
       } break;
+      case 'ensemble':
+        score = (f.quality || 0) * 0.4 + (f.actor?.skill || 0) * 0.3 + (f.director?.skill || 0) * 0.3; break;
+      case 'international':
+        score = (f.quality || 0) + (f.criticScore || 0) * 0.3; break;
       case 'gross': score = (f.totalGross || 0) / 1e6; break;
-      case 'audience': score = (f.audienceScore || 0); break;
+      case 'audience': case 'audienceAction': case 'audienceComedy': case 'audienceDrama':
+        score = (f.audienceScore || 0); break;
       case 'critics': score = (f.criticScore || 0); break;
+      // Razzie categories — LOWEST quality wins
+      case 'worstQuality': score = -(f.quality || 50) + (f.budget || 0) / 5e7; break;
+      case 'worstDirector': score = -(f.director?.skill || 50) - (f.quality || 50) * 0.3; break;
+      case 'worstActor': score = -(f.actor?.skill || 50) - (f.audienceScore || 50) * 0.2; break;
+      case 'worstScreenplay': score = -(f.writer?.skill || 50) - (f.criticScore || 50) * 0.3; break;
       default: score = (f.quality || 0);
     }
-    // Add slight randomness so results aren't perfectly deterministic
+    // Add slight randomness
     score += (Math.random() - 0.5) * 8;
-    // Awards campaign boost
-    if (f._awardsBoost) score += f._awardsBoost;
+    // Awards campaign boost (not for Razzies!)
+    if (f._awardsBoost && !category.weight.startsWith('worst')) score += f._awardsBoost;
     return { film: f, score };
   });
   scored.sort((a, b) => b.score - a.score);
-  // Take top 5 nominees
   return scored.slice(0, 5).map((entry, i) => ({
     title: entry.film.title,
     studio: entry.film.studio || entry.film.isRival ? entry.film.studio : '(player)',
@@ -326,6 +490,7 @@ const generateNominees = (allFilms, category) => {
     writer: entry.film.writer?.name,
     genre: entry.film.genre,
     genre2: entry.film.genre2,
+    filmType: entry.film.filmType,
     isRival: !!entry.film.isRival,
     isWinner: i === 0,
     score: Math.round(entry.score),
@@ -2974,63 +3139,99 @@ function reducer(state, action) {
         log.push({ text: `Achievement Unlocked: ${a.name} — ${a.desc}`, type: 'award' });
       });
 
-      // 8c. Annual Awards Ceremony (January = awards for previous year's films)
+      // 8c. Awards Season — Multiple real ceremonies throughout the year
       let annualAwards = [...state.annualAwards];
       let pendingCeremony = null;
-      if (state.month === 1 && state.turn > 0) {
-        const prevYear = state.year - 1;
-        // Pull all films from permanent history for the previous year
-        const allYearFilms = (state.allFilmHistory || []).filter(f => f.releasedYear === prevYear);
-        // Also include player films released this year that might not be in history yet
-        const playerYearFilms = films.filter(f => f.status === 'released' && f.releasedYear === prevYear)
+      const currentMonth = state.month;
+      const prevYear = currentMonth <= 3 ? state.year - 1 : state.year; // Awards season covers Jan-Mar for prev year's films
+
+      // Find award shows happening this month
+      const showsThisMonth = AWARD_SHOWS.filter(show => show.month === currentMonth);
+      if (showsThisMonth.length > 0 && state.turn > 0) {
+        // Pull all films from permanent history for the award year
+        const awardYear = currentMonth <= 6 ? state.year - 1 : state.year;
+        const allYearFilms = (state.allFilmHistory || []).filter(f => f.releasedYear === awardYear);
+        const playerYearFilms = films.filter(f => f.status === 'released' && f.releasedYear === awardYear)
           .map(f => ({ ...f, studio: state.studioName, isRival: false }));
-        // Merge, avoiding duplicates by checking title+studio
         const historyTitles = new Set(allYearFilms.map(f => f.title + '|' + f.studio));
         const missingPlayerFilms = playerYearFilms.filter(f => !historyTitles.has(f.title + '|' + f.studio));
         const combinedYearFilms = [...allYearFilms, ...missingPlayerFilms];
+
         if (combinedYearFilms.length > 0) {
           // Apply awards campaign spending boosts
           const campaignBoostedFilms = combinedYearFilms.map(f => {
             if (f.isRival) {
-              // Rivals spend on campaigns too (proportional to their budget)
               const rivalCampaign = f.quality >= 75 ? Math.round(f.budget * 0.05 * Math.random()) : 0;
               const rivalBoost = Math.min(Math.sqrt(rivalCampaign / 1e6) * 3, 8);
               return { ...f, _awardsBoost: rivalBoost };
             }
             const campaign = (state.awardsCampaigns || {})[f.id] || 0;
-            const boost = Math.min(Math.sqrt(campaign / 1e6) * 5, 12); // diminishing returns, max +12
+            const detailedCampaign = (state.awardsCampaignsDetailed || {})[f.id];
+            const campaignSpent = detailedCampaign ? detailedCampaign.spent : campaign;
+            const effectMult = detailedCampaign ? detailedCampaign.effectMult : 1;
+            const boost = Math.min(Math.sqrt(campaignSpent / 1e6) * 5 * effectMult, 15);
             return { ...f, _awardsBoost: boost };
           });
-          const ceremonyData = { year: prevYear, categories: [] };
-          ANNUAL_AWARD_CATEGORIES.forEach(cat => {
-            const nominees = generateNominees(campaignBoostedFilms, cat);
-            if (nominees.length > 0) {
-              const winner = nominees[0];
-              ceremonyData.categories.push({
-                name: cat.name,
-                icon: cat.icon,
-                nominees,
-                winner: winner.title,
-                winnerStudio: winner.studio,
-                isRivalWin: winner.isRival,
-              });
-              // Only count player wins
-              if (!winner.isRival) {
-                tAwards += 1;
-                pres += 3;
-                awards.push({ year: prevYear, film: winner.title, type: cat.name });
+
+          // Process each show this month
+          const allShowResults = [];
+          showsThisMonth.forEach(show => {
+            const showData = { showId: show.id, showName: show.name, shortName: show.shortName, icon: show.icon, year: awardYear, isNegative: show.isNegative || false, categories: [] };
+            show.categories.forEach(cat => {
+              const nominees = generateNominees(campaignBoostedFilms, cat, show.id);
+              if (nominees.length > 0) {
+                const winner = nominees[0];
+                showData.categories.push({
+                  name: cat.name,
+                  icon: cat.icon,
+                  nominees,
+                  winner: winner.title,
+                  winnerStudio: winner.studio,
+                  isRivalWin: winner.isRival,
+                  prestigeBonus: cat.prestigeBonus || 0,
+                });
+                // Only count player wins
+                if (!winner.isRival) {
+                  if (!show.isNegative) {
+                    tAwards += 1;
+                    pres += cat.prestigeBonus || 2;
+                    rep += show.reputationBonus > 0 ? 1 : 0;
+                    awards.push({ year: awardYear, film: winner.title, type: cat.name, show: show.shortName });
+                  } else {
+                    // Razzies — negative prestige
+                    pres += cat.prestigeBonus || 0;
+                    rep -= 1;
+                    awards.push({ year: awardYear, film: winner.title, type: cat.name, show: show.shortName, isRazzie: true });
+                  }
+                }
               }
+            });
+            allShowResults.push(showData);
+            const playerWins = showData.categories.filter(c => !c.isRivalWin).length;
+            const totalCats = showData.categories.length;
+            if (show.isNegative) {
+              const playerRazzies = showData.categories.filter(c => !c.isRivalWin).length;
+              if (playerRazzies > 0) {
+                log.push({ text: `${show.icon} ${show.shortName} ${awardYear}: Your studio "won" ${playerRazzies} Razzie(s). Ouch.`, type: 'warning' });
+              }
+            } else if (playerWins > 0) {
+              log.push({ text: `${show.icon} ${show.shortName} ${awardYear}: Your studio won ${playerWins}/${totalCats} awards!`, type: 'award' });
+            } else {
+              log.push({ text: `${show.icon} ${show.shortName} ${awardYear} ceremony concluded. No wins for your studio.`, type: 'info' });
             }
+            // Store in annual awards
+            annualAwards.push({
+              year: awardYear,
+              showId: show.id,
+              showName: show.shortName,
+              showIcon: show.icon,
+              isNegative: show.isNegative || false,
+              awards: showData.categories.map(c => ({ category: c.name, film: c.winner, studio: c.winnerStudio, isRivalWin: c.isRivalWin })),
+            });
           });
-          const playerWins = ceremonyData.categories.filter(c => !c.isRivalWin).length;
-          const totalCats = ceremonyData.categories.length;
-          annualAwards.push({ year: prevYear, awards: ceremonyData.categories.map(c => ({ category: c.name, film: c.winner, studio: c.winnerStudio, isRivalWin: c.isRivalWin })) });
-          pendingCeremony = ceremonyData;
-          if (playerWins > 0) {
-            log.push({ text: `The ${prevYear} Awards Ceremony! Your studio won ${playerWins}/${totalCats} awards!`, type: 'award' });
-          } else {
-            log.push({ text: `The ${prevYear} Awards Ceremony concluded. Your studio didn't win any awards this year.`, type: 'warning' });
-          }
+
+          // Set pending ceremony to show all shows this month
+          pendingCeremony = { year: awardYear, shows: allShowResults };
         }
       }
 
@@ -4352,8 +4553,9 @@ export default function MovieMogul() {
               <div className="max-h-48 overflow-y-auto space-y-1">
                 {state.annualAwards.slice().reverse().map((yr, i) => (
                   <div key={i} className="text-xs">
-                    <span className="text-amber-400 font-bold">{yr.year}:</span>
-                    {yr.awards.map((a, j) => <span key={j} className={`ml-2 ${a.isRivalWin ? 'text-gray-500' : 'text-gray-300'}`}>{a.isRivalWin ? '🎬' : '🏆'} {a.category} — "{a.film}"</span>)}
+                    <span className={`font-bold ${yr.isNegative ? 'text-red-400' : 'text-amber-400'}`}>{yr.showIcon || '🏆'} {yr.year} {yr.showName || 'Awards'}:</span>
+                    {yr.awards.slice(0, 3).map((a, j) => <span key={j} className={`ml-1 ${a.isRivalWin ? 'text-gray-600' : 'text-gray-300'}`}>{a.isRivalWin ? '' : '🏆'} {a.category}</span>)}
+                    {yr.awards.length > 3 && <span className="text-gray-500 ml-1">+{yr.awards.length - 3} more</span>}
                   </div>
                 ))}
               </div>
@@ -4578,14 +4780,17 @@ export default function MovieMogul() {
               </button>
             )}
           </div>
-          <div className="bg-gray-800 border border-amber-700 rounded-lg p-4">
-            {state.annualAwards.slice(-2).reverse().map((yr, i) => (
+          <div className="bg-gray-800 border border-amber-700 rounded-lg p-4 max-h-48 overflow-y-auto">
+            {state.annualAwards.slice(-6).reverse().map((yr, i) => (
               <div key={i} className="mb-2 last:mb-0">
-                <div className="text-amber-400 font-bold text-xs mb-1">{yr.year} Awards Ceremony</div>
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-1">
-                  {yr.awards.map((a, j) => (
-                    <div key={j} className={`text-xs ${a.isRivalWin ? 'text-gray-500' : 'text-gray-300'}`}>{a.isRivalWin ? '🎬' : '🏆'} <span className={`font-bold ${a.isRivalWin ? 'text-gray-400' : 'text-white'}`}>{a.category}</span>: "{a.film}" <span className="text-xs text-gray-500">({a.studio})</span></div>
+                <div className={`font-bold text-xs mb-1 ${yr.isNegative ? 'text-red-400' : 'text-amber-400'}`}>{yr.showIcon || '🏆'} {yr.year} {yr.showName || 'Awards'}</div>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-0.5">
+                  {yr.awards.slice(0, 4).map((a, j) => (
+                    <div key={j} className={`text-xs ${a.isRivalWin ? 'text-gray-600' : 'text-gray-300'}`}>
+                      {a.isRivalWin ? '' : (yr.isNegative ? '💩' : '🏆')} <span className="font-bold">{a.category}</span>: "{a.film}"
+                    </div>
                   ))}
+                  {yr.awards.length > 4 && <div className="text-xs text-gray-500">+{yr.awards.length - 4} more</div>}
                 </div>
               </div>
             ))}
@@ -5241,27 +5446,59 @@ export default function MovieMogul() {
           </div>
         )}
 
-        {/* AWARDS CAMPAIGN */}
-        {released.filter(f => f.releasedYear === state.year).length > 0 && (
+        {/* AWARDS SEASON OVERVIEW */}
+        <div>
+          <div className="text-white font-bold text-lg mb-1">Awards Season Calendar</div>
+          <div className="text-gray-400 text-sm mb-3">Major ceremonies throughout the year. Campaign spending boosts your chances at all shows.</div>
+          <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-2 mb-4">
+            {AWARD_SHOWS.map(show => {
+              const monthNames = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+              const isUpcoming = show.month > state.month || (show.month <= 3 && state.month >= 10);
+              return (
+                <div key={show.id} className={`bg-gray-800 border rounded-lg p-2 text-center ${show.isNegative ? 'border-red-700' : (isUpcoming ? 'border-amber-600' : 'border-gray-700')}`}>
+                  <div className="text-xl">{show.icon}</div>
+                  <div className={`text-xs font-bold ${show.isNegative ? 'text-red-400' : 'text-amber-400'}`}>{show.shortName}</div>
+                  <div className="text-xs text-gray-500">{monthNames[show.month - 1]}</div>
+                  <div className="text-xs text-gray-600">{show.categories.length} categories</div>
+                  {!show.isNegative && <div className="text-xs text-purple-400">+{show.prestigeBonus}p / +{show.reputationBonus}r per win</div>}
+                </div>
+              );
+            })}
+          </div>
+        </div>
+
+        {/* AWARDS CAMPAIGNS */}
+        {released.filter(f => f.releasedYear === state.year || f.releasedYear === state.year - 1).length > 0 && (
           <div>
-            <div className="text-white font-bold text-lg mb-1">Awards Campaign</div>
-            <div className="text-gray-400 text-sm mb-3">Spend money lobbying for awards. Higher spending increases your chances of winning nominations and awards.</div>
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
-              {released.filter(f => f.releasedYear === state.year).map(f => {
-                const spent = state.awardsCampaigns[f.id] || 0;
+            <div className="text-white font-bold text-lg mb-1">Awards Campaigns</div>
+            <div className="text-gray-400 text-sm mb-3">Invest in FYC campaigns to boost your odds. Choose a strategy and target specific films.</div>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-3 mb-3">
+              {released.filter(f => f.releasedYear === state.year || f.releasedYear === state.year - 1).slice(0, 6).map(f => {
+                const basicSpent = state.awardsCampaigns[f.id] || 0;
+                const detailedCampaign = (state.awardsCampaignsDetailed || {})[f.id];
+                const filmAwards = state.awards.filter(a => a.film === f.title && !a.isRazzie);
                 return (
                   <div key={f.id} className="bg-gray-800 border border-purple-600 rounded-lg p-3">
-                    <div className="text-white font-bold text-sm">{f.title}</div>
-                    <div className="text-gray-400 text-xs mb-2">Quality: {f.quality} | Awards: {state.awards.filter(a => a.film === f.title).length}</div>
-                    <div className="text-purple-400 text-xs mb-2">Campaign spending: {fmt(spent)}</div>
-                    <input type="range" min="0" max={Math.round(state.cash)} step="50000" value={spent}
+                    <div className="text-white font-bold text-sm">{f.title} ({f.releasedYear})</div>
+                    <div className="text-gray-400 text-xs mb-1">Q:{f.quality} | Critic:{f.criticScore} | Audience:{f.audienceScore}</div>
+                    {filmAwards.length > 0 && <div className="text-amber-400 text-xs mb-1">{filmAwards.length} award(s): {filmAwards.map(a => a.show || a.type).join(', ')}</div>}
+                    {detailedCampaign && <div className="text-purple-300 text-xs mb-1">Active: {CAMPAIGN_STRATEGIES.find(s => s.id === detailedCampaign.strategy)?.name} ({fmt(detailedCampaign.spent)})</div>}
+                    <div className="text-purple-400 text-xs mb-2">Basic lobbying: {fmt(basicSpent)}</div>
+                    <input type="range" min="0" max={Math.min(5000000, Math.round(state.cash + basicSpent))} step="100000" value={basicSpent}
                       onChange={(e) => dispatch({ type: 'SET_AWARDS_CAMPAIGN', filmId: f.id, amount: parseInt(e.target.value) })}
                       className="w-full mb-2" />
-                    <div className="text-xs text-gray-400 flex justify-between">
-                      <span>$0</span>
-                      <span>{fmt(spent)}</span>
-                      <span>{fmt(Math.round(state.cash))}</span>
-                    </div>
+                    {!detailedCampaign && (
+                      <div className="flex flex-wrap gap-1 mt-1">
+                        {CAMPAIGN_STRATEGIES.map(strat => (
+                          <button key={strat.id} onClick={() => dispatch({ type: 'LAUNCH_AWARDS_CAMPAIGN', filmId: f.id, strategy: strat.id })}
+                            disabled={state.cash < Math.round(2000000 * strat.costMult)}
+                            className="text-xs bg-purple-800 hover:bg-purple-700 disabled:opacity-30 text-white px-2 py-1 rounded transition"
+                            title={strat.desc}>
+                            {strat.name} ({fmt(Math.round(2000000 * strat.costMult))})
+                          </button>
+                        ))}
+                      </div>
+                    )}
                   </div>
                 );
               })}
@@ -5879,15 +6116,29 @@ export default function MovieMogul() {
 
       {state.awards.length > 0 && (
         <div>
-          <div className="text-white font-bold text-lg mb-3">Awards Cabinet ({state.awards.length})</div>
+          <div className="text-white font-bold text-lg mb-3">Awards Cabinet ({state.awards.filter(a => !a.isRazzie).length} wins{state.awards.some(a => a.isRazzie) ? `, ${state.awards.filter(a => a.isRazzie).length} Razzies` : ''})</div>
           <div className="grid grid-cols-2 gap-2">
-            {state.awards.slice().reverse().map((a, i) => (
+            {state.awards.slice().reverse().filter(a => !a.isRazzie).map((a, i) => (
               <div key={i} className="bg-gray-800 border border-amber-400 rounded-lg p-3">
                 <div className="text-amber-400 text-sm font-bold">{a.type}</div>
                 <div className="text-white text-xs">{a.film} ({a.year})</div>
+                {a.show && <div className="text-xs text-gray-500 mt-0.5">{a.show}</div>}
               </div>
             ))}
           </div>
+          {state.awards.some(a => a.isRazzie) && (
+            <div className="mt-3">
+              <div className="text-red-400 font-bold text-sm mb-2">Razzie Shelf of Shame</div>
+              <div className="grid grid-cols-2 gap-1">
+                {state.awards.filter(a => a.isRazzie).map((a, i) => (
+                  <div key={i} className="bg-gray-800 border border-red-700 rounded-lg p-2">
+                    <div className="text-red-400 text-xs font-bold">{a.type}</div>
+                    <div className="text-gray-400 text-xs">{a.film} ({a.year})</div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
         </div>
       )}
     </div>
@@ -6338,28 +6589,42 @@ export default function MovieMogul() {
           {state.annualAwards.length > 0 && (
             <div className="mb-4">
               <div className="text-white font-bold text-sm mb-2">Awards History</div>
-              <div className="space-y-2 max-h-64 overflow-y-auto">
-                {state.annualAwards.slice().reverse().map((yr, yi) => {
-                  const playerWins = yr.awards.filter(a => !a.isRivalWin).length;
-                  return (
-                    <div key={yi} className="bg-gray-800 border border-gray-700 rounded-lg p-3">
-                      <div className="flex justify-between items-center mb-1">
-                        <span className="text-amber-400 font-bold text-sm">{yr.year} Awards</span>
-                        <span className="text-xs text-gray-400">{playerWins}/{yr.awards.length} won by you</span>
-                      </div>
-                      <div className="grid grid-cols-1 md:grid-cols-2 gap-1">
-                        {yr.awards.map((a, ai) => (
-                          <div key={ai} className={`text-xs flex items-center gap-1 ${a.isRivalWin ? 'text-gray-500' : 'text-white'}`}>
-                            <span>{a.isRivalWin ? '🎬' : '🏆'}</span>
-                            <span className="font-bold">{a.category}:</span>
-                            <span className="truncate">"{a.film}"</span>
-                            <span className="text-gray-600 text-xs ml-auto shrink-0">({a.studio})</span>
+              <div className="space-y-2 max-h-80 overflow-y-auto">
+                {(() => {
+                  // Group by year, then by show
+                  const byYear = {};
+                  state.annualAwards.forEach(entry => {
+                    if (!byYear[entry.year]) byYear[entry.year] = [];
+                    byYear[entry.year].push(entry);
+                  });
+                  return Object.entries(byYear).sort((a, b) => b[0] - a[0]).map(([year, entries]) => (
+                    <div key={year} className="bg-gray-800 border border-gray-700 rounded-lg p-3">
+                      <div className="text-amber-400 font-bold text-sm mb-2">{year} Awards Season</div>
+                      {entries.map((entry, ei) => {
+                        const playerWins = entry.awards.filter(a => !a.isRivalWin).length;
+                        return (
+                          <div key={ei} className="mb-2">
+                            <div className="flex justify-between items-center mb-1">
+                              <span className={`text-xs font-bold ${entry.isNegative ? 'text-red-400' : 'text-gray-300'}`}>
+                                {entry.showIcon || '🏆'} {entry.showName || 'Awards'}
+                              </span>
+                              <span className="text-xs text-gray-500">{playerWins}/{entry.awards.length} yours</span>
+                            </div>
+                            <div className="grid grid-cols-1 md:grid-cols-2 gap-0.5">
+                              {entry.awards.map((a, ai) => (
+                                <div key={ai} className={`text-xs flex items-center gap-1 ${a.isRivalWin ? 'text-gray-600' : (entry.isNegative ? 'text-red-400' : 'text-white')}`}>
+                                  <span>{a.isRivalWin ? '·' : (entry.isNegative ? '💩' : '🏆')}</span>
+                                  <span className="font-bold truncate">{a.category}:</span>
+                                  <span className="truncate">"{a.film}"</span>
+                                </div>
+                              ))}
+                            </div>
                           </div>
-                        ))}
-                      </div>
+                        );
+                      })}
                     </div>
-                  );
-                })}
+                  ));
+                })()}
               </div>
             </div>
           )}
@@ -6802,54 +7067,71 @@ export default function MovieMogul() {
     );
   };
 
-  // Awards ceremony modal
+  // Awards ceremony modal — now shows multiple real award shows
   const renderCeremony = () => {
     if (!state.showCeremony || !state.pendingCeremony) return null;
     const c = state.pendingCeremony;
+    const shows = c.shows || [];
+    const totalPlayerWins = shows.reduce((sum, s) => sum + s.categories.filter(cat => !cat.isRivalWin && !s.isNegative).length, 0);
+    const totalCats = shows.reduce((sum, s) => sum + (s.isNegative ? 0 : s.categories.length), 0);
     return (
       <div className="fixed inset-0 bg-black/80 z-50 flex items-center justify-center p-4 overflow-y-auto">
-        <div className="bg-gray-900 border-2 border-amber-500 rounded-2xl max-w-3xl w-full max-h-[90vh] overflow-y-auto p-6">
+        <div className="bg-gray-900 border-2 border-amber-500 rounded-2xl max-w-4xl w-full max-h-[90vh] overflow-y-auto p-6">
           <div className="text-center mb-6">
-            <div className="text-amber-400 text-4xl font-bold mb-1">The {c.year} Awards</div>
-            <div className="text-gray-400">Annual Awards Ceremony — Celebrating the Best in Cinema</div>
+            <div className="text-amber-400 text-4xl font-bold mb-1">Awards Season {c.year}</div>
+            <div className="text-gray-400">{shows.length} ceremony{shows.length > 1 ? 'ies' : ''} this month</div>
           </div>
 
-          <div className="space-y-5">
-            {c.categories.map((cat, ci) => (
-              <div key={ci} className="bg-gray-800 border border-gray-700 rounded-xl p-4">
-                <div className="flex items-center gap-2 mb-3">
-                  <span className="text-2xl">{cat.icon}</span>
-                  <span className="text-amber-400 font-bold text-lg">{cat.name}</span>
+          {shows.map((show, si) => (
+            <div key={si} className={`mb-6 ${si > 0 ? 'border-t border-gray-700 pt-6' : ''}`}>
+              <div className="flex items-center gap-3 mb-4">
+                <span className="text-3xl">{show.icon}</span>
+                <div>
+                  <div className={`font-bold text-xl ${show.isNegative ? 'text-red-400' : 'text-amber-400'}`}>{show.showName}</div>
+                  <div className="text-xs text-gray-500">{show.year} · {show.categories.length} categories</div>
                 </div>
-
-                <div className="space-y-1.5 mb-3">
-                  {cat.nominees.map((nom, ni) => (
-                    <div key={ni} className={`flex justify-between items-center px-3 py-2 rounded-lg ${nom.isWinner ? (nom.isRival ? 'bg-blue-900/20 border border-blue-500' : 'bg-amber-500/20 border border-amber-500') : 'bg-gray-700/50'}`}>
-                      <div className="flex items-center gap-2">
-                        {nom.isWinner && <span className={`font-bold text-sm ${nom.isRival ? 'text-blue-400' : 'text-amber-400'}`}>{nom.isRival ? 'RIVAL WINNER' : 'WINNER'}</span>}
-                        <div>
-                          <div className={`font-bold text-sm ${nom.isWinner ? (nom.isRival ? 'text-blue-300' : 'text-amber-300') : 'text-white'}`}>"{nom.title}"</div>
-                          <div className="text-xs text-gray-400">
-                            {nom.genre}{nom.genre2 ? ` / ${nom.genre2}` : ''} · {nom.studio}
-                            {nom.director && ` · Dir: ${nom.director}`}
-                          </div>
-                        </div>
-                      </div>
-                      <div className="text-right text-xs text-gray-400">
-                        {cat.name === 'Box Office Champion' ? <span className="text-green-400">{fmt(nom.gross)}</span>
-                          : cat.name === 'Audience Favorite' ? <span>{nom.audienceScore}/100</span>
-                          : cat.name === 'Critics Choice' ? <span>{nom.criticScore}/100</span>
-                          : <span>Q: {nom.quality}</span>}
-                      </div>
-                    </div>
-                  ))}
+                <div className="ml-auto text-right">
+                  {!show.isNegative && <div className="text-amber-300 font-bold text-sm">{show.categories.filter(cat => !cat.isRivalWin).length} wins</div>}
+                  {show.isNegative && <div className="text-red-400 font-bold text-sm">{show.categories.filter(cat => !cat.isRivalWin).length} "wins"</div>}
                 </div>
               </div>
-            ))}
-          </div>
 
-          <div className="text-center mt-6">
-            <div className="text-gray-400 text-sm mb-3">Your studio won {c.categories.filter(cat => !cat.isRivalWin).length} of {c.categories.length} awards!</div>
+              <div className="space-y-3">
+                {show.categories.map((cat, ci) => (
+                  <div key={ci} className={`${show.isNegative ? 'bg-red-900/10 border-red-800' : 'bg-gray-800 border-gray-700'} border rounded-xl p-3`}>
+                    <div className="flex items-center gap-2 mb-2">
+                      <span className="text-lg">{cat.icon}</span>
+                      <span className={`font-bold text-sm ${show.isNegative ? 'text-red-400' : 'text-amber-400'}`}>{cat.name}</span>
+                    </div>
+                    <div className="space-y-1">
+                      {cat.nominees.map((nom, ni) => (
+                        <div key={ni} className={`flex justify-between items-center px-3 py-1.5 rounded-lg text-sm ${nom.isWinner
+                          ? (show.isNegative
+                            ? (nom.isRival ? 'bg-gray-700/50' : 'bg-red-900/30 border border-red-500')
+                            : (nom.isRival ? 'bg-blue-900/20 border border-blue-500' : 'bg-amber-500/20 border border-amber-500'))
+                          : 'bg-gray-700/30'}`}>
+                          <div className="flex items-center gap-2">
+                            {nom.isWinner && <span className={`font-bold text-xs ${show.isNegative ? 'text-red-400' : (nom.isRival ? 'text-blue-400' : 'text-amber-400')}`}>
+                              {show.isNegative ? '💩' : (nom.isRival ? 'RIVAL' : '★ WINNER')}
+                            </span>}
+                            <div>
+                              <span className={`font-bold text-xs ${nom.isWinner ? (show.isNegative ? 'text-red-300' : (nom.isRival ? 'text-blue-300' : 'text-amber-300')) : 'text-white'}`}>"{nom.title}"</span>
+                              <span className="text-xs text-gray-500 ml-2">{nom.studio}{nom.director ? ` · ${nom.director}` : ''}</span>
+                            </div>
+                          </div>
+                          <span className="text-xs text-gray-500">Q:{nom.quality}</span>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          ))}
+
+          <div className="text-center mt-6 border-t border-gray-700 pt-4">
+            <div className="text-amber-400 font-bold text-lg mb-1">{totalPlayerWins} of {totalCats} awards won</div>
+            <div className="text-gray-500 text-xs mb-3">across {shows.filter(s => !s.isNegative).length} ceremonies</div>
             <button onClick={() => dispatch({ type: 'DISMISS_CEREMONY' })}
               className={`${studioColor.bg} hover:opacity-90 text-gray-900 font-bold px-8 py-3 rounded-lg text-lg transition`}>
               Continue
