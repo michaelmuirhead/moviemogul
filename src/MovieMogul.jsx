@@ -1,5 +1,6 @@
 import React, { useState, useReducer, useMemo } from 'react';
 import { AreaChart, Area, BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, ComposedChart, Line } from 'recharts';
+import gameContent from './gameContent.json';
 
 // ==================== DATA ====================
 
@@ -94,186 +95,11 @@ const BANKRUPTCY_THRESHOLD = -5000000;
 
 const getCareerPhase = (age) => CAREER_PHASES.find(p => age >= p.minAge && age <= p.maxAge) || CAREER_PHASES[4];
 
-const SCRIPTS = {
-  Drama: [
-    { title: 'The French Deception', logline: 'A retired judge must confront the wrongful conviction that defined her career.' },
-    { title: 'Unbroken Silence', logline: 'Two estranged sisters reunite after decades to bury their mother and face old wounds.' },
-    { title: 'The Weight of Days', logline: 'A factory worker navigates love, loss, and redemption in a dying industrial town.' },
-    { title: 'Ordinary Grace', logline: 'A woman discovers her husband\'s double life and must rebuild everything.' },
-    { title: 'Midnight Rider', logline: 'An aging musician takes one last journey across America searching for meaning.' },
-    { title: 'Autumn Letters', logline: 'A professor finds decades-old love letters that rewrite her family history.' },
-  ],
-  Action: [
-    { title: 'Killshot', logline: 'When mercenaries seize an offshore oil rig, one engineer fights back alone.' },
-    { title: 'Hard Target', logline: 'An ex-operative must protect a witness through a hostile foreign city.' },
-    { title: 'Breakpoint', logline: 'A rogue soldier commandeers experimental hardware for one last impossible mission.' },
-    { title: 'Chrome Thunder', logline: 'Elite assassins are hunted by the very agency that trained them.' },
-    { title: 'Iron Fist Protocol', logline: 'A disgraced cop infiltrates a global arms syndicate to clear his name.' },
-    { title: 'Firestorm', logline: 'A helicopter rescue pilot must save a city from a weaponized wildfire.' },
-  ],
-  Horror: [
-    { title: 'The Hollowing', logline: 'A family moves into their dream home, unaware it was built on a burial ground.' },
-    { title: 'Beneath the Floor', logline: 'Something ancient awakens in the mines where a community digs for survival.' },
-    { title: 'Don\'t Look Back', logline: 'A mysterious figure follows a woman, visible only in reflections.' },
-    { title: 'Skin Deep', logline: 'A beauty treatment unlocks something sinister hiding beneath human flesh.' },
-    { title: 'The Wailing Hour', logline: 'Every night at 3AM, the residents of a small town hear the same scream.' },
-    { title: 'Roots', logline: 'A botanical research station discovers a plant species that hunts humans.' },
-  ],
-  Comedy: [
-    { title: 'Wedding Chaos', logline: 'A family pulls out all the stops to sabotage their son\'s wedding to a rival\'s daughter.' },
-    { title: 'The Roommate', logline: 'A successful entrepreneur is forced to move in with his estranged brother.' },
-    { title: 'Oops!', logline: 'A kindergarten teacher is accidentally mistaken for a secret agent.' },
-    { title: 'Big Shoes', logline: 'A con artist impersonates a fashion designer and accidentally creates a global trend.' },
-    { title: 'Second Honeymoon', logline: 'A couple tries to recreate their disastrous first vacation 20 years later.' },
-    { title: 'Office Wars', logline: 'Two rival departments compete in increasingly absurd challenges for a corner office.' },
-  ],
-  'Sci-Fi': [
-    { title: 'Mars Colony', logline: 'The first settlers on Mars discover evidence of a prior civilization.' },
-    { title: 'The Signal', logline: 'Humanity receives a message from deep space — but it\'s a warning, not a greeting.' },
-    { title: 'Digital Storm', logline: 'An AI outbreak threatens to consume global infrastructure within twelve hours.' },
-    { title: 'The Algorithm', logline: 'A programmer discovers the AI running society has become sentient.' },
-    { title: 'Lightyears', logline: 'A generation ship loses contact with Earth and must decide its own fate.' },
-    { title: 'Parallel', logline: 'A physicist opens a door to an alternate reality — and something comes through.' },
-  ],
-  Thriller: [
-    { title: 'Dead Reckoning', logline: 'A detective haunted by an unsolved case meets the prime suspect decades later.' },
-    { title: 'Crossfire', logline: 'A witness protection agent discovers they\'re protecting the wrong person.' },
-    { title: 'Code Zero', logline: 'A whistleblower races against time to expose a classified government program.' },
-    { title: 'Aftermath', logline: 'A woman wakes in a hospital with no memory, hunted by police and criminals alike.' },
-    { title: 'The Ninth Floor', logline: 'A journalist investigating a tech CEO finds the story goes deeper than corruption.' },
-    { title: 'Glass Houses', logline: 'Neighbors in an upscale community discover everyone is hiding something deadly.' },
-  ],
-  Animation: [
-    { title: 'Paper Moon Rising', logline: 'A young girl must return a stolen magical relic to save her enchanted village.' },
-    { title: 'Starbound', logline: 'An alien child crash-lands on Earth and must navigate human society to get home.' },
-    { title: 'The Last Garden', logline: 'In a post-apocalyptic world, one family protects the last seeds of life.' },
-    { title: 'Neon Dreams', logline: 'A street racer in a cyberpunk city chases the ultimate underground race.' },
-    { title: 'Cloud Kingdom', logline: 'A boy discovers a hidden civilization living above the clouds.' },
-    { title: 'The Brave Little Bot', logline: 'A malfunctioning robot must cross a junkyard kingdom to find spare parts.' },
-  ],
-  Documentary: [
-    { title: 'The Hidden War', logline: 'An investigation into corporate corruption affecting millions worldwide.' },
-    { title: 'Silent Giants', logline: 'A deep dive into the secretive lives of the ocean\'s largest creatures.' },
-    { title: 'Code Breakers', logline: 'The untold story of women mathematicians who helped win World War II.' },
-    { title: 'Painted Truths', logline: 'Artists and activists use street art to transform communities.' },
-    { title: 'The Price of Progress', logline: 'How one industry\'s growth devastated an entire ecosystem.' },
-    { title: 'Unheard Voices', logline: 'Communities around the world share stories mainstream media has ignored.' },
-  ],
-  Romance: [
-    { title: 'Letters from Lisbon', logline: 'Two strangers connected by a lost journal fall in love across continents.' },
-    { title: 'Once More With Feeling', logline: 'A divorced couple is forced to relive their wedding through a time loop.' },
-    { title: 'Summer in Seville', logline: 'A chef and a travel writer discover love in the heat of a Spanish summer.' },
-    { title: 'The Space Between', logline: 'Two astronauts on a long-haul mission find unexpected connection in isolation.' },
-    { title: 'Against All Odds', logline: 'A journalist and a political rival fall for each other during a heated campaign.' },
-    { title: 'Unwritten', logline: 'A bestselling romance novelist realizes she has never been truly in love.' },
-  ],
-  Fantasy: [
-    { title: 'The Crystal Throne', logline: 'A farm girl discovers she is heir to a kingdom guarded by ancient magic.' },
-    { title: 'Shadowweaver', logline: 'A mage who controls shadows must stop a war between gods and mortals.' },
-    { title: 'The Last Dragon King', logline: 'A young prince bonds with the last dragon to save his dying realm.' },
-    { title: 'Realm of Thorns', logline: 'A cursed knight seeks the only healer who can break an ancient spell.' },
-    { title: 'Fae Court', logline: 'A mortal detective is hired to solve a murder in the fairy realm.' },
-    { title: 'The Iron Grimoire', logline: 'A banned book of spells resurfaces, threatening to unravel reality itself.' },
-  ],
-  Musical: [
-    { title: 'Spotlight', logline: 'A struggling singer in 1960s Harlem fights for her chance on the big stage.' },
-    { title: 'The Final Encore', logline: 'An aging rock star reunites her band for one last world tour.' },
-    { title: 'Rhythm & Blues', logline: 'A jazz pianist and a hip-hop producer create an unlikely musical fusion.' },
-    { title: 'Curtain Call', logline: 'Behind the scenes of Broadway\'s most troubled production in history.' },
-    { title: 'La Vie en Rose', logline: 'A Parisian street performer dreams of the opera, against all odds.' },
-    { title: 'Electric Avenue', logline: 'A group of kids in 1980s London form a band that changes the music scene.' },
-  ],
-  Western: [
-    { title: 'Dust and Gold', logline: 'A former outlaw protects a frontier town from the gang he once rode with.' },
-    { title: 'The Last Marshal', logline: 'An aging lawman faces one final showdown with the territory\'s most wanted.' },
-    { title: 'Iron Horse', logline: 'A railroad worker uncovers a conspiracy that threatens the entire frontier.' },
-    { title: 'Blood Mesa', logline: 'A bounty hunter tracks a killer across a cursed desert landscape.' },
-    { title: 'The Homesteader', logline: 'A widow defends her ranch from a cattle baron who wants her land.' },
-    { title: 'Six Bullets', logline: 'Six strangers converge on a lawless town, each with a deadly secret.' },
-  ],
-  War: [
-    { title: 'The Longest Night', logline: 'A platoon trapped behind enemy lines must survive until dawn.' },
-    { title: 'Letters Home', logline: 'A soldier\'s correspondence reveals the true cost of war on one family.' },
-    { title: 'No Man\'s Land', logline: 'Soldiers from opposing sides form an unlikely alliance in a shared trench.' },
-    { title: 'The Resistance', logline: 'A network of civilians risks everything to sabotage an occupying force.' },
-    { title: 'Valor Ridge', logline: 'A medic saves lives on both sides of a brutal mountain campaign.' },
-    { title: 'Wings of Thunder', logline: 'A fighter pilot squadron faces impossible odds in the skies over Europe.' },
-  ],
-  Mystery: [
-    { title: 'The Vanishing', logline: 'A detective investigates the disappearance of an entire small-town family.' },
-    { title: 'Crimson Clue', logline: 'A retired forensic scientist is drawn back by a case that mirrors her past.' },
-    { title: 'The Locked Room', logline: 'A murder in a sealed chamber defies every rational explanation.' },
-    { title: 'Whispers in the Dark', logline: 'A podcaster investigating cold cases stumbles onto a very active killer.' },
-    { title: 'The Collector', logline: 'An art thief discovers the paintings she steals contain hidden messages.' },
-    { title: 'Midnight Caller', logline: 'Anonymous phone calls lead a journalist deeper into a web of conspiracy.' },
-  ],
-  Sports: [
-    { title: 'The Comeback', logline: 'An injured champion boxer risks everything for one final shot at the title.' },
-    { title: 'Underdogs', logline: 'A ragtag high school football team defies expectations in the state finals.' },
-    { title: 'The Long Run', logline: 'A marathon runner from a small village trains to compete at the Olympics.' },
-    { title: 'Ice Breakers', logline: 'A women\'s hockey team fights for recognition in a male-dominated sport.' },
-    { title: 'Fast Lane', logline: 'A street racer turned Formula 1 driver must prove she belongs at the top.' },
-    { title: 'The Natural', logline: 'A middle-aged amateur golfer gets a shot at the professional tour.' },
-  ],
-};
+const SCRIPTS = gameContent.scripts;
 
-const FIRST_NAMES = [
-  // Classic Hollywood
-  'Jack', 'Grace', 'James', 'Audrey', 'Robert', 'Elizabeth', 'Clark', 'Vivien',
-  'Humphrey', 'Ingrid', 'Cary', 'Katharine', 'Marlon', 'Rita', 'Paul', 'Ava',
-  // Modern International
-  'Marcus', 'Sofia', 'Leo', 'Maya', 'Daniel', 'Elena', 'Oscar', 'Lily',
-  'André', 'Carmen', 'Kenji', 'Fatima', 'Raj', 'Yuki', 'Diego', 'Aisha',
-  'Liam', 'Mei', 'Omar', 'Sasha', 'Theo', 'Nadia', 'Chris', 'Zara',
-  'David', 'Priya', 'Amara', 'Finn', 'Leila', 'Hugo', 'Ines', 'Mateo',
-  // Additional diversity
-  'Idris', 'Lupita', 'Dev', 'Greta', 'Denzel', 'Viola', 'Javier', 'Penélope',
-  'Chiwetel', 'Saoirse', 'Mahershala', 'Cate', 'Mads', 'Tilda', 'Bong', 'Zhao',
-  'Ke', 'Michelle', 'Pedro', 'Florence', 'Timothée', 'Zendaya', 'Rami', 'Margot',
-  'Adam', 'Scarlett', 'Benedict', 'Emma', 'Ryan', 'Jennifer', 'Tom', 'Natalie',
-  'Joaquin', 'Charlize', 'Samuel', 'Meryl', 'Anthony', 'Frances', 'Morgan', 'Halle',
-  'Benicio', 'Salma', 'Gael', 'Ana', 'Wagner', 'Fernanda', 'Tony', 'Sandra',
-  'Jet', 'Gong', 'Takeshi', 'Rinko', 'Song', 'Bae', 'Shah', 'Deepika',
-  'Riz', 'Gemma', 'Colin', 'Olivia', 'Ralph', 'Rachel', 'Hugh', 'Nicole',
-];
-const LAST_NAMES = [
-  // Anglo/European
-  'Williams', 'Stone', 'Blake', 'Taylor', 'Cooper', 'Grant', 'Ford', 'Newman',
-  'Redford', 'Streep', 'Hanks', 'Roberts', 'Pitt', 'Blanchett', 'Murray', 'Weaver',
-  'Fiennes', 'Thompson', 'Dench', 'Bale', 'Hardy', 'Winslet', 'Law', 'Pike',
-  'Fassbender', 'Mulligan', 'Colman', 'Cumberbatch', 'Hiddleston', 'Atkinson',
-  // Latin/Hispanic
-  'Rodriguez', 'García', 'Santos', 'Del Toro', 'Bardem', 'Cruz', 'Luna', 'Bernal',
-  'De Armas', 'Hayek', 'Monteiro', 'Alvarez', 'Reyes', 'Vega', 'Castellano',
-  // East Asian
-  'Chen', 'Kim', 'Nakamura', 'Park', 'Wong', 'Li', 'Tanaka', 'Watanabe',
-  'Choi', 'Yeoh', 'Leung', 'Takahashi', 'Huang', 'Kang', 'Suzuki', 'Zhao',
-  // South Asian
-  'Singh', 'Patel', 'Khan', 'Kapoor', 'Kumar', 'Sharma', 'Nair', 'Ahmed',
-  // African/Caribbean
-  'Okafor', 'Ejiofor', 'Aduba', 'Kaluuya', 'Mbatha', 'Oyelowo', 'Elba', 'Nyongo',
-  'Boseman', 'Gurira', 'Diop', 'Mensah',
-  // Eastern European/Scandinavian
-  'Petrov', 'Novak', 'Johansson', 'Skarsgård', 'Mikkelsen', 'Vikander', 'Larsson',
-  'Holm', 'Kuznetsov', 'Sorokin',
-  // Middle Eastern/North African
-  'Al-Rashid', 'Malek', 'Khoury', 'Habibi', 'Nazari', 'Karam',
-  // French/Italian
-  'Moreau', 'Dubois', 'Cotillard', 'Binoche', 'Russo', 'Sorrentino', 'Bellucci',
-  'Mastroianni', 'Ferrara', 'Laurent',
-  // Irish/Scottish
-  "O'Brien", "O'Connell", 'Gleeson', 'Doyle', 'Byrne', 'McGregor',
-];
-
-const ADAPTATIONS = [
-  { name: 'Bestselling Novel', cost: 2000000, qualityBonus: 6, marketingBonus: 0.15, genres: ['Drama', 'Thriller', 'Sci-Fi'] },
-  { name: 'Hit Comic Series', cost: 3000000, qualityBonus: 5, marketingBonus: 0.25, genres: ['Action', 'Sci-Fi', 'Animation'] },
-  { name: 'Popular Video Game', cost: 5000000, qualityBonus: 3, marketingBonus: 0.30, genres: ['Action', 'Sci-Fi', 'Horror'] },
-  { name: 'True Story', cost: 500000, qualityBonus: 8, marketingBonus: 0.10, genres: ['Drama', 'Documentary', 'Thriller'] },
-  { name: 'Classic Remake Rights', cost: 4000000, qualityBonus: 4, marketingBonus: 0.20, genres: ['Drama', 'Horror', 'Comedy'] },
-  { name: 'Stage Play', cost: 1500000, qualityBonus: 7, marketingBonus: 0.10, genres: ['Drama', 'Comedy'] },
-  { name: 'Foreign Film Remake', cost: 1000000, qualityBonus: 6, marketingBonus: 0.05, genres: ['Drama', 'Thriller', 'Horror'] },
-];
+const FIRST_NAMES = gameContent.firstNames;
+const LAST_NAMES = gameContent.lastNames;
+const ADAPTATIONS = gameContent.adaptations;
 
 const ACHIEVEMENTS = [
   { id: 'first_film', name: 'Lights, Camera, Action!', desc: 'Release your first film', check: (s) => s.totalFilmsReleased >= 1 },
@@ -718,54 +544,12 @@ const makeCompetitors = () => {
   ];
 };
 
-const RIVAL_FILM_TITLES = [
-  'The Last Horizon', 'Crimson Tide', 'Stellar Dawn', 'Shadow Protocol', 'Emerald City',
-  'The Glass Tower', 'Midnight Run', 'Final Frontier', 'Deep Impact', 'Golden Gate',
-  'Silver Lining', 'Dark Waters', 'Blue Thunder', 'Iron Will', 'Crystal Palace',
-  'The Long Road', 'Northern Lights', 'Rising Sun', 'Pacific Rim', 'Desert Storm',
-];
-
-const RIVAL_DIRECTOR_NAMES = [
-  'James Cameron', 'Sofia Coppola', 'Denis Villeneuve', 'Greta Gerwig', 'Christopher Nolan',
-  'Ava DuVernay', 'Martin Scorsese', 'Kathryn Bigelow', 'Bong Joon-ho', 'Chloe Zhao',
-  'Ridley Scott', 'Wes Anderson', 'Jordan Peele', 'Taika Waititi', 'Spike Lee',
-  'David Fincher', 'Alfonso Cuaron', 'Patty Jenkins', 'Barry Jenkins', 'Guillermo del Toro',
-];
-const RIVAL_ACTOR_NAMES = [
-  'Meryl Streep', 'Leonardo DiCaprio', 'Viola Davis', 'Denzel Washington', 'Cate Blanchett',
-  'Brad Pitt', 'Saoirse Ronan', 'Joaquin Phoenix', 'Florence Pugh', 'Tom Hanks',
-  'Lupita Nyongo', 'Ryan Gosling', 'Margot Robbie', 'Daniel Kaluuya', 'Scarlett Johansson',
-  'Oscar Isaac', 'Emma Stone', 'Timothee Chalamet', 'Sandra Oh', 'Robert Downey Jr',
-];
-const RIVAL_WRITER_NAMES = [
-  'Aaron Sorkin', 'Emerald Fennell', 'Charlie Kaufman', 'Diablo Cody', 'Taylor Sheridan',
-  'Greta Gerwig', 'Tony Kushner', 'Taika Waititi', 'Jordan Peele', 'Celine Sciamma',
-  'Paul Thomas Anderson', 'Noah Baumbach', 'Quentin Tarantino', 'Nora Ephron', 'Joel Coen',
-];
-
-// ==================== RIVAL PERSONALITIES ====================
-const RIVAL_PERSONALITIES = [
-  { name: 'Award Chaser', desc: 'Focuses on prestige dramas and Oscar bait.', genreWeights: { Drama: 0.35, Documentary: 0.2, Thriller: 0.15 }, budgetMult: 0.8, qualityBonus: 8, marketingMult: 0.7, aggression: 0.3, riskTolerance: 0.2 },
-  { name: 'Sequel Machine', desc: 'Relies on safe franchise sequels and reboots.', genreWeights: { Action: 0.3, 'Sci-Fi': 0.25, Comedy: 0.15 }, budgetMult: 1.2, qualityBonus: -3, marketingMult: 1.4, aggression: 0.5, riskTolerance: 0.1 },
-  { name: 'Horror Factory', desc: 'Churns out low-budget horror for high margins.', genreWeights: { Horror: 0.5, Thriller: 0.25, Mystery: 0.15 }, budgetMult: 0.4, qualityBonus: 2, marketingMult: 0.6, aggression: 0.4, riskTolerance: 0.7 },
-  { name: 'Blockbuster King', desc: 'Massive budgets, massive marketing, massive risk.', genreWeights: { Action: 0.35, 'Sci-Fi': 0.3, Fantasy: 0.15 }, budgetMult: 2.0, qualityBonus: 5, marketingMult: 1.8, aggression: 0.7, riskTolerance: 0.4 },
-  { name: 'Indie Auteur', desc: 'Small arthouse films with critical acclaim.', genreWeights: { Drama: 0.3, Romance: 0.15, Documentary: 0.2, Mystery: 0.15 }, budgetMult: 0.3, qualityBonus: 12, marketingMult: 0.4, aggression: 0.2, riskTolerance: 0.3 },
-  { name: 'Family Empire', desc: 'Family-friendly animation and adventure.', genreWeights: { Animation: 0.4, Comedy: 0.2, Fantasy: 0.2 }, budgetMult: 1.3, qualityBonus: 6, marketingMult: 1.5, aggression: 0.4, riskTolerance: 0.2 },
-  { name: 'Global Conglomerate', desc: 'Diversified across all genres, plays it safe.', genreWeights: { Action: 0.15, Drama: 0.15, Comedy: 0.15, 'Sci-Fi': 0.1, Horror: 0.1, Animation: 0.1, Thriller: 0.1 }, budgetMult: 1.1, qualityBonus: 2, marketingMult: 1.2, aggression: 0.5, riskTolerance: 0.3 },
-  { name: 'Disruptor', desc: 'Experimental, boundary-pushing, unpredictable.', genreWeights: { 'Sci-Fi': 0.2, Horror: 0.15, Documentary: 0.15, Mystery: 0.15, Fantasy: 0.15 }, budgetMult: 0.9, qualityBonus: 4, marketingMult: 0.8, aggression: 0.8, riskTolerance: 0.9 },
-];
-
-// ==================== INDUSTRY CRISES ====================
-const INDUSTRY_CRISES = [
-  { id: 'writers_strike', name: "Writers' Strike", years: [1960, 1988, 2007, 2023], duration: 6, effects: { blockScripts: true, qualityMod: -8, desc: 'No new scripts can be developed. Films in production suffer quality loss.' } },
-  { id: 'actors_strike', name: "Actors' Strike", years: [1980, 2023], duration: 4, effects: { blockProduction: true, desc: 'No new films can start production. Existing productions continue.' } },
-  { id: 'recession', name: 'Economic Recession', years: [1973, 1981, 1990, 2001, 2008, 2020], duration: 12, effects: { boxOfficeMod: -0.25, budgetCostMod: -0.10, desc: 'Audiences shrink 25%. Budgets cheaper but riskier. Horror and comedy thrive.' } },
-  { id: 'tech_boom', name: 'Technology Revolution', years: [1977, 1993, 2009, 2022], duration: 8, effects: { genreBoost: ['Sci-Fi', 'Action', 'Animation'], qualityMod: 3, desc: 'New tech excites audiences. Sci-Fi, Action, and Animation get quality and box office boosts.' } },
-  { id: 'streaming_wars', name: 'Streaming Wars', years: [2015, 2019], duration: 18, effects: { theatricalMod: -0.15, streamingBoost: 2.0, desc: 'Theatrical shrinks 15%. Streaming revenue doubles.' } },
-  { id: 'censorship', name: 'Censorship Crackdown', years: [1970, 1985, 2005], duration: 6, effects: { ratingPenalty: true, desc: 'R and NC-17 films face distribution restrictions. -30% gross for restricted films.' } },
-  { id: 'indie_boom', name: 'Independent Film Renaissance', years: [1989, 1999, 2017], duration: 12, effects: { indieBudgetBoost: true, desc: 'Low-budget films (<$20M) get +20% box office and +5 quality. Audiences crave originality.' } },
-  { id: 'global_pandemic', name: 'Global Pandemic', years: [2020], duration: 12, effects: { boxOfficeMod: -0.60, streamingBoost: 3.0, desc: 'Theaters devastated. Box office drops 60%. Streaming explodes.' } },
-];
+const RIVAL_FILM_TITLES = gameContent.rivalFilmTitles;
+const RIVAL_DIRECTOR_NAMES = gameContent.rivalDirectorNames;
+const RIVAL_ACTOR_NAMES = gameContent.rivalActorNames;
+const RIVAL_WRITER_NAMES = gameContent.rivalWriterNames;
+const RIVAL_PERSONALITIES = gameContent.rivalPersonalities;
+const INDUSTRY_CRISES = gameContent.industryCrises;
 
 // ==================== TALENT DEMANDS ====================
 const TALENT_DEMANDS = [
@@ -898,6 +682,189 @@ const CULTURAL_MOVEMENTS = [
 
 const getActiveMovements = (year) => CULTURAL_MOVEMENTS.filter(m => year >= m.startYear && year <= m.endYear);
 const getMovementBoost = (year, genre) => getActiveMovements(year).reduce((sum, m) => sum + (m.genreBoost[genre] || 0), 0);
+
+// ==================== GENRE TREND CYCLES (SYSTEM 1) ====================
+const GENRE_CYCLES = {
+  boom: { label: 'Boom', grossMult: 1.4, audienceMod: 12, desc: 'Audiences can\'t get enough!' },
+  rising: { label: 'Rising', grossMult: 1.15, audienceMod: 5, desc: 'Growing interest.' },
+  stable: { label: 'Stable', grossMult: 1.0, audienceMod: 0, desc: 'Steady audience.' },
+  declining: { label: 'Declining', grossMult: 0.85, audienceMod: -5, desc: 'Audiences are tiring.' },
+  fatigued: { label: 'Fatigued', grossMult: 0.65, audienceMod: -15, desc: 'Oversaturated — audiences are burnt out.' },
+};
+const AUDIENCE_FATIGUE_THRESHOLD = 4;
+
+// ==================== TALENT RELATIONSHIP SYSTEM (SYSTEM 2) ====================
+const TALENT_MOODS = ['Motivated', 'Content', 'Frustrated', 'Demanding', 'Loyal', 'Difficult'];
+const TALENT_PERKS = [
+  { id: 'trailer', name: 'Private Trailer', cost: 50000, moodBoost: 5, desc: 'Luxury on-set trailer' },
+  { id: 'profit_share', name: 'Profit Participation', cost: 0, profitSharePct: 5, moodBoost: 10, desc: '5% of net profits' },
+  { id: 'creative_input', name: 'Creative Input', cost: 0, qualityMod: 3, moodBoost: 8, desc: 'Let them contribute creatively' },
+  { id: 'personal_chef', name: 'Personal Chef', cost: 30000, moodBoost: 4, desc: 'Catering to their tastes' },
+  { id: 'first_class', name: 'First-Class Travel', cost: 80000, moodBoost: 6, desc: 'Private jets and suites' },
+  { id: 'entourage', name: 'Entourage Allowance', cost: 40000, moodBoost: 3, desc: 'Bring the whole crew' },
+];
+
+const calcTalentMood = (talent) => {
+  const base = 50;
+  let mood = base;
+  mood += (talent.loyalty || 0) * 0.5;
+  mood -= (talent.consecutiveFilms || 0) * 8;
+  mood += (talent.lastFilmQuality || 50) > 70 ? 10 : -5;
+  mood += (talent.perks || []).length * 5;
+  const marketVal = talent.marketValue || talent.salary;
+  if (talent.salary > marketVal) mood += 10;
+  if (talent.salary < marketVal * 0.8) mood -= 15;
+  return Math.round(Math.max(0, Math.min(100, mood)));
+};
+
+const getTalentMoodLabel = (moodScore) => {
+  if (moodScore >= 80) return 'Loyal';
+  if (moodScore >= 65) return 'Motivated';
+  if (moodScore >= 50) return 'Content';
+  if (moodScore >= 35) return 'Frustrated';
+  if (moodScore >= 20) return 'Demanding';
+  return 'Difficult';
+};
+
+const calcSalaryDemand = (talent) => {
+  let base = talent.salary || 500000;
+  if (talent.awards && talent.awards > 0) base *= 1 + talent.awards * 0.15;
+  if (talent.consecutiveHits && talent.consecutiveHits >= 2) base *= 1.3;
+  if (talent.lastFilmQuality && talent.lastFilmQuality < 40) base *= 0.8;
+  const phase = CAREER_PHASES.find(p => talent.age >= p.minAge && talent.age <= p.maxAge);
+  if (phase) base *= phase.salaryMod;
+  return Math.round(base);
+};
+
+// ==================== AWARDS CAMPAIGN SYSTEM (SYSTEM 3) ====================
+const AWARD_CATEGORIES = [
+  { id: 'bestPicture', name: 'Best Picture', weight: 1.0, qualityMin: 65 },
+  { id: 'bestDirector', name: 'Best Director', weight: 0.8, qualityMin: 70 },
+  { id: 'bestActor', name: 'Best Actor', weight: 0.7, qualityMin: 60 },
+  { id: 'bestScreenplay', name: 'Best Screenplay', weight: 0.7, qualityMin: 65 },
+  { id: 'bestScore', name: 'Best Original Score', weight: 0.4, qualityMin: 55 },
+  { id: 'bestVFX', name: 'Best Visual Effects', weight: 0.5, qualityMin: 50 },
+  { id: 'bestCinematography', name: 'Best Cinematography', weight: 0.5, qualityMin: 60 },
+  { id: 'bestAnimated', name: 'Best Animated Film', weight: 0.6, qualityMin: 55 },
+];
+
+const CAMPAIGN_STRATEGIES = [
+  { id: 'grassroots', name: 'Grassroots Campaign', costMult: 0.5, effectMult: 0.6, desc: 'Word-of-mouth and film society screenings' },
+  { id: 'standard', name: 'Standard Campaign', costMult: 1.0, effectMult: 1.0, desc: 'Trade ads, screeners, and FYC events' },
+  { id: 'aggressive', name: 'Aggressive Campaign', costMult: 2.0, effectMult: 1.5, desc: 'Full media blitz, billboards, and private screenings' },
+  { id: 'prestige', name: 'Prestige Push', costMult: 3.0, effectMult: 1.8, desc: 'No expense spared — the full Oscar playbook' },
+];
+
+// ==================== FILM CATALOG & LEGACY VALUE (SYSTEM 4) ====================
+const CATALOG_REVENUE_STREAMS = [
+  { id: 'tv_licensing', name: 'TV Licensing', yearsAfterRelease: 2, annualRevPct: 0.02, desc: 'Broadcast rights to networks' },
+  { id: 'home_video', name: 'Home Video/Digital', yearsAfterRelease: 1, annualRevPct: 0.05, desc: 'Physical and digital sales' },
+  { id: 'streaming_license', name: 'Streaming License', yearsAfterRelease: 3, annualRevPct: 0.08, desc: 'Licensed to streaming platforms' },
+  { id: 'airline', name: 'In-Flight Entertainment', yearsAfterRelease: 1, annualRevPct: 0.005, desc: 'Airline and hotel VOD' },
+  { id: 'educational', name: 'Educational License', yearsAfterRelease: 5, annualRevPct: 0.003, desc: 'Film schools and libraries' },
+];
+const CULT_CLASSIC_THRESHOLD = 15;
+const CULT_CLASSIC_QUALITY_MIN = 45;
+const CULT_CLASSIC_QUALITY_MAX = 70;
+
+const calcCatalogValue = (film, currentYear) => {
+  if (!film.releaseYear || film.status !== 'released') return 0;
+  const age = currentYear - film.releaseYear;
+  if (age < 1) return 0;
+  let annualRev = 0;
+  CATALOG_REVENUE_STREAMS.forEach(stream => {
+    if (age >= stream.yearsAfterRelease) {
+      const decay = Math.max(0.1, 1 - (age - stream.yearsAfterRelease) * 0.08);
+      annualRev += film.gross * stream.annualRevPct * decay;
+    }
+  });
+  if (age >= CULT_CLASSIC_THRESHOLD && film.quality >= CULT_CLASSIC_QUALITY_MIN && film.quality <= CULT_CLASSIC_QUALITY_MAX) {
+    annualRev *= 2.5;
+    film._isCultClassic = true;
+  }
+  if (film.quality >= 90) annualRev *= 1.5;
+  return Math.round(annualRev / 12);
+};
+
+// ==================== CINEMATIC UNIVERSE SYSTEM (SYSTEM 5) ====================
+const UNIVERSE_TIERS = [
+  { id: 'shared', name: 'Shared Universe', minFilms: 3, crossoverBonus: 0.15, brandValue: 5, desc: 'Connected stories in a shared world' },
+  { id: 'expanded', name: 'Expanded Universe', minFilms: 6, crossoverBonus: 0.25, brandValue: 15, desc: 'A rich tapestry of interconnected tales' },
+  { id: 'mega', name: 'Mega-Universe', minFilms: 10, crossoverBonus: 0.35, brandValue: 30, desc: 'A cultural phenomenon spanning genres' },
+];
+
+const CROSSOVER_TYPES = [
+  { id: 'cameo', name: 'Character Cameo', costMult: 1.05, grossBonus: 0.08, desc: 'A familiar face appears briefly' },
+  { id: 'crossover', name: 'Full Crossover', costMult: 1.3, grossBonus: 0.25, desc: 'Characters from multiple franchises unite' },
+  { id: 'event', name: 'Universe Event Film', costMult: 1.6, grossBonus: 0.45, desc: 'The culmination — everyone shows up' },
+];
+
+// ==================== RELEASE STRATEGY (SYSTEM 6) ====================
+const RELEASE_STRATEGIES = [
+  { id: 'wide_theatrical', name: 'Wide Theatrical', screensMult: 1.0, grossMult: 1.0, streamRevMult: 0, prestigeMod: 0, desc: 'Traditional wide release in theaters' },
+  { id: 'limited_theatrical', name: 'Limited Release', screensMult: 0.3, grossMult: 0.5, streamRevMult: 0, prestigeMod: 8, desc: 'Artsy limited run — great for prestige' },
+  { id: 'platform_release', name: 'Platform Release', screensMult: 0.1, grossMult: 0.3, streamRevMult: 0, prestigeMod: 12, desc: 'Ultra-exclusive — builds word of mouth before expanding' },
+  { id: 'day_and_date', name: 'Day-and-Date', screensMult: 0.7, grossMult: 0.7, streamRevMult: 0.8, prestigeMod: -5, desc: 'Simultaneous theater + streaming' },
+  { id: 'streaming_exclusive', name: 'Streaming Exclusive', screensMult: 0, grossMult: 0, streamRevMult: 1.5, prestigeMod: -8, desc: 'Skip theaters entirely — streaming only' },
+  { id: 'streaming_premiere', name: 'Streaming Premiere + Late Theatrical', screensMult: 0.4, grossMult: 0.35, streamRevMult: 1.2, prestigeMod: -3, desc: 'Stream first, then limited theatrical' },
+];
+
+// ==================== STUDIO FACILITIES (SYSTEM 7 - Enhanced) ====================
+const STUDIO_FACILITIES = [
+  { id: 'soundstage_basic', name: 'Basic Soundstage', cost: 5000000, monthlyUpkeep: 50000, capacity: 1, qualityBonus: 2, desc: 'A standard indoor filming stage' },
+  { id: 'soundstage_large', name: 'Large Soundstage', cost: 15000000, monthlyUpkeep: 120000, capacity: 2, qualityBonus: 5, desc: 'Massive stage for big productions' },
+  { id: 'backlot', name: 'Backlot', cost: 8000000, monthlyUpkeep: 80000, capacity: 1, qualityBonus: 3, genreBonus: ['Western', 'War', 'Action'], desc: 'Outdoor sets and cityscapes' },
+  { id: 'water_stage', name: 'Water Stage', cost: 20000000, monthlyUpkeep: 150000, capacity: 1, qualityBonus: 6, genreBonus: ['Action', 'Fantasy', 'Sci-Fi'], desc: 'Massive tank for water sequences' },
+  { id: 'vfx_lab', name: 'VFX Lab', cost: 12000000, monthlyUpkeep: 100000, capacity: 0, qualityBonus: 4, genreBonus: ['Sci-Fi', 'Fantasy', 'Animation', 'Action'], desc: 'In-house visual effects department' },
+  { id: 'recording_studio', name: 'Recording Studio', cost: 6000000, monthlyUpkeep: 40000, capacity: 0, qualityBonus: 2, genreBonus: ['Musical', 'Animation', 'Drama'], desc: 'Score and soundtrack production' },
+  { id: 'editing_suite', name: 'Premium Editing Suite', cost: 4000000, monthlyUpkeep: 30000, capacity: 0, qualityBonus: 3, desc: 'State-of-the-art post-production' },
+  { id: 'screening_room', name: 'Private Screening Room', cost: 3000000, monthlyUpkeep: 20000, capacity: 0, qualityBonus: 1, desc: 'Test screenings and executive reviews' },
+];
+
+const getStudioCapacity = (facilities) => facilities.reduce((sum, f) => {
+  const def = STUDIO_FACILITIES.find(sf => sf.id === f.facilityId);
+  return sum + (def ? def.capacity : 0);
+}, 0);
+
+const getStudioQualityBonus = (facilities, genre) => facilities.reduce((sum, f) => {
+  const def = STUDIO_FACILITIES.find(sf => sf.id === f.facilityId);
+  if (!def) return sum;
+  let bonus = def.qualityBonus;
+  if (def.genreBonus && def.genreBonus.includes(genre)) bonus += 3;
+  return sum + bonus;
+}, 0);
+
+// ==================== ZEITGEIST EVENTS (SYSTEM 8) ====================
+const ZEITGEIST_EVENTS = [
+  { id: 'economic_boom', name: 'Economic Boom', duration: [12, 36], grossMult: 1.25, budgetInflation: 1.1, genreBoost: { Comedy: 0.1, Action: 0.15, Musical: 0.1 }, desc: 'Audiences spending freely' },
+  { id: 'recession', name: 'Recession', duration: [12, 24], grossMult: 0.75, budgetInflation: 0.9, genreBoost: { Drama: 0.15, Comedy: 0.1, Documentary: 0.1 }, desc: 'Escapism and cheaper thrills' },
+  { id: 'tech_revolution', name: 'Tech Revolution', duration: [24, 48], grossMult: 1.1, budgetInflation: 1.0, genreBoost: { 'Sci-Fi': 0.25, Thriller: 0.1, Documentary: 0.1 }, desc: 'New tech captivates imaginations' },
+  { id: 'war_abroad', name: 'Major Conflict Abroad', duration: [12, 48], grossMult: 0.9, budgetInflation: 1.05, genreBoost: { War: 0.3, Thriller: 0.15, Drama: 0.1 }, desc: 'Audiences crave meaning and heroism' },
+  { id: 'social_movement', name: 'Social Justice Movement', duration: [12, 36], grossMult: 1.05, budgetInflation: 1.0, genreBoost: { Drama: 0.2, Documentary: 0.25, Comedy: -0.1 }, desc: 'Stories of change resonate deeply' },
+  { id: 'pandemic', name: 'Global Pandemic', duration: [6, 18], grossMult: 0.4, budgetInflation: 1.2, genreBoost: { Horror: 0.2, 'Sci-Fi': 0.15, Drama: 0.1, Animation: 0.15 }, desc: 'Theaters suffer — streaming surges' },
+  { id: 'space_race', name: 'Space Exploration Milestone', duration: [6, 24], grossMult: 1.1, budgetInflation: 1.0, genreBoost: { 'Sci-Fi': 0.3, Documentary: 0.2, Action: 0.1 }, desc: 'The cosmos capture public imagination' },
+  { id: 'nostalgia_wave', name: 'Nostalgia Wave', duration: [12, 36], grossMult: 1.15, budgetInflation: 1.0, genreBoost: { Musical: 0.2, Comedy: 0.15, Romance: 0.15, Western: 0.1 }, desc: 'Audiences crave the familiar' },
+  { id: 'true_crime_craze', name: 'True Crime Craze', duration: [12, 24], grossMult: 1.1, budgetInflation: 1.0, genreBoost: { Mystery: 0.25, Thriller: 0.2, Documentary: 0.15 }, desc: 'The public is obsessed with real cases' },
+  { id: 'superhero_fatigue', name: 'Superhero Fatigue', duration: [12, 36], grossMult: 0.95, budgetInflation: 1.0, genreBoost: { Action: -0.2, 'Sci-Fi': -0.1, Drama: 0.1, Horror: 0.1 }, desc: 'Audiences tired of capes and tights' },
+  { id: 'ai_anxiety', name: 'AI Anxiety', duration: [12, 48], grossMult: 1.05, budgetInflation: 1.0, genreBoost: { 'Sci-Fi': 0.25, Thriller: 0.15, Horror: 0.1, Documentary: 0.15 }, desc: 'Fear and fascination with artificial intelligence' },
+  { id: 'streaming_wars', name: 'Streaming Wars', duration: [12, 36], grossMult: 0.85, budgetInflation: 1.15, genreBoost: {}, desc: 'Theatrical suffers as platforms spend billions on content' },
+];
+
+// ==================== DISTRIBUTION DEALS ENHANCED (SYSTEM 9) ====================
+const DISTRIBUTION_TIERS = [
+  { id: 'self', name: 'Self-Distribution', feePct: 0, screenAccess: 0.2, marketingSupport: 0, prestigeMod: -5, desc: 'You handle everything — cheap but limited reach' },
+  { id: 'indie', name: 'Indie Distributor', feePct: 0.15, screenAccess: 0.5, marketingSupport: 0.5, prestigeMod: 3, desc: 'Boutique distribution for art films' },
+  { id: 'mid', name: 'Mid-Tier Studio Deal', feePct: 0.25, screenAccess: 0.75, marketingSupport: 1.0, prestigeMod: 0, desc: 'Solid distribution with decent reach' },
+  { id: 'major', name: 'Major Studio Distribution', feePct: 0.35, screenAccess: 1.0, marketingSupport: 1.5, prestigeMod: 5, desc: 'Maximum screens and marketing muscle' },
+  { id: 'global', name: 'Global Distribution Network', feePct: 0.40, screenAccess: 1.0, marketingSupport: 2.0, prestigeMod: 8, intlGrossBonus: 0.3, desc: 'Worldwide reach with international marketing' },
+];
+
+const THEATER_NEGOTIATIONS = [
+  { id: 'standard', name: 'Standard Terms', studioSharePct: 55, screens: 'normal', desc: '55/45 split — industry standard' },
+  { id: 'aggressive', name: 'Aggressive Terms', studioSharePct: 65, screens: 'reduced', desc: '65/35 in your favor — fewer theaters will agree' },
+  { id: 'generous', name: 'Generous Terms', studioSharePct: 45, screens: 'expanded', desc: '45/55 — theaters love you, max screen count' },
+  { id: 'four_wall', name: 'Four-Walling', studioSharePct: 90, screens: 'minimal', cost: 500000, desc: 'Rent the theaters yourself — huge risk, huge reward' },
+];
 
 // ==================== FILM FESTIVALS ====================
 const FILM_FESTIVALS = [
@@ -1480,6 +1447,27 @@ const INIT = {
   filmSchools: [],          // [{id, schoolId, founded: turn, nextGraduate: turn, graduatesQueue: [talent]}]
   // Feature 14: International Studio Partnerships
   internationalPartners: [], // [{id, partnerId, formDate: year, active: bool}]
+  // ---- SYSTEM 1: GENRE TRENDS & AUDIENCE FATIGUE ----
+  genreCycleState: {},        // genre -> {phase: 'stable'|'boom'|etc, momentum: -100..100, filmsThisYear: 0}
+  genreFatigueLog: [],        // [{genre, year, films, effect}]
+  // ---- SYSTEM 2: TALENT RELATIONSHIPS ----
+  talentMoods: {},            // talentId -> mood score
+  // ---- SYSTEM 3: AWARDS CAMPAIGNS ----
+  awardsCampaignsDetailed: {}, // filmId -> {strategy, spent, categories, effectMult}
+  // ---- SYSTEM 4: FILM CATALOG ----
+  catalogRevenue: 0,          // monthly catalog revenue
+  cultClassics: [],           // film ids that became cult classics
+  // ---- SYSTEM 5: CINEMATIC UNIVERSES ----
+  cinematicUniverses: [],     // [{id, name, franchiseIds: [], tier: 'shared', brandHealth: 100}]
+  // ---- SYSTEM 6: RELEASE STRATEGY ----
+  devReleaseStrategy: 'wide_theatrical',
+  // ---- SYSTEM 7: STUDIO FACILITIES ----
+  studioFacilities: [],       // [{id, facilityId, built: turn}]
+  // ---- SYSTEM 8: ZEITGEIST EVENTS ----
+  activeZeitgeist: [],        // [{id, name, monthsLeft, grossMult, genreBoost, ...}]
+  // ---- SYSTEM 9: DISTRIBUTION ----
+  distributionTier: 'self',   // current distribution deal tier
+  theaterRelationship: 50,    // 0-100 relationship with theater chains
 };
 
 function reducer(state, action) {
@@ -3193,6 +3181,7 @@ function reducer(state, action) {
       // 11. Rival studio competition
       let competitors = state.competitors.map(c => ({ ...c, releasesThisQ: 0 }));
       const rivalFilmsThisQ = [];
+      const usedTitlesThisTurn = new Set((state.rivalFilmsThisYear || []).map(f => f.title));
       competitors.forEach(comp => {
         // Personality-driven release chance — rivals release 1-3 films per year on average
         const releaseChance = comp.personality ? 0.08 + comp.personality.aggression * 0.10 : 0.12;
@@ -3212,7 +3201,9 @@ function reducer(state, action) {
           const budget = Math.round(randInt(10, 100) * 1e6 * bMult);
           const mMult = comp.personality ? comp.personality.marketingMult : 1;
           const gross = Math.round(budget * (quality >= 75 ? 3.0 : quality >= 55 ? 1.5 : 0.5) * (1 + Math.random()) * mMult);
-          const title = pick(RIVAL_FILM_TITLES);
+          const availableTitles = RIVAL_FILM_TITLES.filter(t => !usedTitlesThisTurn.has(t));
+          const title = availableTitles.length > 0 ? pick(availableTitles) : `${pick(RIVAL_FILM_TITLES)}: ${pick(['Reborn','Unleashed','Redux','Returns','Rising','Legacy','Untold','Chronicles','Awakening'])}`;
+          usedTitlesThisTurn.add(title);
           const directorName = pick(RIVAL_DIRECTOR_NAMES);
           const actorName = pick(RIVAL_ACTOR_NAMES);
           const writerName = pick(RIVAL_WRITER_NAMES);
@@ -3525,6 +3516,137 @@ function reducer(state, action) {
         }
       });
 
+      // ==================== NEW SYSTEMS: END_TURN LOGIC ====================
+
+      // SYSTEM 1: Genre Cycle & Fatigue Updates (annual, month 12)
+      let genreCycleState = { ...state.genreCycleState };
+      let genreFatigueLog = [...(state.genreFatigueLog || [])];
+      if (state.month === 12) {
+        GENRES.forEach(genre => {
+          const playerFilms = films.filter(f => f.status === 'released' && f.genre === genre && f.releasedYear === state.year).length;
+          const rivalFilms = (state.allFilmHistory || []).filter(f => f.genre === genre && f.releaseYear === state.year && f.isRival).length;
+          const totalThisYear = playerFilms + rivalFilms;
+          const current = genreCycleState[genre] || { phase: 'stable', momentum: 0, filmsThisYear: 0 };
+          let momentum = current.momentum;
+          if (totalThisYear >= AUDIENCE_FATIGUE_THRESHOLD) {
+            momentum -= 25;
+            if (totalThisYear >= 6) momentum -= 15;
+          } else if (totalThisYear === 0 || totalThisYear === 1) {
+            momentum += 15;
+          }
+          momentum = clamp(momentum, -100, 100);
+          const phases = ['fatigued', 'declining', 'stable', 'rising', 'boom'];
+          const phaseIdx = Math.max(0, Math.min(4, Math.round((momentum + 100) / 50)));
+          const phase = phases[phaseIdx];
+          genreCycleState[genre] = { phase, momentum, filmsThisYear: totalThisYear };
+          if (totalThisYear >= AUDIENCE_FATIGUE_THRESHOLD) {
+            genreFatigueLog.push({ genre, year: state.year, films: totalThisYear, effect: `Fatigue detected (${totalThisYear} films)` });
+            log.push({ text: `${genre} fatigue: ${totalThisYear} films released. Audiences tiring of the genre.`, type: 'warning' });
+          }
+        });
+      }
+
+      // SYSTEM 2: Talent Mood & Loyalty (update after each film release)
+      let talentMoods = { ...state.talentMoods };
+      films.filter(f => f.status === 'released' && f.releasedYear === state.year && f.releasedMonth === state.month).forEach(film => {
+        [film.director, film.actor, film.writer].forEach(talent => {
+          if (talent && talent.id) {
+            talent.consecutiveFilms = (talent.consecutiveFilms || 0) + 1;
+            talent.lastFilmQuality = film.quality;
+            if (film.quality >= 75) {
+              talent.consecutiveHits = (talent.consecutiveHits || 0) + 1;
+            } else {
+              talent.consecutiveHits = 0;
+            }
+            talent.marketValue = calcSalaryDemand(talent);
+            const mood = calcTalentMood(talent);
+            talentMoods[talent.id] = mood;
+            if (mood < 20 && Math.random() < 0.10) {
+              log.push({ text: `${talent.name} left the studio due to low morale!`, type: 'warning' });
+              contracts = contracts.filter(c => c.id !== talent.id);
+            }
+          }
+        });
+      });
+
+      // SYSTEM 3: Awards Campaigns - already tracked in awardsCampaignsDetailed, enhance awards calculation during ceremony
+      // (awards ceremony logic at month 12 already factored in)
+
+      // SYSTEM 4: Catalog Revenue (monthly from old films)
+      let catalogRevenue = 0;
+      state.films.filter(f => f.status === 'released').forEach(film => {
+        const catValue = calcCatalogValue(film, state.year);
+        catalogRevenue += catValue;
+      });
+      revenue += catalogRevenue;
+
+      // SYSTEM 5: Cinematic Universe Effects (at year end, update brand health)
+      let cinematicUniverses = (state.cinematicUniverses || []).map(u => {
+        if (state.month === 12) {
+          const universeFilms = films.filter(f => {
+            const fran = franchises.find(fr => fr.id === f.franchiseId);
+            return f.status === 'released' && fran && u.franchiseIds.includes(fran.id);
+          });
+          let brandHealthDelta = 0;
+          universeFilms.forEach(uf => {
+            if (uf.quality < 40) brandHealthDelta -= 10;
+            else if (uf.quality >= 75) brandHealthDelta += 5;
+          });
+          const newHealth = clamp(u.brandHealth + brandHealthDelta, 0, 100);
+          const newTier = UNIVERSE_TIERS.slice().reverse().find(t => u.franchiseIds.length >= t.minFilms) || UNIVERSE_TIERS[0];
+          return { ...u, brandHealth: newHealth, tier: newTier.id };
+        }
+        return u;
+      });
+
+      // SYSTEM 6: Release Strategy affects gross (already applied in release calculation)
+
+      // SYSTEM 7: Studio Facilities - deduct upkeep each month
+      (state.studioFacilities || []).forEach(fac => {
+        const def = STUDIO_FACILITIES.find(f => f.id === fac.facilityId);
+        if (def) {
+          cash -= def.monthlyUpkeep;
+          expenses += def.monthlyUpkeep;
+        }
+      });
+
+      // SYSTEM 8: Zeitgeist Events (2% chance each month for new event)
+      let activeZeitgeist = (state.activeZeitgeist || []).map(z => ({ ...z, monthsLeft: z.monthsLeft - 1 }));
+      activeZeitgeist = activeZeitgeist.filter(z => z.monthsLeft > 0);
+      if (activeZeitgeist.length < 2 && Math.random() < 0.02) {
+        const event = pick(ZEITGEIST_EVENTS);
+        const duration = randInt(event.duration[0], event.duration[1]);
+        activeZeitgeist.push({
+          id: state.nextId + 300 + activeZeitgeist.length,
+          name: event.name,
+          monthsLeft: duration,
+          grossMult: event.grossMult,
+          budgetInflation: event.budgetInflation,
+          genreBoost: event.genreBoost,
+          desc: event.desc,
+        });
+        log.push({ text: `ZEITGEIST: ${event.name} begins! ${event.desc}`, type: 'info' });
+      }
+      // Apply zeitgeist bonuses to released films this month
+      activeZeitgeist.forEach(z => {
+        films.filter(f => f.status === 'released' && f.releasedYear === state.year && f.releasedMonth === state.month).forEach(film => {
+          if (z.genreBoost[film.genre]) {
+            const bonus = Math.round(film.totalGross * z.genreBoost[film.genre]);
+            film.totalGross += bonus;
+            film.profit += bonus;
+            revenue += bonus;
+            log.push({ text: `"${film.title}" got zeitgeist boost: +${fmt(bonus)}`, type: 'info' });
+          }
+        });
+      });
+
+      // SYSTEM 9: Distribution Tier Effects (already applied in release, but here we can apply monthly effects)
+      // Theater relationship degradation (time-based)
+      let theaterRelationship = state.theaterRelationship;
+      if (state.distributionTier === 'self' || state.distributionTier === 'indie') {
+        theaterRelationship = Math.max(0, theaterRelationship - 1); // slow decay for indie
+      }
+
       return {
         ...state,
         phase,
@@ -3585,6 +3707,177 @@ function reducer(state, action) {
         pressEvents,
         filmSchools,
         internationalPartners: intlPartners,
+        // New systems features
+        genreCycleState,
+        genreFatigueLog,
+        talentMoods,
+        catalogRevenue: catalogRevenue,
+        cinematicUniverses,
+        activeZeitgeist,
+        theaterRelationship,
+        studioFacilities: state.studioFacilities,
+        awardsCampaignsDetailed: state.awardsCampaignsDetailed,
+      };
+    }
+
+    // ==================== SYSTEM 1: GENRE TRENDS & CYCLES ====================
+    case 'UPDATE_GENRE_CYCLE': {
+      const state2 = { ...state };
+      state2.genreCycleState = { ...state.genreCycleState };
+      const genre = action.genre;
+      const current = state2.genreCycleState[genre] || { phase: 'stable', momentum: 0, filmsThisYear: 0 };
+      const updated = { ...current };
+      updated.momentum = clamp(updated.momentum + (action.momentumDelta || 0), -100, 100);
+      const phases = ['fatigued', 'declining', 'stable', 'rising', 'boom'];
+      const phaseIdx = Math.max(0, Math.min(4, Math.round((updated.momentum + 100) / 50)));
+      updated.phase = phases[phaseIdx];
+      state2.genreCycleState[genre] = updated;
+      return state2;
+    }
+
+    // ==================== SYSTEM 2: TALENT RELATIONSHIPS ====================
+    case 'NEGOTIATE_SALARY': {
+      const talent = state.contracts.find(t => t.id === action.talentId);
+      if (!talent) return state;
+      const demand = calcSalaryDemand(talent);
+      const offer = action.offer;
+      const diff = offer / demand;
+      let accepted = diff >= 0.9;
+      if (diff >= 0.8 && Math.random() < 0.5) accepted = true;
+      if (!accepted) {
+        return {
+          ...state,
+          gameLog: [...state.gameLog, { text: `${talent.name} rejected your offer of ${fmt(offer)} (demanded ${fmt(demand)}).`, type: 'warning' }],
+        };
+      }
+      const contracts = state.contracts.map(t => t.id === action.talentId ? { ...t, salary: offer, loyalty: (t.loyalty || 0) + (diff >= 1.1 ? 5 : diff >= 1 ? 2 : -3) } : t);
+      return {
+        ...state,
+        contracts,
+        gameLog: [...state.gameLog, { text: `${talent.name} accepted ${fmt(offer)}/film.${diff >= 1.1 ? ' They\'re thrilled!' : ''}`, type: 'success' }],
+      };
+    }
+
+    case 'GRANT_PERK': {
+      const perk = TALENT_PERKS.find(p => p.id === action.perkId);
+      if (!perk) return state;
+      const contracts = state.contracts.map(t => {
+        if (t.id !== action.talentId) return t;
+        const existing = t.perks || [];
+        if (existing.includes(action.perkId)) return t;
+        return { ...t, perks: [...existing, action.perkId], loyalty: (t.loyalty || 0) + 3 };
+      });
+      return {
+        ...state,
+        cash: state.cash - (perk.cost || 0),
+        contracts,
+        gameLog: [...state.gameLog, { text: `Granted "${perk.name}" perk to talent. ${perk.cost ? `Cost: ${fmt(perk.cost)}` : 'No cost.'}`, type: 'info' }],
+      };
+    }
+
+    // ==================== SYSTEM 3: AWARDS CAMPAIGNS ====================
+    case 'LAUNCH_AWARDS_CAMPAIGN': {
+      const film = state.films.find(f => f.id === action.filmId);
+      if (!film || film.status !== 'released') return state;
+      const strategy = CAMPAIGN_STRATEGIES.find(s => s.id === action.strategy);
+      if (!strategy) return state;
+      const baseCost = 2000000;
+      const cost = Math.round(baseCost * strategy.costMult);
+      if (state.cash < cost) return { ...state, gameLog: [...state.gameLog, { text: `Can't afford ${fmt(cost)} awards campaign!`, type: 'warning' }] };
+      const campaigns = { ...state.awardsCampaignsDetailed };
+      campaigns[action.filmId] = {
+        strategy: action.strategy,
+        spent: cost,
+        categories: action.categories || ['bestPicture'],
+        effectMult: strategy.effectMult,
+      };
+      return {
+        ...state,
+        cash: state.cash - cost,
+        awardsCampaignsDetailed: campaigns,
+        gameLog: [...state.gameLog, { text: `Launched ${strategy.name} for "${film.title}" — ${fmt(cost)} invested.`, type: 'info' }],
+      };
+    }
+
+    // ==================== SYSTEM 5: CINEMATIC UNIVERSES ====================
+    case 'CREATE_UNIVERSE': {
+      const id = state.nextId;
+      const universe = {
+        id,
+        name: action.name,
+        franchiseIds: action.franchiseIds || [],
+        tier: 'shared',
+        brandHealth: 100,
+        totalGross: 0,
+        filmCount: 0,
+      };
+      return {
+        ...state,
+        cinematicUniverses: [...state.cinematicUniverses, universe],
+        nextId: id + 1,
+        gameLog: [...state.gameLog, { text: `Founded the "${action.name}" cinematic universe!`, type: 'success' }],
+      };
+    }
+
+    case 'ADD_FRANCHISE_TO_UNIVERSE': {
+      const universes = state.cinematicUniverses.map(u => {
+        if (u.id !== action.universeId) return u;
+        if (u.franchiseIds.includes(action.franchiseId)) return u;
+        const newIds = [...u.franchiseIds, action.franchiseId];
+        const tier = UNIVERSE_TIERS.slice().reverse().find(t => newIds.length >= t.minFilms) || UNIVERSE_TIERS[0];
+        return { ...u, franchiseIds: newIds, tier: tier.id };
+      });
+      return { ...state, cinematicUniverses: universes };
+    }
+
+    // ==================== SYSTEM 7: STUDIO FACILITIES ====================
+    case 'BUILD_FACILITY': {
+      const facility = STUDIO_FACILITIES.find(f => f.id === action.facilityId);
+      if (!facility || state.cash < facility.cost) return { ...state, gameLog: [...state.gameLog, { text: `Can't afford ${facility.name} (${fmt(facility.cost)})`, type: 'warning' }] };
+      const newFacility = { id: state.nextId, facilityId: action.facilityId, built: state.turn };
+      return {
+        ...state,
+        cash: state.cash - facility.cost,
+        studioFacilities: [...state.studioFacilities, newFacility],
+        nextId: state.nextId + 1,
+        gameLog: [...state.gameLog, { text: `Built ${facility.name} for ${fmt(facility.cost)}!`, type: 'success' }],
+      };
+    }
+
+    case 'DEMOLISH_FACILITY': {
+      const fac = state.studioFacilities.find(f => f.id === action.id);
+      if (!fac) return state;
+      const def = STUDIO_FACILITIES.find(sf => sf.id === fac.facilityId);
+      const salvage = def ? Math.round(def.cost * 0.3) : 0;
+      return {
+        ...state,
+        cash: state.cash + salvage,
+        studioFacilities: state.studioFacilities.filter(f => f.id !== action.id),
+        gameLog: [...state.gameLog, { text: `Demolished ${def?.name || 'facility'} for ${fmt(salvage)} salvage.`, type: 'info' }],
+      };
+    }
+
+    // ==================== SYSTEM 9: DISTRIBUTION ====================
+    case 'SET_DISTRIBUTION_TIER': {
+      const tier = DISTRIBUTION_TIERS.find(t => t.id === action.tier);
+      if (!tier) return state;
+      return {
+        ...state,
+        distributionTier: action.tier,
+        gameLog: [...state.gameLog, { text: `Distribution deal: ${tier.name} — ${tier.desc}`, type: 'info' }],
+      };
+    }
+
+    case 'NEGOTIATE_THEATER_TERMS': {
+      const terms = THEATER_NEGOTIATIONS.find(t => t.id === action.termsId);
+      if (!terms) return state;
+      let rel = state.theaterRelationship;
+      if (terms.id === 'aggressive') rel -= 10;
+      if (terms.id === 'generous') rel += 10;
+      return {
+        ...state,
+        theaterRelationship: clamp(rel, 0, 100),
+        gameLog: [...state.gameLog, { text: `Theater terms: ${terms.name} (${terms.studioSharePct}% studio share)`, type: 'info' }],
       };
     }
 
@@ -4097,8 +4390,8 @@ export default function MovieMogul() {
   const inPipeline = state.films.filter(f => ['development', 'production', 'postproduction'].includes(f.status));
   const released = state.films.filter(f => f.status === 'released').slice().reverse();
   const awaitingRelease = state.films.filter(f => f.status === 'completed' || f.status === 'scheduled');
-  const tabs = ['dashboard', 'develop', 'production', 'release', 'talent', 'studio', 'finance', 'market', 'press', 'academy', 'partners', 'screening'];
-  const tabIcons = { dashboard: '📊', develop: '🎬', production: '🎥', release: '🎞', talent: '⭐', studio: '🏢', finance: '💰', market: '📈', press: '📰', academy: '🎓', partners: '🌍', screening: '🎬' };
+  const tabs = ['dashboard', 'develop', 'production', 'release', 'talent', 'studio', 'finance', 'market', 'catalog', 'press', 'academy', 'partners', 'screening'];
+  const tabIcons = { dashboard: '📊', develop: '🎬', production: '🎥', release: '🎞', talent: '⭐', studio: '🏢', finance: '💰', market: '📈', catalog: '📀', press: '📰', academy: '🎓', partners: '🌍', screening: '🎬' };
 
   const facilityCosts = [0, 500000, 2000000, 5000000, 15000000, 50000000];
   const facilityNames = ['Garage Studio', 'Small Lot', 'Soundstages', 'VFX Lab', 'Backlot Complex', 'Premier Facilities'];
@@ -5078,6 +5371,55 @@ export default function MovieMogul() {
           </div>
         )}
 
+        {/* TALENT MOODS & RELATIONSHIPS (NEW SYSTEM 2) */}
+        {state.contracts.length > 0 && (
+          <div className="bg-gray-800 border border-gray-700 rounded-lg p-5 mt-4">
+            <div className="text-white font-bold text-lg mb-3">Talent Moods & Perks</div>
+            <div className="grid grid-cols-1 gap-2">
+              {state.contracts.map(talent => {
+                const mood = calcTalentMood(talent);
+                const moodLabel = getTalentMoodLabel(mood);
+                const demand = calcSalaryDemand(talent);
+                return (
+                  <div key={talent.id} className="bg-gray-700 rounded-lg p-3">
+                    <div className="flex justify-between items-start mb-2">
+                      <div>
+                        <div className="text-white font-bold text-sm">{talent.name}</div>
+                        <div className={`text-xs font-bold mt-1 ${mood >= 80 ? 'text-green-400' : mood >= 50 ? 'text-yellow-400' : 'text-red-400'}`}>{moodLabel} (Mood: {mood}/100)</div>
+                      </div>
+                      <div className="text-right text-xs text-gray-400">
+                        <div>Current: {fmt(talent.salary)}/film</div>
+                        <div>Demands: {fmt(demand)}/film</div>
+                      </div>
+                    </div>
+                    {talent.perks && talent.perks.length > 0 && (
+                      <div className="text-xs text-purple-400 mb-2">Perks: {talent.perks.map(p => {
+                        const perk = TALENT_PERKS.find(pk => pk.id === p);
+                        return perk ? perk.name : p;
+                      }).join(', ')}</div>
+                    )}
+                    <div className="flex gap-2 flex-wrap">
+                      <button onClick={() => dispatch({ type: 'NEGOTIATE_SALARY', talentId: talent.id, offer: Math.round(demand * 0.95) })}
+                        disabled={state.cash < Math.round(demand * 0.05)}
+                        className="text-xs bg-green-700 hover:bg-green-600 disabled:opacity-40 text-white px-2 py-1 rounded transition">
+                        Counter-Offer
+                      </button>
+                      {TALENT_PERKS.slice(0, 2).map(perk => (
+                        <button key={perk.id} onClick={() => dispatch({ type: 'GRANT_PERK', talentId: talent.id, perkId: perk.id })}
+                          disabled={state.cash < (perk.cost || 0) || (talent.perks || []).includes(perk.id)}
+                          className="text-xs bg-purple-700 hover:bg-purple-600 disabled:opacity-40 text-white px-2 py-1 rounded transition"
+                          title={perk.desc}>
+                          {perk.name} {perk.cost ? `(${fmt(perk.cost)})` : ''}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+        )}
+
         {/* Talent Academy */}
         <div className="bg-gray-800 border border-gray-700 rounded-lg p-5 mt-4">
           <div className="text-white font-bold text-lg mb-2">Talent Academy</div>
@@ -5464,6 +5806,77 @@ export default function MovieMogul() {
         </div>
       )}
 
+      {/* STUDIO FACILITIES (NEW SYSTEM 7) */}
+      <div>
+          <div className="text-white font-bold text-lg mb-3">Studio Facilities</div>
+          <div className="text-gray-400 text-sm mb-3">Build state-of-the-art facilities to boost quality and unlock new capabilities.</div>
+          {state.studioFacilities && state.studioFacilities.length > 0 && (
+            <div className="mb-3 p-3 bg-gray-750 border border-green-700 rounded-lg">
+              <div className="text-green-400 text-sm font-bold mb-2">Owned Facilities ({state.studioFacilities.length})</div>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
+                {state.studioFacilities.map((fac, i) => {
+                  const def = STUDIO_FACILITIES.find(f => f.id === fac.facilityId);
+                  return (
+                    <div key={i} className="bg-gray-800 rounded p-2 text-xs">
+                      <div className="text-white font-bold">{def?.name || 'Unknown'}</div>
+                      <div className="text-gray-400">Upkeep: {fmt(def?.monthlyUpkeep || 0)}/mo</div>
+                      <button onClick={() => dispatch({ type: 'DEMOLISH_FACILITY', id: fac.id })} className="text-xs text-red-400 hover:underline mt-1">Demolish</button>
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+          )}
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
+            {STUDIO_FACILITIES.map(facility => {
+              const owned = state.studioFacilities && state.studioFacilities.filter(f => f.facilityId === facility.id).length;
+              return (
+                <div key={facility.id} className="bg-gray-800 border border-gray-700 rounded-lg p-3">
+                  <div className="text-white font-bold text-sm">{facility.name}</div>
+                  <div className="text-xs text-gray-400 mt-1">{facility.desc}</div>
+                  <div className="text-xs text-amber-400 mt-1">+{facility.qualityBonus}q{facility.genreBonus ? ` (+3 for ${facility.genreBonus.join(', ')})` : ''}</div>
+                  <div className="text-xs text-gray-500 mt-1">Cost: {fmt(facility.cost)} | Upkeep: {fmt(facility.monthlyUpkeep)}/mo</div>
+                  {owned > 0 && <div className="text-xs text-green-400 mt-1 font-bold">Owned ×{owned}</div>}
+                  <button onClick={() => dispatch({ type: 'BUILD_FACILITY', facilityId: facility.id })} disabled={state.cash < facility.cost}
+                    className="mt-2 w-full text-xs bg-blue-700 hover:bg-blue-600 disabled:opacity-40 text-white px-2 py-1 rounded transition">
+                    Build ({fmt(facility.cost)})
+                  </button>
+                </div>
+              );
+            })}
+          </div>
+        </div>
+
+        {/* CINEMATIC UNIVERSES (NEW SYSTEM 5) */}
+        {state.cinematicUniverses && state.cinematicUniverses.length > 0 && (
+          <div>
+            <div className="text-white font-bold text-lg mb-3">Cinematic Universes</div>
+            <div className="space-y-3">
+              {state.cinematicUniverses.map(u => {
+                const tierDef = UNIVERSE_TIERS.find(t => t.id === u.tier);
+                return (
+                  <div key={u.id} className="bg-gray-800 border border-blue-600 rounded-lg p-4">
+                    <div className="flex justify-between items-start mb-2">
+                      <div>
+                        <div className="text-white font-bold text-sm">{u.name}</div>
+                        <div className="text-xs text-blue-400 font-bold mt-1">{tierDef?.name || 'Shared'}</div>
+                      </div>
+                      <div className="text-right">
+                        <div className="text-amber-400 text-xs font-bold">Brand Health: {u.brandHealth}/100</div>
+                        <div className="text-gray-400 text-xs">{u.franchiseIds.length} franchises | {u.filmCount} films</div>
+                      </div>
+                    </div>
+                    <div className="w-full bg-gray-700 rounded h-2 mb-2">
+                      <div className="bg-amber-500 rounded h-2" style={{ width: `${u.brandHealth}%` }}></div>
+                    </div>
+                    <div className="text-xs text-gray-400">{tierDef?.desc || ''}</div>
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+        )}
+
       {state.awards.length > 0 && (
         <div>
           <div className="text-white font-bold text-lg mb-3">Awards Cabinet ({state.awards.length})</div>
@@ -5626,6 +6039,40 @@ export default function MovieMogul() {
             </div>
           </div>
         )}
+
+        {/* DISTRIBUTION & RELEASE STRATEGY (NEW SYSTEMS 6 & 9) */}
+        <div className="bg-gray-800 border border-gray-700 rounded-lg p-4">
+          <div className="text-white font-bold text-sm mb-3">Distribution & Release Strategy</div>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-3 mb-4">
+            <div>
+              <div className="text-gray-400 text-xs mb-2 font-bold">Distribution Tier</div>
+              <div className="space-y-1">
+                {DISTRIBUTION_TIERS.map(tier => (
+                  <button key={tier.id} onClick={() => dispatch({ type: 'SET_DISTRIBUTION_TIER', tier: tier.id })}
+                    className={`w-full text-left text-xs rounded p-2 transition ${state.distributionTier === tier.id ? 'bg-green-700 text-white border border-green-500' : 'bg-gray-700 text-gray-300 border border-gray-600 hover:bg-gray-650'}`}>
+                    <div className="font-bold">{tier.name}</div>
+                    <div className="text-xs opacity-70">{tier.desc}</div>
+                  </button>
+                ))}
+              </div>
+            </div>
+            <div>
+              <div className="text-gray-400 text-xs mb-2 font-bold">Theater Relationship</div>
+              <div className="bg-gray-700 rounded p-3">
+                <div className="w-full bg-gray-600 rounded h-2 mb-2">
+                  <div className="bg-amber-500 rounded h-2 transition" style={{ width: `${state.theaterRelationship}%` }}></div>
+                </div>
+                <div className="text-white font-bold text-sm">{state.theaterRelationship}/100</div>
+                <div className="text-gray-400 text-xs mt-2">
+                  {state.theaterRelationship >= 80 ? 'Excellent — max screen access' : state.theaterRelationship >= 60 ? 'Good — strong screen access' : state.theaterRelationship >= 40 ? 'Fair — limited screens' : 'Poor — theater chains reluctant'}
+                </div>
+              </div>
+            </div>
+          </div>
+          <div className="text-xs text-gray-400">
+            <div>Current tier provides: {DISTRIBUTION_TIERS.find(t => t.id === state.distributionTier)?.screenAccess}x screen access, {Math.round((DISTRIBUTION_TIERS.find(t => t.id === state.distributionTier)?.marketingSupport || 1) * 100)}% marketing support</div>
+          </div>
+        </div>
 
         {/* Stock Management (if public) */}
         {state.isPublic && (
@@ -5810,6 +6257,48 @@ export default function MovieMogul() {
           </div>
         )}
 
+        {/* GENRE CYCLES & FATIGUE (NEW SYSTEM 1) */}
+        <div>
+          <div className="text-white font-bold text-lg mb-3">Genre Cycles & Audience Fatigue</div>
+          <div className="text-gray-400 text-sm mb-3">Genres move through cycles. Too many releases in one year causes fatigue (negative gross multiplier).</div>
+          <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-2">
+            {GENRES.map(genre => {
+              const cycle = state.genreCycleState && state.genreCycleState[genre];
+              const cycleDef = cycle ? GENRE_CYCLES[cycle.phase] : GENRE_CYCLES.stable;
+              const fatigueEntries = state.genreFatigueLog && state.genreFatigueLog.filter(f => f.genre === genre && f.year === state.year);
+              const isFatigued = fatigueEntries && fatigueEntries.length > 0;
+              return (
+                <div key={genre} className={`rounded-lg p-2 border ${isFatigued ? 'bg-red-900/30 border-red-600' : 'bg-gray-800 border-gray-700'}`}>
+                  <div className="text-white font-bold text-xs">{genre}</div>
+                  <div className={`text-xs font-bold mt-1 ${isFatigued ? 'text-red-400' : cycle ? (cycle.phase === 'boom' ? 'text-green-400' : cycle.phase === 'declining' || cycle.phase === 'fatigued' ? 'text-orange-400' : 'text-yellow-400') : 'text-gray-400'}`}>
+                    {cycle ? cycleDef.label : 'Stable'}</div>
+                  {cycle && <div className="text-xs text-gray-500 mt-1">{cycle.filmsThisYear} releases this year</div>}
+                  {isFatigued && <div className="text-xs text-red-400 mt-1">Audience fatigued!</div>}
+                </div>
+              );
+            })}
+          </div>
+        </div>
+
+        {/* ZEITGEIST EVENTS (NEW SYSTEM 8) */}
+        {state.activeZeitgeist && state.activeZeitgeist.length > 0 && (
+          <div>
+            <div className="text-white font-bold text-lg mb-3">Active Zeitgeist Events</div>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+              {state.activeZeitgeist.map((z, i) => (
+                <div key={i} className="bg-blue-900/30 border border-blue-600 rounded-lg p-3">
+                  <div className="text-blue-400 font-bold text-sm">{z.name}</div>
+                  <div className="text-xs text-gray-400 mt-1">{z.desc}</div>
+                  <div className="text-xs text-gray-500 mt-1">{z.monthsLeft} months left | Gross ×{z.grossMult.toFixed(2)}</div>
+                  {Object.keys(z.genreBoost || {}).length > 0 && (
+                    <div className="text-xs text-blue-300 mt-1">Boosts: {Object.entries(z.genreBoost).filter(([, v]) => v > 0).map(([g, v]) => `${g} +${Math.round(v * 100)}%`).join(', ')}</div>
+                  )}
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+
         {/* AUDIENCE DEMOGRAPHICS */}
         <div>
           <div className="text-white font-bold text-lg mb-3">Audience Demographics</div>
@@ -5943,6 +6432,92 @@ export default function MovieMogul() {
               </div>
             );
           })()}
+        </div>
+      </div>
+    );
+  };
+
+  // ==================== NEW SYSTEMS RENDER FUNCTIONS ====================
+
+  const renderCatalog = () => {
+    const releasedFilms = state.films.filter(f => f.status === 'released').sort((a, b) => (b.releasedYear || 0) - (a.releasedYear || 0));
+    const cultClassics = releasedFilms.filter(f => {
+      const age = state.year - (f.releasedYear || state.year);
+      return age >= CULT_CLASSIC_THRESHOLD && f.quality >= CULT_CLASSIC_QUALITY_MIN && f.quality <= CULT_CLASSIC_QUALITY_MAX;
+    });
+
+    return (
+      <div className="space-y-6">
+        <div>
+          <div className="text-white font-bold text-lg mb-3">Catalog Revenue Streams</div>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-3 mb-4">
+            <div className="bg-gray-800 border border-gray-700 rounded-lg p-3">
+              <div className="text-gray-400 text-xs">Monthly Catalog Revenue</div>
+              <div className="text-green-400 text-2xl font-bold mt-1">{fmt(state.catalogRevenue)}</div>
+            </div>
+            <div className="bg-gray-800 border border-gray-700 rounded-lg p-3">
+              <div className="text-gray-400 text-xs">Cult Classics</div>
+              <div className="text-purple-400 text-2xl font-bold mt-1">{cultClassics.length}</div>
+            </div>
+          </div>
+
+          <div className="text-white font-bold text-sm mb-2">Revenue Stream Details</div>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-2 text-xs">
+            {CATALOG_REVENUE_STREAMS.map(stream => (
+              <div key={stream.id} className="bg-gray-800 border border-gray-700 rounded p-2">
+                <div className="font-bold text-amber-400">{stream.name}</div>
+                <div className="text-gray-400">Starts: Year {stream.yearsAfterRelease} | {Math.round(stream.annualRevPct * 100)}% of gross/year</div>
+              </div>
+            ))}
+          </div>
+        </div>
+
+        {cultClassics.length > 0 && (
+          <div>
+            <div className="text-white font-bold text-lg mb-3">Cult Classics</div>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+              {cultClassics.map(f => (
+                <div key={f.id} className="bg-purple-900/30 border border-purple-600 rounded-lg p-3">
+                  <div className="text-purple-400 font-bold">{f.title}</div>
+                  <div className="text-xs text-gray-400 mt-1">Released {f.releasedYear} | Quality {f.quality}</div>
+                  <div className="text-xs text-gray-300 mt-1">Age: {state.year - f.releasedYear} years — Premium catalog value with 2.5x revenue boost!</div>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+
+        <div>
+          <div className="text-white font-bold text-lg mb-3">Recent Releases & Catalog Value</div>
+          <div className="overflow-x-auto">
+            <table className="w-full text-xs">
+              <thead>
+                <tr className="text-gray-500 border-b border-gray-700">
+                  <th className="text-left py-2 px-2">Title</th>
+                  <th className="text-left px-2">Genre</th>
+                  <th className="text-right px-2">Released</th>
+                  <th className="text-right px-2">Quality</th>
+                  <th className="text-right px-2">Gross</th>
+                  <th className="text-right px-2">Monthly Catalog Value</th>
+                </tr>
+              </thead>
+              <tbody>
+                {releasedFilms.slice(0, 20).map(f => {
+                  const catVal = calcCatalogValue(f, state.year);
+                  return (
+                    <tr key={f.id} className="border-b border-gray-800 hover:bg-gray-750">
+                      <td className="py-2 px-2 text-white">{f.title}</td>
+                      <td className="px-2 text-amber-400">{f.genre}</td>
+                      <td className="text-right px-2 text-gray-400">{f.releasedYear}</td>
+                      <td className={`text-right px-2 ${f.quality >= 80 ? 'text-green-400' : f.quality >= 60 ? 'text-yellow-400' : 'text-orange-400'}`}>{f.quality}</td>
+                      <td className="text-right px-2 text-green-400">{fmt(f.totalGross || 0)}</td>
+                      <td className={`text-right px-2 ${catVal > 0 ? 'text-purple-400' : 'text-gray-500'}`}>{fmt(catVal)}</td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
+          </div>
         </div>
       </div>
     );
@@ -6329,6 +6904,7 @@ export default function MovieMogul() {
           {tab === 'market' && renderMarket()}
           {tab === 'press' && renderPress()}
           {tab === 'academy' && renderAcademy()}
+          {tab === 'catalog' && renderCatalog()}
           {tab === 'partners' && renderPartners()}
           {tab === 'screening' && renderScreening()}
         </div>
