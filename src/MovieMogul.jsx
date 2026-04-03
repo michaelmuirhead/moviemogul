@@ -1483,9 +1483,6 @@ const INIT = {
 };
 
 function reducer(state, action) {
-  try { return reducerInner(state, action); } catch (e) { console.error('REDUCER ERROR:', action.type, e); return { ...state, errorMsg: `BUG: ${e.message}` }; }
-}
-function reducerInner(state, action) {
   switch (action.type) {
 
     case 'START_GAME': {
@@ -3246,8 +3243,8 @@ function reducerInner(state, action) {
       });
       // Accumulate rival films for annual awards
       let rivalFilmsThisYear = [...(state.rivalFilmsThisYear || []), ...rivalFilmsThisQ];
-      // Reset at start of new year
-      if (newMonth === 1 && state.month === 12) rivalFilmsThisYear = [];
+      // Reset at start of new year (month 12 means next turn is Jan)
+      if (state.month === 12) rivalFilmsThisYear = [];
 
       // Market saturation: if rivals release many films, your films get a slight penalty
       const totalRivalReleases = competitors.reduce((s, c) => s + c.releasesThisQ, 0);
@@ -3916,22 +3913,7 @@ function TalentCard({ talent, action, actionLabel, actionColor, disabled }) {
 
 // ==================== MAIN COMPONENT ====================
 
-class ErrorBoundary extends React.Component {
-  constructor(props) { super(props); this.state = { error: null }; }
-  static getDerivedStateFromError(e) { return { error: e }; }
-  componentDidCatch(e, info) { console.error('RENDER ERROR:', e, info); }
-  render() {
-    if (this.state.error) return React.createElement('div', { style: { color: 'white', background: '#1a1a2e', padding: 40, fontFamily: 'monospace' } },
-      React.createElement('h1', null, 'Game Error'),
-      React.createElement('pre', { style: { color: '#ff6b6b', whiteSpace: 'pre-wrap' } }, this.state.error.message),
-      React.createElement('pre', { style: { color: '#999', fontSize: 12, marginTop: 10, whiteSpace: 'pre-wrap' } }, this.state.error.stack),
-      React.createElement('button', { onClick: () => this.setState({ error: null }), style: { marginTop: 20, padding: '10px 20px', cursor: 'pointer' } }, 'Try to Recover')
-    );
-    return this.props.children;
-  }
-}
-
-function MovieMogulInner() {
+export default function MovieMogul() {
   const [state, dispatch] = useReducer(reducer, INIT);
   const [tab, setTab] = useState('dashboard');
   const [nameInput, setNameInput] = useState('');
@@ -6355,6 +6337,3 @@ function MovieMogulInner() {
   );
 }
 
-export default function MovieMogul() {
-  return React.createElement(ErrorBoundary, null, React.createElement(MovieMogulInner));
-}
