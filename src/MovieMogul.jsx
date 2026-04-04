@@ -3352,9 +3352,8 @@ const INIT = {
   totalMerchRevenue: 0,
   devProductionType: 'live_action',
   tvEpisodeRatings: {},
-  tvNetworkDeals: [],       // [{networkId, showId, licenseFeePerEp, seasons, relationship: 0-100, adRevShare}]
-  tvDevNetwork: null,         // selected network id for greenlighting
-  tvDevDistType: 'network',   // 'network' or 'streaming_exclusive' — distribution type selector
+  tvNetworkDeals: [],       // [{networkId, showId, networkName, networkType, licenseFeePerEp, adRevShare, relationship: 0-100}]
+  tvPitchingShowId: null,     // show id currently being pitched to networks
 
   logFilter: 'all',           // 'all' | 'boxoffice' | 'talent' | 'market' | 'streaming' | 'rivals' | 'production'
   // ---- FEATURE 7: STUDIO GENRE IDENTITY ----
@@ -3533,7 +3532,7 @@ function reducer(state, action) {
         // Wave 2
         musicLabel: null, musicArtists: [], musicAlbums: [],
         musicTours: [], musicCharts: [], musicAwardsHistory: [], licensingPartners: [], consumerProductsDiv: null, totalMerchRevenue: 0,
-        tvEpisodeRatings: {}, tvNetworkDeals: [], tvDevNetwork: null, tvDevDistType: 'network', devProductionType: 'live_action',
+        tvEpisodeRatings: {}, tvNetworkDeals: [], tvPitchingShowId: null, devProductionType: 'live_action',
         scenarioGoal,
         scenarioDeadline,
         gameLog: [
@@ -4583,12 +4582,14 @@ case 'REMASTER_FILM': {
     case 'GREENLIGHT_TV': {
       const format = TV_FORMATS.find(f => f.id === state.tvDevFormat);
       if (!format) return { ...state, errorMsg: 'Select a TV format first.' };
-      const showrunner = state.contracts.find(t => t.id === state.tvDevShowrunnerId && t.type === 'showrunner');
+      const showrunner = state.contracts.find(t => t.id === state.tvDevShowrunnerId && (t.type === 'showrunner' || ['writer','producer','director'].includes(t.type)));
       if (!showrunner) return { ...state, errorMsg: 'Assign a showrunner first.' };
       const episodes = state.tvDevEpisodes || format.episodesRange[0];
       const costPerEp = (state.tvDevBudgetPerEp || 3) * 1e6;
       const totalCost = episodes * costPerEp;
-      if (state.cash < totalCost) return { ...state, errorMsg: `Need ${fmt(totalCost)} to greenlight this show.` };
+      // Pilot costs ~25% of a full season upfront
+      const pilotCost = Math.round(totalCost * 0.25);
+      if (state.cash < pilotCost) return { ...state, errorMsg: `Need ${fmt(pilotCost)} to produce a pilot (25% of ${fmt(totalCost)} season budget).` };
 
       const formatName = format.name;
       const titlePool = (gameContent.tvShowTitles && gameContent.tvShowTitles[formatName]) || [];
@@ -4596,30 +4597,6 @@ case 'REMASTER_FILM': {
       const available = titlePool.filter(t => !usedTitles.has(t.title || t));
       const picked = available.length > 0 ? pick(available) : { title: state.tvDevTitle || `${state.studioName} Series #${state.tvShows.length + 1}`, logline: 'A new show in development.' };
       const title = state.tvDevTitle || (typeof picked === 'object' ? picked.title : picked);
-
-      // Determine distribution type
-      const distType = state.tvDevDistType || (state.streamingPlatform ? 'streaming_exclusive' : 'network');
-      const selectedNetwork = distType === 'network' ? state.tvDevNetwork : null;
-      const networkDeal = selectedNetwork ? state.tvNetworkDeals.find(d => d.networkId === selectedNetwork && d.active) : null;
-      const network = selectedNetwork ? TV_NETWORKS.find(n => n.id === selectedNetwork) : null;
-
-      // Network distribution: network pays license fee, reducing your upfront cost
-      let playerCost = totalCost;
-      let networkContribution = 0;
-      if (networkDeal && network) {
-        networkContribution = Math.round(networkDeal.licenseFeePerEp * episodes * 0.5); // Network fronts 50% via license
-        playerCost = Math.max(totalCost - networkContribution, Math.round(totalCost * 0.3)); // Player always pays at least 30%
-      }
-      if (state.cash < playerCost) return { ...state, errorMsg: `Need ${fmt(playerCost)} to greenlight this show${networkContribution > 0 ? ` (network covers ${fmt(networkContribution)})` : ''}.` };
-
-      // Validate: streaming exclusive requires streaming platform
-      if (distType === 'streaming_exclusive' && !state.streamingPlatform) {
-        return { ...state, errorMsg: 'Streaming exclusive requires a streaming platform! Use network distribution or launch streaming first.' };
-      }
-      // Validate: network distribution requires a network deal
-      if (distType === 'network' && !networkDeal) {
-        return { ...state, errorMsg: 'Select a network first, or sign a network deal.' };
-      }
 
       const show = {
         id: state.nextId,
@@ -4630,50 +4607,38 @@ case 'REMASTER_FILM': {
         showrunnerId: showrunner.id,
         showrunnerName: showrunner.name,
         quality: 0,
+        pilotQuality: 0,
         seasons: 0,
         currentSeason: 1,
         episodes,
         episodeCost: costPerEp,
         totalCost,
-        playerCost,
-        networkContribution,
-        status: 'development',
+        pilotCost,
+        status: 'development',      // development → pilot_production → pilot_complete → (pitch) → production → airing
         viewership: 0,
         criticScore: 0,
         audienceScore: 0,
         subscriberImpact: 0,
         turnsInStatus: 0,
-        turnsNeeded: 2,
+        turnsNeeded: 2,              // 2 months in development (writing/pre-production)
         prodTurns: Math.ceil(episodes / 3),
-        releaseStrategy: distType,
-        networkId: selectedNetwork,
-        networkName: network ? network.name : null,
-        networkType: network ? network.type : null,
+        releaseStrategy: null,       // set when pitched/picked up — 'network' or 'streaming_exclusive'
+        networkId: null,
+        networkName: null,
+        networkType: null,
         year: state.year,
         events: [],
       };
 
-      // Update network deal with this show
-      let updatedNetworkDeals = state.tvNetworkDeals;
-      if (networkDeal) {
-        updatedNetworkDeals = state.tvNetworkDeals.map(d =>
-          d.id === networkDeal.id ? { ...d, showIds: [...d.showIds, state.nextId] } : d
-        );
-      }
-
-      const networkMsg = network ? ` on ${network.name}` : '';
-      const costMsg = networkContribution > 0 ? ` (you pay ${fmt(playerCost)}, network covers ${fmt(networkContribution)})` : '';
       return {
         ...state,
         tvShows: [...state.tvShows, show],
-        cash: state.cash - playerCost,
-        tvNetworkDeals: updatedNetworkDeals,
+        cash: state.cash - pilotCost,
         nextId: state.nextId + 1,
         tvDevFormat: null,
         tvDevShowrunnerId: null,
         tvDevTitle: '',
-        tvDevNetwork: null,
-        gameLog: [...state.gameLog, { text: `Greenlit "${title}" (${format.name}, ${episodes} eps${networkMsg})${costMsg}!`, type: 'success' }],
+        gameLog: [...state.gameLog, { text: `Greenlit "${title}" pilot (${format.name}, ${episodes} eps planned). Pilot cost: ${fmt(pilotCost)}.`, type: 'success' }],
         errorMsg: '',
       };
     }
@@ -4682,35 +4647,103 @@ case 'REMASTER_FILM': {
       return { ...state, [action.field]: action.value };
     }
 
-    case 'PITCH_TO_NETWORK': {
+    case 'PITCH_SHOW_TO_NETWORK': {
       const net = TV_NETWORKS.find(n => n.id === action.networkId);
       if (!net) return { ...state, errorMsg: 'Network not found.' };
-      const existingDeal = state.tvNetworkDeals.find(d => d.networkId === action.networkId && d.active);
-      if (existingDeal) return { ...state, errorMsg: `Already have an active deal with ${net.name}.` };
-      // Pitch success depends on studio reputation and prestige
-      const pitchScore = (state.reputation || 50) * 0.4 + (state.prestige || 0) * 0.3 + randInt(10, 40);
-      const threshold = net.type === 'cable' ? 45 : 35;
+      const show = state.tvShows.find(s => s.id === action.showId && s.status === 'pilot_complete');
+      if (!show) return { ...state, errorMsg: 'Show must have a completed pilot to pitch.' };
+
+      // Pitch success based on: pilot quality, genre fit, studio reputation, luck
+      let pitchScore = (show.pilotQuality || 50) * 0.45;
+      pitchScore += (state.reputation || 50) * 0.2;
+      pitchScore += (state.prestige || 0) * 0.15;
+      pitchScore += randInt(5, 25);
+      // Genre fit bonus/penalty
+      if (net.genrePrefs.includes(show.format)) pitchScore += 10;
+      if ((net.genrePenalty || []).includes(show.format)) pitchScore -= 15;
+      // Existing relationship bonus
+      const existingDeal = state.tvNetworkDeals.find(d => d.networkId === net.id && d.active);
+      if (existingDeal) pitchScore += (existingDeal.relationship - 50) * 0.2;
+
+      const threshold = net.type === 'cable' ? 55 : 42;
       if (pitchScore < threshold) {
-        return { ...state, gameLog: [...state.gameLog, { text: `${net.name} passed on your pitch. Build more reputation and try again.`, type: 'warning' }], errorMsg: '' };
+        return {
+          ...state,
+          tvShows: state.tvShows.map(s => s.id === action.showId ? { ...s, events: [...(s.events || []), `Pitched to ${net.name} — PASSED`] } : s),
+          gameLog: [...state.gameLog, { text: `${net.name} passed on "${show.title}". Pilot quality: ${show.pilotQuality}. Try another network or improve your reputation.`, type: 'warning' }],
+          errorMsg: '',
+        };
       }
-      const deal = {
-        id: state.nextId,
-        networkId: net.id,
-        networkName: net.name,
-        networkType: net.type,
-        licenseFeePerEp: net.licenseFeePerEp,
-        adRevShare: net.adRevShare,
-        relationship: 50,
-        active: true,
-        showIds: [],
-        signedYear: state.year,
-        signedMonth: state.month,
-      };
+
+      // Network picks up the show! Calculate cost sharing
+      const networkContribution = Math.round(net.licenseFeePerEp * show.episodes * 0.5);
+      const remainingCost = Math.max(show.totalCost - show.pilotCost - networkContribution, Math.round(show.totalCost * 0.2));
+      if (state.cash < remainingCost) return { ...state, errorMsg: `${net.name} wants to pick up "${show.title}" but you need ${fmt(remainingCost)} to fund the full season (network covers ${fmt(networkContribution)}).` };
+
+      // Create/update network deal
+      let updatedDeals = [...state.tvNetworkDeals];
+      if (existingDeal) {
+        updatedDeals = updatedDeals.map(d => d.id === existingDeal.id ? { ...d, showIds: [...(d.showIds || []), show.id], relationship: Math.min(100, d.relationship + 5) } : d);
+      } else {
+        updatedDeals.push({
+          id: state.nextId,
+          networkId: net.id,
+          networkName: net.name,
+          networkType: net.type,
+          licenseFeePerEp: net.licenseFeePerEp,
+          adRevShare: net.adRevShare,
+          relationship: 55,
+          active: true,
+          showIds: [show.id],
+          signedYear: state.year,
+          signedMonth: state.month,
+        });
+      }
+
       return {
         ...state,
-        tvNetworkDeals: [...state.tvNetworkDeals, deal],
-        nextId: state.nextId + 1,
-        gameLog: [...state.gameLog, { text: `Signed development deal with ${net.name}! License fee: ${fmt(net.licenseFeePerEp)}/ep.`, type: 'success' }],
+        tvShows: state.tvShows.map(s => s.id === action.showId ? {
+          ...s,
+          status: 'production',
+          turnsInStatus: 0,
+          turnsNeeded: s.prodTurns || Math.ceil(s.episodes / 3),
+          releaseStrategy: 'network',
+          networkId: net.id,
+          networkName: net.name,
+          networkType: net.type,
+          networkContribution,
+          playerCost: remainingCost,
+          events: [...(s.events || []), `Picked up by ${net.name}!`],
+        } : s),
+        cash: state.cash - remainingCost,
+        tvNetworkDeals: updatedDeals,
+        nextId: existingDeal ? state.nextId : state.nextId + 1,
+        tvPitchingShowId: null,
+        gameLog: [...state.gameLog, { text: `${net.name} picked up "${show.title}"! Season ordered. You pay ${fmt(remainingCost)}, network covers ${fmt(networkContribution)}.`, type: 'success' }],
+        errorMsg: '',
+      };
+    }
+
+    case 'SEND_TO_STREAMING': {
+      const show = state.tvShows.find(s => s.id === action.showId && s.status === 'pilot_complete');
+      if (!show) return { ...state, errorMsg: 'Show must have a completed pilot.' };
+      if (!state.streamingPlatform) return { ...state, errorMsg: 'Launch a streaming platform first (available after 2005).' };
+      const remainingCost = show.totalCost - show.pilotCost;
+      if (state.cash < remainingCost) return { ...state, errorMsg: `Need ${fmt(remainingCost)} to fund the full season for streaming.` };
+      return {
+        ...state,
+        tvShows: state.tvShows.map(s => s.id === action.showId ? {
+          ...s,
+          status: 'production',
+          turnsInStatus: 0,
+          turnsNeeded: s.prodTurns || Math.ceil(s.episodes / 3),
+          releaseStrategy: 'streaming_exclusive',
+          playerCost: remainingCost,
+          events: [...(s.events || []), 'Ordered to series for streaming platform'],
+        } : s),
+        cash: state.cash - remainingCost,
+        tvPitchingShowId: null,
+        gameLog: [...state.gameLog, { text: `"${show.title}" ordered for streaming! Season cost: ${fmt(remainingCost)}.`, type: 'success' }],
         errorMsg: '',
       };
     }
@@ -5040,7 +5073,7 @@ case 'REMASTER_FILM': {
     case 'PRODUCE_TV_SHOW': {
       const tvCost = 5000000; // $5M per season
       if (state.cash < tvCost) return { ...state, errorMsg: 'Not enough cash for a TV show!' };
-      if (!state.streamingPlatform) return { ...state, errorMsg: 'Use the TV Deep Dive tab to produce shows via network deals, or launch a streaming platform after 2005.' };
+      if (!state.streamingPlatform) return { ...state, errorMsg: 'Use the TV tab to develop shows and pitch pilots to networks, or launch a streaming platform after 2005.' };
       const tvGenre = action.genre || 'Drama Series';
       const quality = randInt(40, 85) + (state.facilitiesLevel * 2);
       const subscriberBoost = Math.round(quality * 500 + Math.random() * 20000);
@@ -6670,11 +6703,27 @@ case 'REMASTER_FILM': {
         s.turnsInStatus = (s.turnsInStatus || 0) + 1;
 
         if (s.status === 'development' && s.turnsInStatus >= s.turnsNeeded) {
-          s.status = 'production';
+          // Development complete → start producing pilot
+          s.status = 'pilot_production';
           s.turnsInStatus = 0;
-          s.turnsNeeded = s.prodTurns || Math.ceil(s.episodes / 3);
-          s.events.push(`S${s.currentSeason} entered production`);
-          log.push({ text: `"${s.title}" S${s.currentSeason} entered production.`, type: 'info', category: 'streaming' });
+          s.turnsNeeded = 2; // 2 months to shoot pilot
+          s.events.push('Pilot entered production');
+          log.push({ text: `"${s.title}" pilot is now filming.`, type: 'info', category: 'streaming' });
+        } else if (s.status === 'pilot_production' && s.turnsInStatus >= s.turnsNeeded) {
+          // Pilot complete → calculate pilot quality, wait for player to pitch
+          const showrunner = state.contracts.find(t => t.id === s.showrunnerId);
+          let pq = (showrunner ? showrunner.skill * 0.5 : 25) + randInt(15, 35);
+          const format = TV_FORMATS.find(f => f.id === s.format);
+          if (format) pq *= format.qualityWeight;
+          if (showrunner?.traitEffect?.qualityBonus) {
+            const traitGenres = showrunner.traitEffect.genres || [];
+            if (traitGenres.includes(s.formatName)) pq += showrunner.traitEffect.qualityBonus;
+          }
+          s.pilotQuality = Math.round(clamp(pq, 15, 95));
+          s.status = 'pilot_complete';
+          s.turnsInStatus = 0;
+          s.events.push(`Pilot completed (Quality: ${s.pilotQuality})`);
+          log.push({ text: `"${s.title}" pilot is complete! Quality: ${s.pilotQuality}. Pitch it to networks or send to streaming.`, type: 'success', category: 'streaming' });
         } else if (s.status === 'production' && s.turnsInStatus >= s.turnsNeeded) {
           s.status = 'airing';
           s.turnsInStatus = 0;
@@ -13759,14 +13808,121 @@ export default function MovieMogul() {
   const renderTVDeepDive = () => {
     const tvList = state.tvShows || [];
     const tvER = state.tvEpisodeRatings || {};
+    const pilotReady = tvList.filter(s => s.status === 'pilot_complete');
+    const inPipeline = tvList.filter(s => ['development', 'pilot_production'].includes(s.status));
+    const activeShows = tvList.filter(s => ['production', 'airing'].includes(s.status));
+    const pastShows = tvList.filter(s => ['cancelled', 'ended'].includes(s.status));
     return (
       <div className="space-y-4">
         <div className="text-white font-bold text-xl mb-2">📺 TV Division</div>
-        <div className="text-gray-400 text-sm mb-4">Manage your TV empire — track episode ratings, renew or cancel shows.</div>
-        <div className="text-white font-bold text-lg mb-2">Active Shows ({tvList.filter(s => !['cancelled','ended'].includes(s.status)).length})</div>
-        {tvList.length === 0 ? <div className="text-gray-500 text-sm">No shows yet. Sign a network deal and greenlight a show below!</div> : (
+        <div className="text-gray-400 text-sm mb-4">Develop shows, produce pilots, and pitch them to broadcast & cable networks.</div>
+
+        {/* PILOTS READY TO PITCH */}
+        {pilotReady.length > 0 && (
+          <div>
+            <div className="text-white font-bold text-lg mb-2 text-amber-400">🎬 Pilots Ready to Pitch ({pilotReady.length})</div>
+            <div className="space-y-3">
+              {pilotReady.map(tvs => {
+                const tvFmt = TV_FORMATS.find(f => f.id === tvs.format);
+                return (
+                  <div key={tvs.id} className="bg-gray-800 border border-amber-700 rounded-lg p-4">
+                    <div className="flex justify-between items-start mb-2">
+                      <div>
+                        <div className="text-white font-bold">{tvs.title}</div>
+                        <div className="text-xs text-gray-400">{tvFmt?.name || tvs.format} | {tvs.episodes} eps planned</div>
+                        <div className="text-xs text-gray-400">Showrunner: {tvs.showrunnerName}</div>
+                      </div>
+                      <div className="text-right">
+                        <div className="text-amber-400 text-sm font-bold">PILOT COMPLETE</div>
+                        <div className="text-xs text-gray-300">Pilot Quality: <span className={tvs.pilotQuality >= 70 ? 'text-green-400' : tvs.pilotQuality >= 50 ? 'text-amber-400' : 'text-red-400'}>{tvs.pilotQuality}</span></div>
+                      </div>
+                    </div>
+                    <div className="bg-gray-700 rounded p-2 mb-2 text-xs">
+                      <div className="text-gray-300 mb-1 font-bold">Full Season Budget: {fmt(tvs.totalCost)} (Pilot already paid: {fmt(tvs.pilotCost)})</div>
+                    </div>
+                    <div className="text-gray-400 text-xs mb-2">Pitch to a network or send to streaming:</div>
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
+                      {TV_NETWORKS.map(net => {
+                        const isPreferred = net.genrePrefs.includes(tvs.format);
+                        const isPenalized = (net.genrePenalty || []).includes(tvs.format);
+                        const existingDeal = (state.tvNetworkDeals || []).find(d => d.networkId === net.id && d.active);
+                        const netContrib = Math.round(net.licenseFeePerEp * tvs.episodes * 0.5);
+                        const remaining = Math.max(tvs.totalCost - tvs.pilotCost - netContrib, Math.round(tvs.totalCost * 0.2));
+                        return (
+                          <div key={net.id} className={'bg-gray-700/50 border rounded p-2 ' + (net.type === 'cable' ? 'border-purple-700/50' : 'border-blue-700/50')}>
+                            <div className="flex justify-between items-center">
+                              <div>
+                                <span className="text-white text-xs font-bold">{net.icon} {net.name}</span>
+                                {existingDeal && <span className="ml-1 text-green-400 text-xs">✓ Relationship</span>}
+                              </div>
+                              <button onClick={() => dispatch({ type: 'PITCH_SHOW_TO_NETWORK', showId: tvs.id, networkId: net.id })}
+                                disabled={state.cash < remaining}
+                                className="bg-teal-700 hover:bg-teal-600 disabled:opacity-30 text-white text-xs px-2 py-1 rounded">Pitch</button>
+                            </div>
+                            <div className="text-xs text-gray-500 mt-0.5">
+                              {isPreferred ? <span className="text-green-400">⭐ Loves this genre</span> : isPenalized ? <span className="text-red-400">⚠️ Poor fit</span> : <span>Neutral fit</span>}
+                              {' · '}{fmt(net.licenseFeePerEp)}/ep · You pay: {fmt(remaining)}
+                            </div>
+                          </div>
+                        );
+                      })}
+                    </div>
+                    {state.streamingPlatform && (
+                      <div className="mt-2">
+                        <button onClick={() => dispatch({ type: 'SEND_TO_STREAMING', showId: tvs.id })}
+                          disabled={state.cash < (tvs.totalCost - tvs.pilotCost)}
+                          className="w-full bg-purple-700 hover:bg-purple-600 disabled:opacity-30 text-white text-xs px-3 py-2 rounded font-bold">
+                          🎥 Send to Streaming Platform ({fmt(tvs.totalCost - tvs.pilotCost)} for full season)
+                        </button>
+                      </div>
+                    )}
+                    {tvs.events && tvs.events.filter(e => e.includes('PASSED')).length > 0 && (
+                      <div className="mt-2 text-xs text-red-400">
+                        {tvs.events.filter(e => e.includes('PASSED')).map((e, i) => <div key={i}>❌ {e}</div>)}
+                      </div>
+                    )}
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+        )}
+
+        {/* IN DEVELOPMENT PIPELINE */}
+        {inPipeline.length > 0 && (
+          <div>
+            <div className="text-white font-bold text-lg mb-2">🔧 In Development ({inPipeline.length})</div>
+            <div className="space-y-2">
+              {inPipeline.map(tvs => {
+                const tvFmt = TV_FORMATS.find(f => f.id === tvs.format);
+                const statusLabel = tvs.status === 'development' ? 'Writing & Pre-Production' : 'Filming Pilot';
+                const statusColor = tvs.status === 'development' ? 'text-blue-400' : 'text-amber-400';
+                const progress = tvs.turnsNeeded > 0 ? Math.round((tvs.turnsInStatus / tvs.turnsNeeded) * 100) : 0;
+                return (
+                  <div key={tvs.id} className="bg-gray-800 border border-gray-600 rounded-lg p-3">
+                    <div className="flex justify-between items-center mb-1">
+                      <div>
+                        <span className="text-white font-bold text-sm">{tvs.title}</span>
+                        <span className="text-gray-400 text-xs ml-2">{tvFmt?.name || tvs.format}</span>
+                      </div>
+                      <div className={statusColor + ' text-xs font-bold'}>{statusLabel}</div>
+                    </div>
+                    <div className="w-full bg-gray-700 rounded-full h-1.5 mt-1">
+                      <div className={'h-1.5 rounded-full ' + (tvs.status === 'development' ? 'bg-blue-500' : 'bg-amber-500')} style={{ width: progress + '%' }} />
+                    </div>
+                    <div className="text-xs text-gray-500 mt-1">Showrunner: {tvs.showrunnerName} · {tvs.turnsInStatus}/{tvs.turnsNeeded} months</div>
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+        )}
+
+        {/* ACTIVE SHOWS (production + airing) */}
+        <div className="text-white font-bold text-lg mb-2">📺 Active Shows ({activeShows.length})</div>
+        {activeShows.length === 0 ? <div className="text-gray-500 text-sm">No active shows. Develop a pilot and pitch it to a network!</div> : (
           <div className="space-y-3">
-            {tvList.filter(s => !['cancelled','ended'].includes(s.status)).map(tvs => {
+            {activeShows.map(tvs => {
               const eps = tvER[tvs.id] || [];
               const avgR = eps.length > 0 ? (eps.reduce((s,e) => s + e.rating, 0) / eps.length).toFixed(1) : 'N/A';
               const latest = eps[eps.length-1];
@@ -13781,8 +13937,9 @@ export default function MovieMogul() {
                       {tvs.releaseStrategy === 'streaming_exclusive' && <div className="text-xs mt-0.5 px-1.5 py-0.5 rounded inline-block bg-purple-900 text-purple-300">🎥 Streaming Exclusive</div>}
                     </div>
                     <div className="text-right">
-                      <div className={'text-sm font-bold ' + (tvs.status === 'airing' ? 'text-green-400' : tvs.status === 'production' ? 'text-amber-400' : 'text-blue-400')}>{tvs.status.toUpperCase()}</div>
+                      <div className={'text-sm font-bold ' + (tvs.status === 'airing' ? 'text-green-400' : 'text-amber-400')}>{tvs.status === 'production' ? 'IN PRODUCTION' : 'AIRING'}</div>
                       {tvs.quality > 0 && <div className="text-xs text-gray-400">Q: {tvs.quality}</div>}
+                      {tvs.pilotQuality > 0 && !tvs.quality && <div className="text-xs text-gray-400">Pilot Q: {tvs.pilotQuality}</div>}
                     </div>
                   </div>
                   {eps.length > 0 && (
@@ -13818,15 +13975,47 @@ export default function MovieMogul() {
             })}
           </div>
         )}
-        {tvList.filter(s => ['cancelled','ended'].includes(s.status)).length > 0 && (
+
+        {/* NETWORK RELATIONSHIPS */}
+        {(state.tvNetworkDeals || []).filter(d => d.active).length > 0 && (
+          <div className="bg-gray-800 border border-gray-600 rounded-lg p-4">
+            <div className="text-white font-bold mb-2">📡 Network Relationships</div>
+            <div className="space-y-2">
+              {(state.tvNetworkDeals || []).filter(d => d.active).map(d => {
+                const net = TV_NETWORKS.find(n => n.id === d.networkId);
+                const dealShows = tvList.filter(s => s.networkId === d.networkId);
+                return (
+                  <div key={d.id} className="bg-gray-700 rounded p-3">
+                    <div className="flex justify-between items-center">
+                      <div>
+                        <span className="text-white font-bold">{net?.icon || '📺'} {d.networkName}</span>
+                        <span className={'ml-2 text-xs px-1.5 py-0.5 rounded ' + (d.networkType === 'cable' ? 'bg-purple-800 text-purple-300' : 'bg-blue-800 text-blue-300')}>{d.networkType}</span>
+                      </div>
+                      <div className="text-right">
+                        <div className="text-green-400 text-xs">{fmt(d.licenseFeePerEp)}/ep</div>
+                        <div className="text-xs">Relationship: <span className={d.relationship >= 70 ? 'text-green-400 font-bold' : d.relationship >= 40 ? 'text-amber-400' : 'text-red-400'}>{d.relationship}/100</span></div>
+                      </div>
+                    </div>
+                    {dealShows.length > 0 && (
+                      <div className="text-xs text-gray-400 mt-1">Shows: {dealShows.map(s => s.title).join(', ')}</div>
+                    )}
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+        )}
+
+        {/* PAST SHOWS */}
+        {pastShows.length > 0 && (
           <div>
             <div className="text-white font-bold text-lg mb-2">Past Shows</div>
             <div className="space-y-1">
-              {tvList.filter(s => ['cancelled','ended'].includes(s.status)).map(tvs => (
+              {pastShows.map(tvs => (
                 <div key={tvs.id} className={'bg-gray-800 border rounded p-2 flex justify-between ' + (tvs.status === 'ended' ? 'border-gray-600' : 'border-red-800')}>
                   <div>
                     <div className="text-white text-sm">{tvs.title}</div>
-                    <div className="text-xs text-gray-400">{tvs.seasons}S | Q:{tvs.quality}</div>
+                    <div className="text-xs text-gray-400">{tvs.seasons}S | Q:{tvs.quality}{tvs.networkName ? ` · ${tvs.networkName}` : ''}</div>
                   </div>
                   <div className={'text-xs ' + (tvs.status === 'ended' ? 'text-gray-400' : 'text-red-400')}>{tvs.status}</div>
                 </div>
@@ -13834,105 +14023,23 @@ export default function MovieMogul() {
             </div>
           </div>
         )}
-        {/* Network Deals Section */}
-        <div className="bg-gray-800 border border-gray-600 rounded-lg p-4">
-          <div className="text-white font-bold mb-2">📡 Network Deals</div>
-          <div className="text-gray-400 text-xs mb-3">Sign deals with broadcast and cable networks to produce and distribute TV shows. Networks cover part of production costs and provide audience reach.</div>
-          {(state.tvNetworkDeals || []).filter(d => d.active).length > 0 && (
-            <div className="mb-3 space-y-2">
-              <div className="text-gray-300 text-xs font-bold">Active Deals:</div>
-              {(state.tvNetworkDeals || []).filter(d => d.active).map(d => {
-                const net = TV_NETWORKS.find(n => n.id === d.networkId);
-                return (
-                  <div key={d.id} className="bg-gray-700 rounded p-2 flex justify-between items-center">
-                    <div>
-                      <span className="text-white text-sm font-bold">{net?.icon || '📺'} {d.networkName}</span>
-                      <span className={'ml-2 text-xs px-1.5 py-0.5 rounded ' + (d.networkType === 'cable' ? 'bg-purple-800 text-purple-300' : 'bg-blue-800 text-blue-300')}>{d.networkType}</span>
-                    </div>
-                    <div className="text-right">
-                      <div className="text-green-400 text-xs">{fmt(d.licenseFeePerEp)}/ep</div>
-                      <div className="text-xs text-gray-400">Rel: <span className={d.relationship >= 70 ? 'text-green-400' : d.relationship >= 40 ? 'text-amber-400' : 'text-red-400'}>{d.relationship}</span>/100</div>
-                    </div>
-                  </div>
-                );
-              })}
-            </div>
-          )}
-          <div className="text-gray-300 text-xs font-bold mb-2">Available Networks:</div>
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
-            {TV_NETWORKS.filter(n => !(state.tvNetworkDeals || []).some(d => d.networkId === n.id && d.active)).map(net => (
-              <div key={net.id} className={'bg-gray-700 border rounded p-2 ' + (net.type === 'cable' ? 'border-purple-700' : 'border-blue-700')}>
-                <div className="flex justify-between items-start">
-                  <div>
-                    <div className="text-white text-sm font-bold">{net.icon} {net.name}</div>
-                    <div className={'text-xs px-1.5 py-0.5 rounded inline-block mt-0.5 ' + (net.type === 'cable' ? 'bg-purple-900 text-purple-300' : 'bg-blue-900 text-blue-300')}>{net.type}</div>
-                  </div>
-                  <button onClick={() => dispatch({ type: 'PITCH_TO_NETWORK', networkId: net.id })}
-                    className="bg-teal-700 hover:bg-teal-600 text-white text-xs px-2 py-1 rounded">Pitch</button>
-                </div>
-                <div className="text-gray-400 text-xs mt-1">{net.desc}</div>
-                <div className="text-xs text-gray-500 mt-1">License: {fmt(net.licenseFeePerEp)}/ep | Reach: {Math.round(net.audienceReach * 100)}% | Prestige: {net.prestigeMod > 1 ? '+' + Math.round((net.prestigeMod - 1) * 100) + '%' : 'Standard'}</div>
-                <div className="text-xs text-gray-500">Prefers: {net.genrePrefs.join(', ')}</div>
-              </div>
-            ))}
-          </div>
-        </div>
 
-        {/* Greenlight Section */}
+        {/* GREENLIGHT NEW SHOW */}
         <div className="bg-gray-800 border border-gray-600 rounded-lg p-4">
-          <div className="text-white font-bold mb-2">🎬 Greenlight New Show</div>
-          {/* Distribution Type Toggle */}
-          <div className="flex gap-2 mb-3">
-            <button onClick={() => dispatch({ type: 'SET_DEV', key: 'tvDevDistType', value: 'network' })}
-              className={'px-3 py-1.5 rounded text-xs font-bold transition border ' + ((state.tvDevDistType || 'network') === 'network' ? 'bg-blue-700 border-blue-500 text-white' : 'bg-gray-700 border-gray-600 text-gray-400 hover:bg-gray-600')}>
-              📡 Network TV
-            </button>
-            <button onClick={() => dispatch({ type: 'SET_DEV', key: 'tvDevDistType', value: 'streaming_exclusive' })}
-              disabled={!state.streamingPlatform}
-              className={'px-3 py-1.5 rounded text-xs font-bold transition border ' + ((state.tvDevDistType) === 'streaming_exclusive' ? 'bg-purple-700 border-purple-500 text-white' : 'bg-gray-700 border-gray-600 text-gray-400 hover:bg-gray-600') + (!state.streamingPlatform ? ' opacity-30 cursor-not-allowed' : '')}>
-              🎥 Streaming{!state.streamingPlatform ? ' (2005+)' : ''}
-            </button>
-          </div>
-
-          {/* Network Selection (only for network distribution) */}
-          {(state.tvDevDistType || 'network') === 'network' && (
-            <div className="mb-3">
-              <div className="text-gray-400 text-xs mb-1">Select Network:</div>
-              <div className="flex flex-wrap gap-1">
-                {(state.tvNetworkDeals || []).filter(d => d.active).map(d => {
-                  const net = TV_NETWORKS.find(n => n.id === d.networkId);
-                  return (
-                    <button key={d.networkId} onClick={() => dispatch({ type: 'SET_DEV', key: 'tvDevNetwork', value: d.networkId })}
-                      className={'px-2 py-1 rounded text-xs transition border ' + (state.tvDevNetwork === d.networkId ? 'bg-teal-700 border-teal-400 text-white' : 'bg-gray-700 border-gray-600 text-gray-300 hover:bg-gray-600')}>
-                      {net?.icon || '📺'} {d.networkName}
-                    </button>
-                  );
-                })}
-                {(state.tvNetworkDeals || []).filter(d => d.active).length === 0 && (
-                  <div className="text-amber-400 text-xs">⚠️ No network deals yet. Pitch to a network above first!</div>
-                )}
-              </div>
-            </div>
-          )}
+          <div className="text-white font-bold mb-2">🎬 Develop New Show</div>
+          <div className="text-gray-400 text-xs mb-3">Select a format and showrunner to begin development. You'll produce a pilot first, then pitch it to networks (or send to streaming).</div>
 
           {/* Format Selection */}
           <div className="text-gray-400 text-xs mb-1">Show Format:</div>
           <div className="grid grid-cols-2 md:grid-cols-4 gap-2">
-            {TV_FORMATS.map(f => {
-              const selectedNet = state.tvDevNetwork ? TV_NETWORKS.find(n => n.id === state.tvDevNetwork) : null;
-              const isPreferred = selectedNet && selectedNet.genrePrefs.includes(f.id);
-              const isPenalized = selectedNet && (selectedNet.genrePenalty || []).includes(f.id);
-              return (
-                <button key={f.id} onClick={() => dispatch({ type: 'SET_DEV', key: 'tvDevFormat', value: f.id })}
-                  className={'p-2 rounded text-xs text-left transition border ' + (state.tvDevFormat === f.id ? 'bg-teal-800 border-teal-500 text-white' : 'bg-gray-700 border-gray-600 text-gray-300 hover:bg-gray-600')}>
-                  <div className="font-bold">{f.name} {isPreferred ? '⭐' : ''}{isPenalized ? '⚠️' : ''}</div>
-                  <div className="text-gray-400">{f.episodesRange[0]}-{f.episodesRange[1]} eps</div>
-                  <div className="text-gray-500">{fmt(f.baseCostPerEp)}/ep</div>
-                  {isPreferred && <div className="text-green-400 text-xs">Network favorite</div>}
-                  {isPenalized && <div className="text-red-400 text-xs">Poor network fit</div>}
-                </button>
-              );
-            })}
+            {TV_FORMATS.map(f => (
+              <button key={f.id} onClick={() => dispatch({ type: 'SET_DEV', key: 'tvDevFormat', value: f.id })}
+                className={'p-2 rounded text-xs text-left transition border ' + (state.tvDevFormat === f.id ? 'bg-teal-800 border-teal-500 text-white' : 'bg-gray-700 border-gray-600 text-gray-300 hover:bg-gray-600')}>
+                <div className="font-bold">{f.name}</div>
+                <div className="text-gray-400">{f.episodesRange[0]}-{f.episodesRange[1]} eps</div>
+                <div className="text-gray-500">{fmt(f.baseCostPerEp)}/ep</div>
+              </button>
+            ))}
           </div>
           {state.tvDevFormat && (
             <div className="mt-3 space-y-2">
@@ -13940,13 +14047,13 @@ export default function MovieMogul() {
                 <select value={state.tvDevShowrunnerId || ''} onChange={e => dispatch({ type: 'SET_DEV', key: 'tvDevShowrunnerId', value: e.target.value ? parseInt(e.target.value) : null })}
                   className="bg-gray-700 text-white rounded px-2 py-1 text-xs flex-1">
                   <option value="">Select Showrunner...</option>
-                  {state.contracts.filter(t => ['writer','producer','director'].includes(t.type)).map(t => (
+                  {state.contracts.filter(t => ['writer','producer','director','showrunner'].includes(t.type)).map(t => (
                     <option key={t.id} value={t.id}>{t.name} ({t.type}, {t.skill})</option>
                   ))}
                 </select>
                 <button onClick={() => dispatch({ type: 'GREENLIGHT_TV' })}
-                  disabled={!state.tvDevFormat || ((state.tvDevDistType || 'network') === 'network' && !state.tvDevNetwork)}
-                  className="bg-teal-600 hover:bg-teal-500 disabled:opacity-40 text-white text-xs px-4 py-1.5 rounded font-bold transition">Greenlight</button>
+                  disabled={!state.tvDevFormat || !state.tvDevShowrunnerId}
+                  className="bg-teal-600 hover:bg-teal-500 disabled:opacity-40 text-white text-xs px-4 py-1.5 rounded font-bold transition">Develop Pilot</button>
               </div>
               {(() => {
                 const fmt2 = TV_FORMATS.find(f => f.id === state.tvDevFormat);
@@ -13954,19 +14061,41 @@ export default function MovieMogul() {
                 const eps = state.tvDevEpisodes || fmt2.episodesRange[0];
                 const costPerEp2 = (state.tvDevBudgetPerEp || 3) * 1e6;
                 const totalBudget = eps * costPerEp2;
-                const netDeal = state.tvDevNetwork ? (state.tvNetworkDeals || []).find(d => d.networkId === state.tvDevNetwork && d.active) : null;
-                const netContrib = netDeal ? Math.round(netDeal.licenseFeePerEp * eps * 0.5) : 0;
-                const playerPays = netContrib > 0 ? Math.max(totalBudget - netContrib, Math.round(totalBudget * 0.3)) : totalBudget;
+                const pilotCost2 = Math.round(totalBudget * 0.25);
                 return (
                   <div className="bg-gray-700 rounded p-2 text-xs">
-                    <div className="flex justify-between"><span className="text-gray-400">Total Budget:</span><span className="text-white">{fmt(totalBudget)}</span></div>
-                    {netContrib > 0 && <div className="flex justify-between"><span className="text-blue-400">Network Covers:</span><span className="text-blue-300">-{fmt(netContrib)}</span></div>}
-                    <div className="flex justify-between border-t border-gray-600 mt-1 pt-1"><span className="text-gray-300 font-bold">You Pay:</span><span className={playerPays <= state.cash ? 'text-green-400' : 'text-red-400'}>{fmt(playerPays)}</span></div>
+                    <div className="flex justify-between"><span className="text-gray-400">Full Season Budget:</span><span className="text-white">{fmt(totalBudget)}</span></div>
+                    <div className="flex justify-between border-t border-gray-600 mt-1 pt-1"><span className="text-amber-300 font-bold">Pilot Cost (25%):</span><span className={pilotCost2 <= state.cash ? 'text-green-400' : 'text-red-400'}>{fmt(pilotCost2)}</span></div>
+                    <div className="text-gray-500 mt-1">Remaining cost paid when a network picks up or you send to streaming.</div>
                   </div>
                 );
               })()}
             </div>
           )}
+        </div>
+
+        {/* NETWORK DIRECTORY */}
+        <div className="bg-gray-800 border border-gray-600 rounded-lg p-4">
+          <div className="text-white font-bold mb-2">📡 Network Directory</div>
+          <div className="text-gray-400 text-xs mb-3">These networks are available for pitching your completed pilots. Genre preferences affect pickup chances.</div>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
+            {TV_NETWORKS.map(net => {
+              const hasRelationship = (state.tvNetworkDeals || []).some(d => d.networkId === net.id && d.active);
+              return (
+                <div key={net.id} className={'bg-gray-700 border rounded p-2 ' + (net.type === 'cable' ? 'border-purple-700/50' : 'border-blue-700/50')}>
+                  <div className="flex justify-between items-start">
+                    <div>
+                      <div className="text-white text-sm font-bold">{net.icon} {net.name} {hasRelationship ? <span className="text-green-400 text-xs">✓</span> : ''}</div>
+                      <div className={'text-xs px-1.5 py-0.5 rounded inline-block mt-0.5 ' + (net.type === 'cable' ? 'bg-purple-900 text-purple-300' : 'bg-blue-900 text-blue-300')}>{net.type}</div>
+                    </div>
+                  </div>
+                  <div className="text-gray-400 text-xs mt-1">{net.desc}</div>
+                  <div className="text-xs text-gray-500 mt-1">License: {fmt(net.licenseFeePerEp)}/ep | Reach: {Math.round(net.audienceReach * 100)}% | Prestige: {net.prestigeMod > 1 ? '+' + Math.round((net.prestigeMod - 1) * 100) + '%' : 'Standard'}</div>
+                  <div className="text-xs text-gray-500">Prefers: {net.genrePrefs.join(', ')}</div>
+                </div>
+              );
+            })}
+          </div>
         </div>
       </div>
     );
