@@ -245,16 +245,40 @@ const calcFlopSeverity = (film) => {
 };
 
 // ==================== SLEEPER HIT SYSTEM ====================
-const SLEEPER_HIT_THRESHOLD = { maxBudget: 25e6, minAudienceScore: 80 };
-const calcSleeperMultiplier = (film) => {
-  if (!film || film.budget > SLEEPER_HIT_THRESHOLD.maxBudget) return 1.0;
-  if ((film.audienceScore || 0) < SLEEPER_HIT_THRESHOLD.minAudienceScore) return 1.0;
-  // Higher audience score = bigger sleeper multiplier
-  const audienceExcess = (film.audienceScore - 80) / 20; // 0-1 range for scores 80-100
-  const qualityFactor = Math.max(0, (film.quality || 50) - 60) / 40; // bonus for quality above 60
-  const budgetFactor = 1.5 - (film.budget / SLEEPER_HIT_THRESHOLD.maxBudget); // smaller budget = bigger multiplier
-  return 1.0 + (audienceExcess * 0.8 + qualityFactor * 0.6) * budgetFactor; // up to ~2.9x for perfect conditions
+// Sleeper hits are RANDOM — good films have better odds, but it's never guaranteed.
+// Even mediocre films can occasionally catch lightning in a bottle.
+const calcSleeperResult = (film) => {
+  if (!film) return { isSleeper: false, mult: 1.0 };
+  const budgetM = (film.budget || 0) / 1e6;
+
+  // Base chance depends on budget: cheaper = more room to surprise
+  // Big-budget films can't really be "sleepers" — the expectations are too high
+  let baseChance = budgetM < 5 ? 0.20 : budgetM < 15 ? 0.14 : budgetM < 30 ? 0.08 : budgetM < 50 ? 0.03 : 0;
+  if (baseChance === 0) return { isSleeper: false, mult: 1.0 };
+
+  // Quality and audience score improve odds
+  const q = film.quality || 50;
+  const a = film.audienceScore || 50;
+  if (q >= 80) baseChance += 0.12;
+  else if (q >= 65) baseChance += 0.06;
+  if (a >= 85) baseChance += 0.15;
+  else if (a >= 70) baseChance += 0.08;
+
+  // Genre: Horror and Comedy have more sleeper potential historically
+  const sleeperGenres = ['Horror', 'Comedy', 'Thriller', 'Documentary'];
+  if (sleeperGenres.includes(film.genre)) baseChance += 0.05;
+
+  // Random gate: roll the dice
+  if (Math.random() > baseChance) return { isSleeper: false, mult: 1.0 };
+
+  // It's a sleeper! Multiplier is random within a range based on film quality
+  const minMult = 1.3;
+  const maxMult = q >= 80 ? 3.5 : q >= 65 ? 2.5 : 2.0;
+  const mult = minMult + Math.random() * (maxMult - minMult);
+  return { isSleeper: true, mult };
 };
+// Legacy wrapper for compatibility
+const calcSleeperMultiplier = (film) => calcSleeperResult(film).mult;
 
 // ==================== IP MARKETPLACE ====================
 const IP_CATEGORIES = {
@@ -910,6 +934,25 @@ const getEraMarketingMax = (year) => {
 
 // BUDGET_TIERS and getBudgetTier are defined in the box office section above
 
+// Era gross ceiling multiplier — scales box office to period-accurate levels
+// In 1970 the biggest films grossed ~$100-200M. $1B wasn't hit until Titanic (1997).
+const getEraGrossMult = (year) => {
+  if (year < 1927) return 0.01;  // Silent: <$5M was huge
+  if (year < 1948) return 0.03;  // Golden Age: ~$10-20M hits
+  if (year < 1960) return 0.05;  // Post-War: ~$30-50M possible
+  if (year < 1975) return 0.10;  // Early New Hollywood: ~$50-100M
+  if (year < 1980) return 0.15;  // Jaws/Star Wars era: ~$200-300M
+  if (year < 1990) return 0.25;  // 80s blockbusters: ~$300-500M
+  if (year < 1998) return 0.40;  // Early 90s: ~$500-800M
+  if (year < 2005) return 0.55;  // Post-Titanic: $1B possible
+  if (year < 2010) return 0.70;  // Franchise era: $1-1.5B
+  if (year < 2015) return 0.85;  // Avatar era: $2B possible
+  if (year < 2025) return 1.00;  // Modern: full scale
+  if (year < 2045) return 1.15;  // Near future inflation
+  if (year < 2080) return 1.40;  // Far future
+  return 1.80;                    // Distant future
+};
+
 const getEraIntlMult = (year) => {
   if (year < 1980) return 0.3;
   if (year < 2000) return 0.5;
@@ -1005,6 +1048,18 @@ const TRAITS = {
     { name: 'Risk Taker', desc: 'Higher variance: quality ±15', effect: { qualityVariance: 15 } },
     { name: 'Legendary Producer', desc: '+5 quality, +3 prestige per film', effect: { qualityFlat: 5, prestigeBonus: 3 } },
     { name: 'Development Expert', desc: '-1 development month', effect: { devSpeed: 1 } },
+  ],
+  composer: [
+    { name: 'Orchestral Master', desc: '+8 quality on Drama/Romance', effect: { qualityBonus: 8, genres: ['Drama', 'Romance'] } },
+    { name: 'Synth Pioneer', desc: '+10 quality on Sci-Fi/Horror', effect: { qualityBonus: 10, genres: ['Sci-Fi', 'Horror'] } },
+    { name: 'Action Scorer', desc: '+8 quality on Action/Thriller', effect: { qualityBonus: 8, genres: ['Action', 'Thriller'] } },
+    { name: 'Minimalist', desc: 'Lower salary, subtle but effective scores', effect: { salaryDiscount: 0.3 } },
+    { name: 'Award Favorite', desc: '+6 prestige per film, critics adore the scores', effect: { prestigeBonus: 6 } },
+    { name: 'Leitmotif Genius', desc: '+10 quality on franchise/sequel films', effect: { franchiseLore: 10 } },
+    { name: 'Versatile Composer', desc: 'No genre penalty for any film type', effect: { versatile: true } },
+    { name: 'Chart Topper', desc: 'Soundtracks generate +5% gross from album sales', effect: { grossBonus: 0.05 } },
+    { name: 'Prolific', desc: 'Can score multiple films per year without quality loss', effect: { noOverwork: true } },
+    { name: 'Experimental', desc: '+15 quality on art films, -5 on blockbusters', effect: { qualityBonus: 15, genres: ['Drama'], blockbusterPenalty: -5 } },
   ],
   showrunner: [
     { name: 'Prestige Showrunner', desc: '+10 quality on Drama/Thriller', effect: { qualityBonus: 10, genres: ['Drama Series', 'Thriller Series'] } },
@@ -1991,8 +2046,7 @@ const calcMerchandiseRevenue = (franchises, films) => {
 // ==================== LICENSING WINDOWS ====================
 // Time decay: revenue drops 3% per year after release as content ages
 const LICENSING_WINDOWS = [
-  { id: 'homeVideo
-', name: 'Home Video / VOD', monthsAfterRelease: 4, revenuePct: 0.04, duration: 12, desc: 'Physical & digital sales' },
+  { id: 'homeVideo', name: 'Home Video / VOD', monthsAfterRelease: 4, revenuePct: 0.04, duration: 12, desc: 'Physical & digital sales' },
   { id: 'streaming', name: 'Streaming Rights', monthsAfterRelease: 12, revenuePct: 0.03, duration: 24, desc: 'Platform licensing deals' },
   { id: 'tvSyndication', name: 'TV Syndication', monthsAfterRelease: 24, revenuePct: 0.02, duration: 36, desc: 'Network & cable reruns' },
   { id: 'library', name: 'Library Licensing', monthsAfterRelease: 48, revenuePct: 0.008, duration: 999, desc: 'Perpetual catalog value' },
@@ -2638,6 +2692,8 @@ const calcQuality = (film, facilitiesLevel, genreTrend, specialization) => {
 const calcBoxOffice = (quality, budget, marketing, year, genre, film) => {
   const budgetM = budget / 1e6;
   const tier = getBudgetTier(budget);
+  const eraGrossMult = getEraGrossMult(year);
+  const eraGrossCeiling = tier.grossCeiling * eraGrossMult; // era-scaled ceiling
 
   // === REALISTIC BOX OFFICE SCALING ===
   const qNorm = clamp(quality, 0, 100) / 100;
@@ -2664,8 +2720,8 @@ const calcBoxOffice = (quality, budget, marketing, year, genre, film) => {
     }
   }
 
-  // Base domestic — use budget tier ceiling as scaling reference
-  let domestic = Math.min(budgetM * grossMult * marketMult * starPowerMult * 1e6, tier.grossCeiling * 0.4);
+  // Base domestic — use era-scaled ceiling as reference
+  let domestic = Math.min(budgetM * grossMult * marketMult * starPowerMult * 1e6, eraGrossCeiling * 0.4);
 
   // International ratio varies by genre
   const isGlobalGenre = ['Action', 'Sci-Fi', 'Animation', 'Fantasy'].includes(genre);
@@ -2687,9 +2743,9 @@ const calcBoxOffice = (quality, budget, marketing, year, genre, film) => {
     international += regionGross;
   });
 
-  // Cap total gross at tier ceiling
-  if (domestic + international > tier.grossCeiling) {
-    const scale = tier.grossCeiling / (domestic + international);
+  // Cap total gross at era-scaled ceiling
+  if (domestic + international > eraGrossCeiling) {
+    const scale = eraGrossCeiling / (domestic + international);
     domestic *= scale;
     international *= scale;
   }
@@ -2734,9 +2790,10 @@ const calcBoxOffice = (quality, budget, marketing, year, genre, film) => {
   if (film && film._twinFilmPenalty) { domestic *= (1 - film._twinFilmPenalty); international *= (1 - film._twinFilmPenalty); }
   if (film && film._leakedScript) { domestic *= 0.85; international *= 0.85; }
 
-  // Era revenue modifier
+  // Era revenue modifier (softened — gross ceiling already era-scaled)
+  // This now only adds a small nudge for production quality differences across eras
   if (film && film._eraBudgetMult) {
-    const eraRevMult = 0.7 + film._eraBudgetMult * 0.3;
+    const eraRevMult = 0.92 + film._eraBudgetMult * 0.08;
     domestic *= eraRevMult; international *= eraRevMult;
   }
 
@@ -2764,11 +2821,11 @@ const calcBoxOffice = (quality, budget, marketing, year, genre, film) => {
   domestic *= womMultiplier;
   international *= womMultiplier;
 
-  // === SLEEPER HIT ===
-  if (film && budgetM < 25 && audienceScorePreview >= 80 && quality >= 65) {
-    const sleeperMult = calcSleeperMultiplier({ ...film, audienceScore: audienceScorePreview, quality });
-    domestic *= sleeperMult;
-    international *= sleeperMult * 0.8; // sleepers are mostly domestic phenomena
+  // === SLEEPER HIT (random chance, not guaranteed) ===
+  const sleeperResult = film ? calcSleeperResult({ ...film, audienceScore: audienceScorePreview, quality, genre }) : { isSleeper: false, mult: 1.0 };
+  if (sleeperResult.isSleeper) {
+    domestic *= sleeperResult.mult;
+    international *= sleeperResult.mult * 0.7; // sleepers are mostly domestic phenomena
   }
 
   // === COMPUTE SPLIT SCORES (Critics vs Audience) ===
@@ -2798,7 +2855,7 @@ const calcBoxOffice = (quality, budget, marketing, year, genre, film) => {
   if (film && film.isIP && film.ipRecognition > 0) {
     const cat = IP_CATEGORIES[film.ipCategory] || {};
     const audienceFloor = (cat.audienceFloor || 0) * IP_AUDIENCE_MULT[film.ipAudience || 'medium'];
-    const floorDomestic = tier.grossCeiling * audienceFloor * 0.3; // floor is % of ceiling
+    const floorDomestic = eraGrossCeiling * audienceFloor * 0.3; // floor is % of era-scaled ceiling
     if (domestic < floorDomestic) domestic = floorDomestic;
   }
 
@@ -2819,7 +2876,7 @@ const calcBoxOffice = (quality, budget, marketing, year, genre, film) => {
     regionBreakdown,
     openingWeekend,
     budgetTier: tier.id,
-    isSleeper: budgetM < 25 && audienceScore >= 80 && quality >= 65,
+    isSleeper: sleeperResult.isSleeper,
   };
 };
 
@@ -2856,6 +2913,7 @@ const INIT = {
   scripts: [],
   ipMarketplace: [],
   ownedIPs: [],
+  ipBiddingWar: null,        // {ip, currentBid, playerBid, rivals:[{name,maxBid,active}], round, maxRounds}
   pendingScreenplays: [],
   devMode: 'browse',
   screenplayBudget: 1,
@@ -2883,6 +2941,7 @@ const INIT = {
   devEnsembleId: null,       // ensemble actor
   devWriterId: null,
   devProducerId: null,
+  devComposerId: null,
   devFilmType: 'original',  // 'original' | 'sequel' | 'reboot' | 'adaptation'
   devAdaptation: null,      // index into ADAPTATIONS
   devFranchiseId: null,     // for sequels/reboots
@@ -2928,6 +2987,9 @@ const INIT = {
   celebration: null,        // {type: 'confetti'|'fireworks', color: 'gold'|'green', message: ''}
   activeBidding: null,      // bidding war state
   showCeremony: false,      // whether awards show modal is active
+  achievementPopups: [],    // [{id, name, desc, timestamp}] — toast queue for new achievements
+  selectedRivalIdx: null,   // index into competitors[] for rival profile panel
+  selectedFilmId: null,     // film.id for film detail panel
   // ---- NEW FEATURES ----
   // Filming location
   devLocation: 'hollywood', // filming location id
@@ -3118,6 +3180,7 @@ function reducer(state, action) {
         makeTalent(2, 'actor', [35, 55]),
         makeTalent(3, 'writer', [35, 55]),
         makeTalent(4, 'producer', [35, 55]),
+        makeTalent(5, 'composer', [30, 50]),
       ];
       // Mark player's starting talent
       contracts.forEach(t => {
@@ -3160,6 +3223,14 @@ function reducer(state, action) {
         talent.signedTo = null;
         worldTalent.push(talent);
       }
+      // Composers: 10-15 (film score composers — John Williams, Ennio Morricone, etc.)
+      const composerCount = randInt(10, 15);
+      for (let i = 0; i < composerCount; i++) {
+        const talent = makeTalent(nextId++, 'composer', [20, 85], i < 3 ? [40, 60] : i < 7 ? [30, 50] : [22, 40]);
+        talent.status = 'free';
+        talent.signedTo = null;
+        worldTalent.push(talent);
+      }
 
       // Assign 3-5 talent to each active rival studio
       const rivals = makeCompetitors(scenario.startYear || 1970);
@@ -3198,6 +3269,7 @@ function reducer(state, action) {
         scripts: [],
         ipMarketplace: generateIPMarketplace(startYear, []),
         ownedIPs: [],
+        ipBiddingWar: null,
         pendingScreenplays: [],
         competitors: rivals,
         genreTrends: makeGenreTrends(startYear),
@@ -3255,6 +3327,7 @@ function reducer(state, action) {
           devSupporting1Id: null, devSupporting2Id: null, devEnsembleId: null,
           devWriterId: state.contracts.find(t => t.type === 'writer')?.id ?? null,
           devProducerId: state.contracts.find(t => t.type === 'producer')?.id ?? null,
+          devComposerId: state.contracts.find(t => t.type === 'composer')?.id ?? null,
           devFilmType: 'original', devGenre2: script.genre2 || null, devTone: 'serious', devThemes: [],
           devPostProdChoice: 'standard_edit',
           gameLog: [...state.gameLog, { text: `Acquired "${script.title}" for ${fmt(bidAmount)} — no competition!`, type: 'success' }], errorMsg: '' };
@@ -3280,6 +3353,7 @@ function reducer(state, action) {
         devEnsembleId: null,
         devWriterId: state.contracts.find(t => t.type === 'writer')?.id ?? null,
         devProducerId: state.contracts.find(t => t.type === 'producer')?.id ?? null,
+          devComposerId: state.contracts.find(t => t.type === 'composer')?.id ?? null,
         devFilmType: 'original',
         devAdaptation: null,
         devFranchiseId: null,
@@ -3345,6 +3419,177 @@ function reducer(state, action) {
       };
     }
 
+    // ==================== IP BIDDING WAR ====================
+    case 'START_IP_BIDDING': {
+      const ipIdx = action.idx;
+      const ip = state.ipMarketplace[ipIdx];
+      if (!ip || !ip.hotIP) return { ...state, errorMsg: 'This IP is not available for bidding.' };
+      if (state.cash < ip.price) return { ...state, errorMsg: `Need ${fmt(ip.price)} to enter bidding war.` };
+      if (state.ipBiddingWar) return { ...state, errorMsg: 'Already in a bidding war.' };
+
+      // Generate 2-4 rival bidders with hidden max bids
+      const rivalStudios = ['Paramount', 'Universal', 'Warner Bros.', 'MGM', 'Disney', 'Columbia', 'Fox', 'Lionsgate'].filter(n => n !== ip.rivalBidder);
+      const numRivals = randInt(2, 4);
+      const rivals = [];
+      // The named rival bidder is always in the war
+      const primaryMaxBid = Math.round(ip.price * (1.3 + Math.random() * 1.2)); // 1.3x to 2.5x opening
+      rivals.push({ name: ip.rivalBidder, maxBid: primaryMaxBid, droppedOut: false });
+      // Additional rivals with lower thresholds
+      const shuffledRivals = [...rivalStudios].sort(() => Math.random() - 0.5);
+      for (let i = 0; i < numRivals - 1 && i < shuffledRivals.length; i++) {
+        const maxBid = Math.round(ip.price * (1.1 + Math.random() * 0.8)); // 1.1x to 1.9x opening
+        rivals.push({ name: shuffledRivals[i], maxBid, droppedOut: false });
+      }
+
+      return {
+        ...state,
+        ipBiddingWar: {
+          ip: { ...ip },
+          ipIdx,
+          currentBid: ip.price,
+          highBidder: 'player',
+          playerBid: ip.price,
+          round: 1,
+          maxRounds: randInt(5, 8),
+          rivals,
+        },
+        gameLog: [...state.gameLog, { text: `Entered bidding war for "${ip.name}" — ${rivals.length} rival studios competing!`, type: 'warning', category: 'market' }],
+      };
+    }
+
+    case 'IP_BID_RAISE': {
+      const bw = state.ipBiddingWar;
+      if (!bw) return state;
+      const raiseAmt = Math.round(bw.currentBid * 1.15);
+      if (state.cash < raiseAmt) return { ...state, errorMsg: `Need ${fmt(raiseAmt)} to raise bid.` };
+
+      // Player raises
+      let currentBid = raiseAmt;
+      let highBidder = 'player';
+      let round = bw.round + 1;
+      const rivals = bw.rivals.map(r => ({ ...r }));
+
+      // Each active rival decides: raise or drop out
+      for (const rival of rivals) {
+        if (rival.droppedOut) continue;
+        if (currentBid >= rival.maxBid) {
+          // Over their limit — drop out (with some randomness near the edge)
+          const overBy = currentBid / rival.maxBid;
+          if (overBy > 1.05 || Math.random() < 0.7) {
+            rival.droppedOut = true;
+            continue;
+          }
+        }
+        // Rival raises: match or slightly exceed the current bid
+        if (Math.random() < 0.6 && currentBid < rival.maxBid) {
+          const rivalRaise = Math.round(currentBid * (1.05 + Math.random() * 0.12));
+          if (rivalRaise <= rival.maxBid) {
+            currentBid = rivalRaise;
+            highBidder = rival.name;
+          } else {
+            rival.droppedOut = true;
+          }
+        }
+      }
+
+      const activeRivals = rivals.filter(r => !r.droppedOut);
+      // Check if all rivals dropped out — player wins!
+      if (activeRivals.length === 0) {
+        const ip = bw.ip;
+        const cat = IP_CATEGORIES[ip.category] || IP_CATEGORIES.novel;
+        const finalPrice = highBidder === 'player' ? raiseAmt : currentBid;
+        const owned = { ...ip, purchasePrice: finalPrice, purchaseYear: state.year, purchaseMonth: state.month, developed: false };
+        const newspaperEdition = (state.newspaperEdition || 0) + 1;
+        const newspaper = makeNewspaper('ip_purchase', { studio: state.studioName, ipName: ip.name, ipCategory: cat.name.toLowerCase(), price: fmt(finalPrice), dealSize: 'blockbuster', recognition: ip.recognition }, state.year, state.month, newspaperEdition);
+        return {
+          ...state,
+          cash: state.cash - finalPrice,
+          ownedIPs: [...state.ownedIPs, owned],
+          ipMarketplace: state.ipMarketplace.filter((_, i) => i !== bw.ipIdx),
+          ipBiddingWar: null,
+          newspaperEdition,
+          newspaperQueue: [...(state.newspaperQueue || []), newspaper].filter(Boolean),
+          gameLog: [...state.gameLog, { text: `Won bidding war for "${ip.name}"! All rivals dropped out. Final price: ${fmt(finalPrice)}.`, type: 'success', category: 'market' }],
+        };
+      }
+
+      // Check if max rounds reached — highest bidder wins
+      if (round > bw.maxRounds) {
+        if (highBidder === 'player') {
+          const ip = bw.ip;
+          const cat = IP_CATEGORIES[ip.category] || IP_CATEGORIES.novel;
+          const owned = { ...ip, purchasePrice: currentBid, purchaseYear: state.year, purchaseMonth: state.month, developed: false };
+          const newspaperEdition = (state.newspaperEdition || 0) + 1;
+          const newspaper = makeNewspaper('ip_purchase', { studio: state.studioName, ipName: ip.name, ipCategory: cat.name.toLowerCase(), price: fmt(currentBid), dealSize: 'blockbuster', recognition: ip.recognition }, state.year, state.month, newspaperEdition);
+          return {
+            ...state,
+            cash: state.cash - currentBid,
+            ownedIPs: [...state.ownedIPs, owned],
+            ipMarketplace: state.ipMarketplace.filter((_, i) => i !== bw.ipIdx),
+            ipBiddingWar: null,
+            newspaperEdition,
+            newspaperQueue: [...(state.newspaperQueue || []), newspaper].filter(Boolean),
+            gameLog: [...state.gameLog, { text: `Won bidding war for "${bw.ip.name}" after ${bw.maxRounds} rounds! Final price: ${fmt(currentBid)}.`, type: 'success', category: 'market' }],
+          };
+        } else {
+          // Rival won
+          return {
+            ...state,
+            ipBiddingWar: null,
+            ipMarketplace: state.ipMarketplace.filter((_, i) => i !== bw.ipIdx),
+            gameLog: [...state.gameLog, { text: `Lost bidding war for "${bw.ip.name}" — ${highBidder} outbid you at ${fmt(currentBid)} after ${bw.maxRounds} rounds.`, type: 'warning', category: 'market' }],
+          };
+        }
+      }
+
+      return {
+        ...state,
+        ipBiddingWar: { ...bw, currentBid, highBidder, round, rivals },
+      };
+    }
+
+    case 'IP_BID_DROP': {
+      const bw = state.ipBiddingWar;
+      if (!bw) return state;
+      // Player drops out — the highest-bidding active rival wins
+      const activeRivals = bw.rivals.filter(r => !r.droppedOut);
+      const winner = activeRivals.length > 0 ? activeRivals.sort((a, b) => b.maxBid - a.maxBid)[0].name : 'Unknown Studio';
+      return {
+        ...state,
+        ipBiddingWar: null,
+        ipMarketplace: state.ipMarketplace.filter((_, i) => i !== bw.ipIdx),
+        gameLog: [...state.gameLog, { text: `Dropped out of bidding war for "${bw.ip.name}" — ${winner} acquired it for ${fmt(bw.currentBid)}.`, type: 'info', category: 'market' }],
+      };
+    }
+
+    case 'SELL_IP': {
+      const ipIdx = action.idx;
+      const ip = state.ownedIPs[ipIdx];
+      if (!ip) return state;
+      if (ip.developed) return { ...state, errorMsg: 'Cannot sell an IP that is already in development.' };
+      const cat = IP_CATEGORIES[ip.category] || IP_CATEGORIES.novel;
+      // Sell price: base price adjusted by recognition and time owned
+      const yearsOwned = Math.max(0, state.year - (ip.purchaseYear || state.year));
+      const depreciationMult = Math.max(0.4, 1.0 - yearsOwned * 0.08); // lose ~8% value per year
+      const recognitionMult = (ip.recognition || 50) / 100;
+      const basePrice = ip.purchasePrice || ip.price || 5e6;
+      const sellPrice = Math.round(basePrice * depreciationMult * (0.6 + recognitionMult * 0.6));
+      // Put it back on the marketplace for others (or the player could re-buy)
+      const listedIP = { ...ip, price: sellPrice, hotIP: false, rivalBidder: null, purchasePrice: undefined, purchaseYear: undefined, purchaseMonth: undefined, developed: undefined };
+      const newspaperEdition = (state.newspaperEdition || 0) + 1;
+      const newspaper = makeNewspaper('ip_purchase', { studio: state.studioName, ipName: ip.name, ipCategory: cat.name.toLowerCase(), price: fmt(sellPrice), dealSize: 'strategic', recognition: ip.recognition }, state.year, state.month, newspaperEdition);
+      return {
+        ...state,
+        cash: state.cash + sellPrice,
+        ownedIPs: state.ownedIPs.filter((_, i) => i !== ipIdx),
+        ipMarketplace: [...state.ipMarketplace, listedIP],
+        newspaperEdition,
+        newspaperQueue: [...(state.newspaperQueue || []), newspaper].filter(Boolean),
+        gameLog: [...state.gameLog, { text: `Sold IP "${ip.name}" (${cat.name}) for ${fmt(sellPrice)}.`, type: 'success', category: 'market' }],
+        errorMsg: '',
+      };
+    }
+
     case 'DEVELOP_IP': {
       const ipIdx = action.idx;
       const ip = state.ownedIPs[ipIdx];
@@ -3379,6 +3624,7 @@ function reducer(state, action) {
         devSupporting1Id: null, devSupporting2Id: null, devEnsembleId: null,
         devWriterId: state.contracts.find(t => t.type === 'writer')?.id ?? null,
         devProducerId: state.contracts.find(t => t.type === 'producer')?.id ?? null,
+          devComposerId: state.contracts.find(t => t.type === 'composer')?.id ?? null,
         devFilmType: ip.category === 'remake' ? 'reboot' : 'adaptation',
         devAdaptation: null,
         devFranchiseId: null,
@@ -3647,16 +3893,46 @@ case 'REMASTER_FILM': {
     case 'DISMISS_YEAR_SUMMARY':
       return { ...state, showYearSummary: false, pendingYearSummary: null };
 
+    case 'DISMISS_ACHIEVEMENT_POPUP':
+      return { ...state, achievementPopups: (state.achievementPopups || []).filter(a => a.id !== action.achievementId) };
+
+    case 'CLEAR_ACHIEVEMENT_POPUPS':
+      return { ...state, achievementPopups: [] };
+
+    case 'VIEW_RIVAL':
+      return { ...state, selectedRivalIdx: action.idx };
+
+    case 'CLOSE_RIVAL':
+      return { ...state, selectedRivalIdx: null };
+
+    case 'VIEW_FILM':
+      return { ...state, selectedFilmId: action.filmId };
+
+    case 'CLOSE_FILM':
+      return { ...state, selectedFilmId: null };
+
+    case 'LOAD_SAVE': {
+      if (!action.saveData) return state;
+      try {
+        const loaded = JSON.parse(action.saveData);
+        if (!loaded.phase || !loaded.studioName) return { ...state, errorMsg: 'Invalid save data.' };
+        return { ...INIT, ...loaded, errorMsg: '', achievementPopups: [], selectedRivalIdx: null, selectedFilmId: null };
+      } catch (e) {
+        return { ...state, errorMsg: 'Failed to load save: ' + e.message };
+      }
+    }
+
     case 'GREENLIGHT': {
       const script = state.scripts[state.devScriptIdx];
       if (!script) return state;
       const dir = state.contracts.find(t => t.id === state.devDirectorId);
       const act = state.contracts.find(t => t.id === state.devActorId);
       const wri = state.contracts.find(t => t.id === state.devWriterId);
+      const comp = state.contracts.find(t => t.id === state.devComposerId);
       if (!dir || !act || !wri) return { ...state, errorMsg: 'Assign a director, actor, and writer.' };
 
       // Validate talent demands
-      const allTalent = [dir, act, wri];
+      const allTalent = [dir, act, wri, comp].filter(Boolean);
       for (const t of allTalent) {
         if (!t.demands) continue;
         for (const d of t.demands) {
@@ -3819,6 +4095,7 @@ case 'REMASTER_FILM': {
         castMembers, // NEW: full cast with roles
         writer: { id: wri.id, name: wri.name, skill: wri.skill, genreBonus: wri.genreBonus, trait: wri.trait, traitDesc: wri.traitDesc, traitEffect: wri.traitEffect, profitParticipation: wri.profitParticipation || 0 },
         producer: prod ? { id: prod.id, name: prod.name, skill: prod.skill, trait: prod.trait, traitDesc: prod.traitDesc, traitEffect: prod.traitEffect, profitParticipation: prod.profitParticipation || 0 } : null,
+        composer: comp ? { id: comp.id, name: comp.name, skill: comp.skill, genreBonus: comp.genreBonus, trait: comp.trait, traitDesc: comp.traitDesc, traitEffect: comp.traitEffect } : null,
         // Production pipeline
         status: 'script_dev',
         productionPhase: 'script_dev',
@@ -4582,7 +4859,7 @@ case 'REMASTER_FILM': {
       const absorbedTalentCount = randInt(1, 3);
       const newTalent = [];
       for (let i = 0; i < absorbedTalentCount; i++) {
-        const types = ['actor', 'director', 'writer', 'producer'];
+        const types = ['actor', 'director', 'writer', 'producer', 'composer'];
         const t = makeTalent(state.nextId + i + 50, pick(types), [40, 80]);
         newTalent.push(t);
       }
@@ -4681,6 +4958,7 @@ case 'REMASTER_FILM': {
             devSupporting1Id: null, devSupporting2Id: null, devEnsembleId: null,
             devWriterId: state.contracts.find(t => t.type === 'writer')?.id ?? null,
             devProducerId: state.contracts.find(t => t.type === 'producer')?.id ?? null,
+          devComposerId: state.contracts.find(t => t.type === 'composer')?.id ?? null,
             devFilmType: 'original', devGenre2: script.genre2 || null, devTone: 'serious', devThemes: [],
             devPostProdChoice: 'standard_edit',
             gameLog: [...state.gameLog, { text: `Won bidding war for "${script.title}" at ${fmt(cost)}.${msg}`, type: ratio > 1.5 ? 'warning' : 'success' }], errorMsg: '' };
@@ -5263,6 +5541,13 @@ case 'REMASTER_FILM': {
               if (actTr.streak === 'cold') quality = clamp(quality - 3, 5, 98);
             }
 
+            // Composer contribution — great scores elevate films
+            if (f.composer) {
+              const composerBonus = Math.round((f.composer.skill - 50) * 0.08); // -4 to +4 from skill
+              quality = clamp(quality + composerBonus, 5, 98);
+              if (f.composer.genreBonus === f.genre) quality = clamp(quality + 2, 5, 98); // genre match
+            }
+
             // Multi-cast quality contribution
             if (f.castMembers && f.castMembers.length > 1) {
               let castBonus = 0;
@@ -5319,6 +5604,7 @@ case 'REMASTER_FILM': {
             if (f.actor?.id) filmTalentIds.add(f.actor.id);
             if (f.writer?.id) filmTalentIds.add(f.writer.id);
             if (f.producer?.id) filmTalentIds.add(f.producer.id);
+            if (f.composer?.id) filmTalentIds.add(f.composer.id);
             if (f.castMembers) f.castMembers.forEach(cm => { if (cm.id) filmTalentIds.add(cm.id); });
             contracts = contracts.map(t => {
               if (filmTalentIds.has(t.id)) {
@@ -5635,6 +5921,7 @@ case 'REMASTER_FILM': {
         if (f.actor) recordFilmography(f.actor, 'lead');
         if (f.writer) recordFilmography(f.writer, 'writer');
         if (f.producer) recordFilmography(f.producer, 'producer');
+        if (f.composer) recordFilmography(f.composer, 'composer');
         if (f.castMembers) f.castMembers.forEach(cm => recordFilmography(cm, 'supporting'));
 
         Object.values(talentToUpdate).forEach(item => {
@@ -6194,9 +6481,11 @@ case 'REMASTER_FILM': {
       const newAchievements = ACHIEVEMENTS.filter(
         a => !unlockedAchievements.includes(a.id) && a.check(updatedState)
       );
+      const achievementPopups = [...(state.achievementPopups || [])];
       newAchievements.forEach(a => {
         unlockedAchievements.push(a.id);
         log.push({ text: `Achievement Unlocked: ${a.name} — ${a.desc}`, type: 'award' });
+        achievementPopups.push({ id: a.id, name: a.name, desc: a.desc, timestamp: Date.now() });
       });
 
       // 8c. Awards Season — Multiple real ceremonies throughout the year
@@ -6523,7 +6812,8 @@ case 'REMASTER_FILM': {
           const pBonus = comp.personality ? comp.personality.qualityBonus : 0;
           let quality = clamp(randInt(35, 88) + Math.round(comp.reputation * 0.1) + pBonus, 25, 96);
           const bMult = comp.personality ? comp.personality.budgetMult : 1;
-          let budget = Math.round(randInt(10, 100) * 1e6 * bMult);
+          const [eraBudMin, eraBudMax] = getEraBudgetRange(state.year);
+          let budget = Math.round(randInt(eraBudMin, eraBudMax) * 1e6 * bMult);
           const mMult = comp.personality ? comp.personality.marketingMult : 1;
           // Apply AI content tax if regulation active
           const hasAITax = (state.activeRegulations || []).some(r => r.id === 'ai_content_tax');
@@ -6531,7 +6821,7 @@ case 'REMASTER_FILM': {
             quality = Math.max(25, Math.round(quality * 0.75)); // Reduce quality by 25%
             budget = Math.round(budget * 1.25); // Increase costs by 25%
           }
-          let gross = Math.round(budget * (quality >= 75 ? 3.0 : quality >= 55 ? 1.5 : 0.5) * (1 + Math.random()) * mMult);
+          let gross = Math.round(budget * (quality >= 75 ? 3.0 : quality >= 55 ? 1.5 : 0.5) * (1 + Math.random()) * mMult * getEraGrossMult(state.year));
           const availableTitles = RIVAL_FILM_TITLES.filter(t => !usedTitlesThisTurn.has(t));
           const title = availableTitles.length > 0 ? pick(availableTitles) : `${pick(RIVAL_FILM_TITLES)}: ${pick(['Reborn','Unleashed','Redux','Returns','Rising','Legacy','Untold','Chronicles','Awakening'])}`;
           usedTitlesThisTurn.add(title);
@@ -6740,7 +7030,7 @@ case 'REMASTER_FILM': {
             for (let i = 0; i < randInt(2, 3); i++) {
               const budget = randInt(5, 20) * 1e6;
               const quality = randInt(25, 50);
-              const gross = Math.round(budget * 0.8);
+              const gross = Math.round(budget * 0.8 * getEraGrossMult(state.year));
               const title = pick(RIVAL_FILM_TITLES) + ': ' + pick(['Unleashed', 'Rising', 'Returns', 'Redux']);
               rivalFilmsThisQ.push({
                 studio: floodStudio.name, title, genre: floodGenre, quality, budget, totalGross: gross, gross,
@@ -7194,7 +7484,7 @@ case 'REMASTER_FILM': {
       // 15. Refresh talent pool and scripts
       const newNextId = state.nextId + 20;
       const newAvail = Array.from({ length: 10 }, (_, i) => {
-        const types = ['actor', 'director', 'writer', 'producer'];
+        const types = ['actor', 'director', 'writer', 'producer', 'composer'];
         return makeTalent(state.nextId + i, pick(types), [25, 90]);
       });
 
@@ -7718,6 +8008,7 @@ case 'REMASTER_FILM': {
         totalAwards: tAwards,
         totalFilmsReleased,
         unlockedAchievements,
+        achievementPopups,
         loans,
         distributionDeal: distDeal,
         distributionTurnsLeft: distTurns,
@@ -7857,7 +8148,7 @@ case 'REMASTER_FILM': {
           // Add new talent to world pool each turn (3-5 per year = ~30% chance of 1, plus occasional batch)
           const newTalentRoll = Math.random();
           const newTalentCount = newTalentRoll < 0.35 ? 0 : newTalentRoll < 0.75 ? 1 : 2; // avg ~0.7/turn = ~8/yr
-          const typeWeights = [['actor', 0.5], ['director', 0.22], ['writer', 0.18], ['producer', 0.1]];
+          const typeWeights = [['actor', 0.45], ['director', 0.20], ['writer', 0.16], ['producer', 0.09], ['composer', 0.10]];
           let newNextId = state.nextId;
           for (let i = 0; i < newTalentCount; i++) {
             const roll = Math.random();
@@ -8451,6 +8742,7 @@ function FilmCard({ film, dispatch }) {
         <div>Director: <span className="cursor-pointer hover:text-yellow-300 underline decoration-dotted text-white" onClick={() => film.director?.id && dispatch({ type: 'SELECT_TALENT', talentId: film.director.id })}>{film.director?.name}</span> ({film.director?.skill}) {film.director?.genreBonus === film.genre ? <span className="text-green-400">★</span> : ''} {film.director?.trait && <span className="text-purple-300">— {film.director.trait}</span>}</div>
         <div>Lead: <span className="cursor-pointer hover:text-yellow-300 underline decoration-dotted text-white" onClick={() => film.actor?.id && dispatch({ type: 'SELECT_TALENT', talentId: film.actor.id })}>{film.actor?.name}</span> ({film.actor?.skill}) {film.castMembers && film.castMembers.length > 1 ? <span className="text-blue-400">+{film.castMembers.length - 1} cast</span> : ''} {film.actor?.trait && <span className="text-purple-300">— {film.actor.trait}</span>}</div>
         <div>Writer: <span className="cursor-pointer hover:text-yellow-300 underline decoration-dotted text-white" onClick={() => film.writer?.id && dispatch({ type: 'SELECT_TALENT', talentId: film.writer.id })}>{film.writer?.name}</span> ({film.writer?.skill}) {film.writer?.trait && <span className="text-purple-300">— {film.writer.trait}</span>}</div>
+        {film.composer && <div>Composer: <span className="cursor-pointer hover:text-yellow-300 underline decoration-dotted text-white" onClick={() => film.composer?.id && dispatch({ type: 'SELECT_TALENT', talentId: film.composer.id })}>{film.composer.name}</span> ({film.composer.skill}) {film.composer.genreBonus === film.genre ? <span className="text-green-400">★</span> : ''}</div>}
         <div>Budget: {fmt(film.budget)} | Marketing: {fmt(film.marketing)}</div>
         {/* Production events from filming */}
         {film.productionEvents && film.productionEvents.length > 0 && (
@@ -9193,6 +9485,21 @@ export default function MovieMogul() {
               className={`w-full ${selColor.bg} hover:opacity-90 disabled:opacity-40 text-gray-900 font-bold py-3 rounded-lg text-lg transition`}>
               START GAME
             </button>
+            <div className="border-t border-gray-700 pt-4 mt-2">
+              <div className="text-gray-500 text-xs mb-2">Or load a saved game:</div>
+              <button onClick={() => {
+                try {
+                  const saves = JSON.parse(localStorage.getItem('movieMogulSaves') || '{}');
+                  const keys = Object.keys(saves);
+                  if (keys.length === 0) { alert('No saved games found.'); return; }
+                  const choice = keys.length === 1 ? keys[0] : prompt('Enter save name to load:\\n' + keys.join('\\n'));
+                  if (choice && saves[choice]) { dispatch({ type: 'LOAD_SAVE', saveData: saves[choice] }); }
+                } catch(e) { alert('Error loading: ' + e.message); }
+              }}
+                className="w-full bg-gray-700 hover:bg-gray-600 text-gray-300 font-bold py-2 rounded-lg text-sm transition">
+                Load Saved Game
+              </button>
+            </div>
           </div>
           <div className="text-gray-600 text-xs mt-6">Start in 1970 with $5M. Build your way to a Hollywood legend.</div>
         </div>
@@ -9305,8 +9612,8 @@ export default function MovieMogul() {
   const inPipeline = state.films.filter(f => ['development', 'production', 'postproduction', 'script_dev', 'pre_production', 'principal_photography', 'post_production', 'marketing_campaign'].includes(f.status));
   const released = state.films.filter(f => f.status === 'released').slice().reverse();
   const awaitingRelease = state.films.filter(f => f.status === 'completed' || f.status === 'scheduled');
-  const tabs = ['dashboard', 'develop', 'production', 'release', 'talent', 'studio', 'finance', 'market', 'streaming', 'catalog', 'press', 'academy', 'partners', 'screening'];
-  const tabIcons = { dashboard: '📊', develop: '🎬', production: '🎥', release: '🎞', talent: '⭐', studio: '🏢', finance: '💰', market: '📈', streaming: '📺', catalog: '📀', press: '📰', academy: '🎓', partners: '🌍', screening: '🎬' };
+  const tabs = ['dashboard', 'develop', 'ip', 'production', 'release', 'talent', 'studio', 'finance', 'market', 'streaming', 'catalog', 'press', 'academy', 'partners', 'screening'];
+  const tabIcons = { dashboard: '📊', develop: '🎬', ip: '🏷', production: '🎥', release: '🎞', talent: '⭐', studio: '🏢', finance: '💰', market: '📈', streaming: '📺', catalog: '📀', press: '📰', academy: '🎓', partners: '🌍', screening: '🎬' };
 
   const facilityCosts = [0, 500000, 2000000, 5000000, 15000000, 50000000];
   const facilityNames = ['Garage Studio', 'Small Lot', 'Soundstages', 'VFX Lab', 'Backlot Complex', 'Premier Facilities'];
@@ -9715,6 +10022,18 @@ export default function MovieMogul() {
               </div>
             ))}
           </div>
+
+          {/* IP Marketplace Link */}
+          <div className="mt-6 bg-gray-800 border border-cyan-700 rounded-lg p-4 flex justify-between items-center">
+            <div>
+              <div className="text-cyan-400 font-bold text-sm">IP Marketplace</div>
+              <div className="text-gray-400 text-xs">{state.ipMarketplace.length} IPs available | {(state.ownedIPs || []).length} owned</div>
+            </div>
+            <button onClick={() => setTab('ip')}
+              className="bg-cyan-700 hover:bg-cyan-600 text-white font-bold text-sm px-4 py-2 rounded-lg transition">
+              Browse IPs →
+            </button>
+          </div>
         </div>
       );
     }
@@ -9901,7 +10220,7 @@ export default function MovieMogul() {
 
         <div className="grid grid-cols-4 gap-3">
           {/* Director & Writer */}
-          {[['devDirectorId', 'Director', 'director'], ['devWriterId', 'Writer', 'writer'], ['devProducerId', 'Producer', 'producer']].map(([key, label, type]) => (
+          {[['devDirectorId', 'Director', 'director'], ['devWriterId', 'Writer', 'writer'], ['devProducerId', 'Producer', 'producer'], ['devComposerId', 'Composer', 'composer']].map(([key, label, type]) => (
             <div key={key} className="bg-gray-800 border border-gray-700 rounded-lg p-3">
               <div className="text-white font-bold text-xs mb-2">{label}</div>
               <select value={state[key] ?? ''} onChange={e => dispatch({ type: 'SET_DEV', key, value: e.target.value ? parseInt(e.target.value) : null })}
@@ -10557,6 +10876,90 @@ export default function MovieMogul() {
           </div>
         )}
 
+        {/* CATALOG LICENSING */}
+        {state.films.filter(f => f.status === 'released' && !f.soldRights).length > 0 && (
+          <div>
+            <div className="text-white font-bold text-lg mb-1">Catalog Licensing</div>
+            <div className="text-gray-400 text-sm mb-4">License your film catalog to TV networks, rental chains, and streaming platforms. Deals generate recurring revenue.</div>
+
+            {/* Active Deals */}
+            {(state.catalogDeals || []).filter(d => d.turnsLeft > 0).length > 0 && (
+              <div className="mb-4">
+                <div className="text-amber-400 font-bold text-sm mb-2">Active Deals</div>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                  {(state.catalogDeals || []).filter(d => d.turnsLeft > 0).map(d => (
+                    <div key={d.id} className={`bg-gray-800 border ${d.turnsLeft <= 6 ? 'border-red-600' : 'border-green-600'} rounded-lg p-3`}>
+                      <div className="flex justify-between items-start mb-1">
+                        <div className="text-white font-bold text-sm">{d.licenseeName}</div>
+                        <span className={`text-xs px-2 py-0.5 rounded ${d.exclusive ? 'bg-purple-700 text-purple-200' : 'bg-gray-600 text-gray-300'}`}>{d.exclusive ? 'EXCLUSIVE' : 'Non-Exclusive'}</span>
+                      </div>
+                      <div className="text-gray-400 text-xs mb-1">{d.licenseeType} | {d.filmTitles.length} films</div>
+                      <div className="text-green-400 text-sm font-bold">{fmt(d.totalAnnual)}/year ({fmt(d.feePerFilm)}/film)</div>
+                      <div className="flex justify-between mt-1 text-xs">
+                        <span className="text-gray-500">Films: {d.filmTitles.slice(0, 3).join(', ')}{d.filmTitles.length > 3 ? ` +${d.filmTitles.length - 3} more` : ''}</span>
+                        <span className={d.turnsLeft <= 6 ? 'text-red-400 font-bold' : 'text-gray-400'}>{Math.ceil(d.turnsLeft / 12)}y {d.turnsLeft % 12}m left</span>
+                      </div>
+                      <div className="w-full bg-gray-700 rounded-full h-1.5 mt-2">
+                        <div className={`h-1.5 rounded-full ${d.turnsLeft <= 6 ? 'bg-red-500' : 'bg-green-500'}`} style={{ width: `${(d.turnsLeft / d.turnsTotal) * 100}%` }}></div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {/* Pending Bids */}
+            {(state.catalogBids || []).length > 0 ? (
+              <div className="mb-4">
+                <div className="text-green-400 font-bold text-sm mb-2">Incoming Offers</div>
+                <div className="grid grid-cols-1 gap-3">
+                  {state.catalogBids.map((bid, idx) => (
+                    <div key={idx} className="bg-gray-800 border border-amber-600 rounded-lg p-4">
+                      <div className="flex justify-between items-start mb-2">
+                        <div>
+                          <div className="text-white font-bold">{bid.licenseeName}</div>
+                          <div className="text-gray-400 text-xs">{bid.licenseeType} | {bid.licenseeDesc}</div>
+                        </div>
+                        {bid.exclusive && <span className="bg-purple-700 text-purple-200 text-xs px-2 py-1 rounded font-bold">EXCLUSIVE</span>}
+                      </div>
+                      <div className="grid grid-cols-3 gap-3 mb-3 text-center">
+                        <div>
+                          <div className="text-gray-400 text-xs">Per Film/Year</div>
+                          <div className="text-green-400 font-bold">{fmt(bid.feePerFilm)}</div>
+                        </div>
+                        <div>
+                          <div className="text-gray-400 text-xs">Total Annual</div>
+                          <div className="text-green-400 font-bold">{fmt(bid.totalAnnual)}</div>
+                        </div>
+                        <div>
+                          <div className="text-gray-400 text-xs">Term</div>
+                          <div className="text-white font-bold">{Math.round(bid.turnsOffered / 12)} years</div>
+                        </div>
+                      </div>
+                      <div className="text-xs text-gray-400 mb-3">
+                        Films wanted ({bid.filmTitles.length}): {bid.filmTitles.join(', ')}
+                      </div>
+                      <button onClick={() => dispatch({ type: 'ACCEPT_CATALOG_BID', bidIdx: idx })}
+                        className="w-full bg-green-600 hover:bg-green-500 text-white font-bold py-2 rounded transition-colors">
+                        Accept Deal — {fmt(bid.totalAnnual)}/year for {Math.round(bid.turnsOffered / 12)} years
+                      </button>
+                    </div>
+                  ))}
+                </div>
+                <button onClick={() => dispatch({ type: 'DISMISS_CATALOG_BIDS' })}
+                  className="mt-2 text-gray-400 hover:text-white text-sm underline">
+                  Decline all offers
+                </button>
+              </div>
+            ) : (
+              <button onClick={() => dispatch({ type: 'GENERATE_CATALOG_BIDS' })}
+                className="bg-amber-600 hover:bg-amber-500 text-white font-bold py-3 px-6 rounded-lg transition-colors mb-4">
+                Solicit Catalog Licensing Offers
+              </button>
+            )}
+          </div>
+        )}
+
         {/* RELEASED FILMS */}
         <div>
           <div className="text-white font-bold text-lg mb-1">Released Films</div>
@@ -10647,11 +11050,11 @@ export default function MovieMogul() {
           if (!t) return null;
           // Build filmography from released films
           const filmography = (state.allFilmHistory || []).filter(f => !f.isRival && (
-            f.director?.id === t.id || f.actor?.id === t.id || f.writer?.id === t.id || f.producer?.id === t.id ||
+            f.director?.id === t.id || f.actor?.id === t.id || f.writer?.id === t.id || f.producer?.id === t.id || f.composer?.id === t.id ||
             (f.castMembers || []).some(cm => cm.id === t.id)
           )).sort((a, b) => (b.releasedYear || 0) - (a.releasedYear || 0));
           const filmsInProd = state.films.filter(f => f.status !== 'released' && f.status !== 'completed' && (
-            f.director?.id === t.id || f.actor?.id === t.id || f.writer?.id === t.id || f.producer?.id === t.id ||
+            f.director?.id === t.id || f.actor?.id === t.id || f.writer?.id === t.id || f.producer?.id === t.id || f.composer?.id === t.id ||
             (f.castMembers || []).some(cm => cm.id === t.id)
           ));
           const totalGross = filmography.reduce((s, f) => s + (f.totalGross || 0), 0);
@@ -10671,7 +11074,7 @@ export default function MovieMogul() {
               {/* Header */}
               <div className="flex items-start gap-4 mb-4">
                 <div className="w-16 h-16 rounded-full bg-gray-700 border-2 border-amber-500 flex items-center justify-center text-2xl">
-                  {t.type === 'actor' ? '⭐' : t.type === 'director' ? '🎬' : t.type === 'writer' ? '📝' : '🎯'}
+                  {t.type === 'actor' ? '⭐' : t.type === 'director' ? '🎬' : t.type === 'writer' ? '📝' : t.type === 'composer' ? '🎵' : '🎯'}
                 </div>
                 <div className="flex-1">
                   <div className="flex items-center gap-2">
@@ -10765,7 +11168,7 @@ export default function MovieMogul() {
                   <div className="text-white font-bold text-sm mb-2">Filmography</div>
                   <div className="space-y-1.5 max-h-60 overflow-y-auto">
                     {filmography.map((f, i) => {
-                      const role = f.director?.id === t.id ? 'Director' : f.writer?.id === t.id ? 'Writer' : f.producer?.id === t.id ? 'Producer' : (f.castMembers || []).find(cm => cm.id === t.id)?.role === 'lead' ? 'Lead Actor' : (f.castMembers || []).find(cm => cm.id === t.id)?.role === 'supporting1' ? 'Supporting' : f.actor?.id === t.id ? 'Actor' : 'Cast';
+                      const role = f.director?.id === t.id ? 'Director' : f.writer?.id === t.id ? 'Writer' : f.producer?.id === t.id ? 'Producer' : f.composer?.id === t.id ? 'Composer' : (f.castMembers || []).find(cm => cm.id === t.id)?.role === 'lead' ? 'Lead Actor' : (f.castMembers || []).find(cm => cm.id === t.id)?.role === 'supporting1' ? 'Supporting' : f.actor?.id === t.id ? 'Actor' : 'Cast';
                       const qColor = (f.quality || 0) >= 75 ? 'text-green-400' : (f.quality || 0) >= 50 ? 'text-yellow-400' : 'text-red-400';
                       return (
                         <div key={i} className="bg-gray-800 rounded-lg p-2 flex justify-between items-center text-xs">
@@ -10842,7 +11245,7 @@ export default function MovieMogul() {
               onChange={e => dispatch({ type: 'SET_TALENT_FILTER', typeFilter: e.target.value || null, genreFilter: state.talentGenreFilter })}
               className="bg-gray-700 text-white rounded px-3 py-2 text-sm border border-gray-600 focus:border-amber-500 outline-none">
               <option value="">All Types</option>
-              {['actor', 'director', 'writer', 'producer'].map(t => <option key={t} value={t}>{t.charAt(0).toUpperCase() + t.slice(1)}</option>)}
+              {['actor', 'director', 'writer', 'producer', 'composer'].map(t => <option key={t} value={t}>{t.charAt(0).toUpperCase() + t.slice(1)}</option>)}
             </select>
             <select value={state.talentGenreFilter || ''}
               onChange={e => dispatch({ type: 'SET_TALENT_FILTER', typeFilter: state.talentTypeFilter, genreFilter: e.target.value || null })}
@@ -11014,7 +11417,7 @@ export default function MovieMogul() {
                             <div className="flex items-center gap-2">
                               <span className="text-white font-bold text-sm cursor-pointer hover:text-yellow-300 underline decoration-dotted" onClick={() => dispatch({ type: 'SELECT_TALENT', talentId: t.id })}>{t.name}</span>
                               <span className="text-gray-400">{t.gender === 'female' ? '♀' : '♂'}</span>
-                              <span className={`px-1.5 py-0.5 rounded text-xs font-bold ${t.type === 'actor' ? 'bg-blue-800 text-blue-300' : t.type === 'director' ? 'bg-amber-800 text-amber-300' : t.type === 'writer' ? 'bg-green-800 text-green-300' : 'bg-purple-800 text-purple-300'}`}>{t.type}</span>
+                              <span className={`px-1.5 py-0.5 rounded text-xs font-bold ${t.type === 'actor' ? 'bg-blue-800 text-blue-300' : t.type === 'director' ? 'bg-amber-800 text-amber-300' : t.type === 'writer' ? 'bg-green-800 text-green-300' : t.type === 'composer' ? 'bg-pink-800 text-pink-300' : 'bg-purple-800 text-purple-300'}`}>{t.type}</span>
                               {t.personality && <span className="text-gray-500 text-xs">{t.personality.name}</span>}
                             </div>
                             <div className="flex gap-3 mt-1 text-gray-400">
@@ -11181,7 +11584,7 @@ export default function MovieMogul() {
           <div className="text-white font-bold text-lg mb-2">Talent Academy</div>
           <div className="text-gray-400 text-sm mb-3">Train your own talent from scratch. Cheaper long-term but takes time.</div>
           <div className="flex gap-2 mb-3">
-            {['actor', 'director', 'writer', 'producer'].map(type => (
+            {['actor', 'director', 'writer', 'producer', 'composer'].map(type => (
               <button key={type} onClick={() => dispatch({ type: 'TRAIN_TALENT', talentType: type })}
                 disabled={state.cash < 1000000}
                 className="bg-teal-600 hover:bg-teal-500 disabled:opacity-40 text-white text-sm px-3 py-1.5 rounded transition capitalize">
@@ -12114,6 +12517,212 @@ export default function MovieMogul() {
     );
   };
 
+  // ==================== IP MARKETPLACE TAB ====================
+  const renderIPMarketplace = () => {
+    const ownedIPs = state.ownedIPs || [];
+    const marketIPs = state.ipMarketplace || [];
+    const filterCat = state.ipFilterCategory || 'all';
+    const filteredMarket = filterCat === 'all' ? marketIPs : marketIPs.filter(ip => ip.category === filterCat);
+    const categories = ['all', ...Object.keys(IP_CATEGORIES)];
+
+    return (
+      <div>
+        <div className="flex justify-between items-center mb-1">
+          <div className="text-white font-bold text-lg">IP Marketplace</div>
+          <div className="text-gray-400 text-xs">{state.year} | Refreshes annually | {marketIPs.length} available</div>
+        </div>
+        <div className="text-gray-400 text-sm mb-4">Buy and sell proven intellectual properties — novels, comics, true stories, stage plays, games, and more.</div>
+
+        {/* IP Bidding War Modal — always on top */}
+        {state.ipBiddingWar && (() => {
+          const bw = state.ipBiddingWar;
+          const cat = IP_CATEGORIES[bw.ip.category] || IP_CATEGORIES.novel;
+          return (
+            <div className="mb-4 bg-red-900/30 border-2 border-red-500 rounded-lg p-5">
+              <div className="text-red-400 font-bold text-lg mb-2">BIDDING WAR — {bw.ip.name}</div>
+              <div className="text-gray-300 text-sm mb-3">{cat.icon} {cat.name} | Recognition: {bw.ip.recognition}% | {bw.ip.audience} audience</div>
+
+              <div className="grid grid-cols-2 gap-3 mb-3">
+                <div className="bg-gray-800 rounded-lg p-3 text-center">
+                  <div className="text-gray-400 text-xs">Current High Bid</div>
+                  <div className="text-red-400 font-bold text-xl">{fmt(bw.currentBid)}</div>
+                  <div className="text-gray-500 text-xs mt-1">by {bw.highBidder === 'player' ? 'YOU' : bw.highBidder}</div>
+                </div>
+                <div className="bg-gray-800 rounded-lg p-3 text-center">
+                  <div className="text-gray-400 text-xs">Round</div>
+                  <div className="text-white font-bold text-xl">{bw.round} / {bw.maxRounds}</div>
+                  <div className="text-gray-500 text-xs mt-1">{bw.rivals.filter(r => !r.droppedOut).length} active bidder{bw.rivals.filter(r => !r.droppedOut).length !== 1 ? 's' : ''}</div>
+                </div>
+              </div>
+
+              <div className="mb-3">
+                <div className="text-gray-400 text-xs mb-1">Rival Bidders:</div>
+                {bw.rivals.map((r, i) => (
+                  <div key={i} className={`text-xs ${r.droppedOut ? 'text-gray-600 line-through' : 'text-white'}`}>
+                    {r.name} {r.droppedOut ? '(dropped out)' : `— willing to go to ~${fmt(Math.round(r.maxBid * 0.8))}+`}
+                  </div>
+                ))}
+              </div>
+
+              <div className="flex gap-2">
+                <button onClick={() => dispatch({ type: 'IP_BID_RAISE' })}
+                  disabled={state.cash < Math.round(bw.currentBid * 1.15)}
+                  className="flex-1 bg-red-600 hover:bg-red-500 disabled:bg-gray-700 disabled:text-gray-500 text-white font-bold py-3 rounded-lg transition">
+                  Raise to {fmt(Math.round(bw.currentBid * 1.15))}
+                </button>
+                <button onClick={() => dispatch({ type: 'IP_BID_DROP' })}
+                  className="flex-1 bg-gray-700 hover:bg-gray-600 text-gray-300 font-bold py-3 rounded-lg transition">
+                  Drop Out
+                </button>
+              </div>
+              {bw.highBidder === 'player' && <div className="text-green-400 text-xs mt-2 text-center font-bold">You have the high bid! Rivals may raise or drop out.</div>}
+            </div>
+          );
+        })()}
+
+        {/* Your IP Library */}
+        {ownedIPs.length > 0 && (
+          <div className="mb-6">
+            <div className="text-amber-400 font-bold text-sm mb-2">Your IP Library ({ownedIPs.length})</div>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+              {ownedIPs.map((ip, i) => {
+                const cat = IP_CATEGORIES[ip.category] || IP_CATEGORIES.novel;
+                const yearsOwned = Math.max(0, state.year - (ip.purchaseYear || state.year));
+                const depreciationMult = Math.max(0.4, 1.0 - yearsOwned * 0.08);
+                const recognitionMult = (ip.recognition || 50) / 100;
+                const basePrice = ip.purchasePrice || ip.price || 5e6;
+                const estimatedSellPrice = Math.round(basePrice * depreciationMult * (0.6 + recognitionMult * 0.6));
+                return (
+                  <div key={i} className={`bg-gray-800 border ${ip.developed ? 'border-green-600' : 'border-amber-600'} rounded-lg p-4`}>
+                    <div className="flex justify-between items-start mb-2">
+                      <div>
+                        <span className="text-xl mr-1">{cat.icon}</span>
+                        <span className="text-white font-bold">{ip.name}</span>
+                      </div>
+                      <span className={`text-xs px-1.5 py-0.5 rounded ${ip.developed ? 'bg-green-800 text-green-300' : 'bg-amber-800 text-amber-300'}`}>{ip.developed ? 'In Development' : 'Available'}</span>
+                    </div>
+                    <div className="text-gray-400 text-xs mb-2">{cat.name} | Recognition: {ip.recognition}% | {ip.audience} audience</div>
+                    <div className="text-gray-500 text-xs mb-2">Purchased {ip.purchaseYear || '—'} for {fmt(ip.purchasePrice || 0)} | Est. value: {fmt(estimatedSellPrice)}</div>
+                    <div className="flex gap-2">
+                      {!ip.developed && (
+                        <button onClick={() => dispatch({ type: 'DEVELOP_IP', idx: i })}
+                          className="flex-1 bg-amber-700 hover:bg-amber-600 text-white text-xs font-bold py-2 rounded transition">
+                          Develop into Script
+                        </button>
+                      )}
+                      {!ip.developed && (
+                        <button onClick={() => dispatch({ type: 'SELL_IP', idx: i })}
+                          className="flex-1 bg-gray-700 hover:bg-gray-600 text-gray-300 text-xs font-bold py-2 rounded transition">
+                          Sell ({fmt(estimatedSellPrice)})
+                        </button>
+                      )}
+                      {ip.developed && <div className="text-green-400 text-xs">Currently being developed — check Develop tab</div>}
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+        )}
+
+        {/* Category Filter */}
+        <div className="flex flex-wrap gap-1.5 mb-4">
+          {categories.map(c => {
+            const cat = IP_CATEGORIES[c];
+            const label = c === 'all' ? 'All' : (cat ? cat.name : c);
+            const icon = c === 'all' ? '🏷' : (cat ? cat.icon : '');
+            const count = c === 'all' ? marketIPs.length : marketIPs.filter(ip => ip.category === c).length;
+            return (
+              <button key={c} onClick={() => dispatch({ type: 'SET_IP_FILTER', category: c === 'all' ? 'all' : c })}
+                className={`px-2.5 py-1 rounded text-xs font-bold transition ${filterCat === c ? 'bg-cyan-600 text-white' : 'bg-gray-700 text-gray-400 hover:bg-gray-600'}`}>
+                {icon} {label} ({count})
+              </button>
+            );
+          })}
+        </div>
+
+        {/* Available IPs Grid */}
+        {filteredMarket.length > 0 ? (
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+            {filteredMarket.map((ip, i) => {
+              const realIdx = marketIPs.indexOf(ip);
+              const cat = IP_CATEGORIES[ip.category] || IP_CATEGORIES.novel;
+              return (
+                <div key={realIdx} className={`bg-gray-800 border ${ip.hotIP ? 'border-red-500 shadow-lg shadow-red-900/20' : 'border-gray-700'} rounded-lg p-4`}>
+                  <div className="flex justify-between items-start mb-2">
+                    <div>
+                      <span className="text-2xl mr-2">{cat.icon}</span>
+                      <span className="text-white font-bold">{ip.name}</span>
+                      {ip.hotIP && <span className="ml-2 text-xs bg-red-600 text-white px-1.5 py-0.5 rounded font-bold animate-pulse">HOT</span>}
+                    </div>
+                    <div className="text-right">
+                      <div className="text-green-400 font-bold">{fmt(ip.price)}</div>
+                      <div className="text-gray-500 text-xs">{cat.name}</div>
+                    </div>
+                  </div>
+
+                  <div className="text-gray-400 text-xs mb-2">{ip.desc || cat.desc}</div>
+
+                  <div className="grid grid-cols-3 gap-2 mb-3 text-center">
+                    <div className="bg-gray-900 rounded p-1.5">
+                      <div className="text-gray-500 text-xs">Recognition</div>
+                      <div className={`font-bold text-sm ${ip.recognition >= 75 ? 'text-green-400' : ip.recognition >= 50 ? 'text-amber-400' : 'text-gray-400'}`}>{ip.recognition}%</div>
+                    </div>
+                    <div className="bg-gray-900 rounded p-1.5">
+                      <div className="text-gray-500 text-xs">Audience</div>
+                      <div className="text-white font-bold text-sm capitalize">{ip.audience}</div>
+                    </div>
+                    <div className="bg-gray-900 rounded p-1.5">
+                      <div className="text-gray-500 text-xs">Market Fit</div>
+                      <div className={`font-bold text-sm ${ip.marketFit >= 75 ? 'text-green-400' : ip.marketFit >= 50 ? 'text-amber-400' : 'text-red-400'}`}>{ip.marketFit}%</div>
+                    </div>
+                  </div>
+
+                  {ip.hotIP && ip.rivalBidder && (
+                    <div className="text-red-400 text-xs mb-2 font-bold">⚠ {ip.rivalBidder} is also interested — buying will trigger a bidding war!</div>
+                  )}
+
+                  <button onClick={() => dispatch({ type: ip.hotIP ? 'START_IP_BIDDING' : 'PURCHASE_IP', idx: realIdx })}
+                    disabled={state.cash < ip.price || !!state.ipBiddingWar}
+                    className={`w-full ${ip.hotIP ? 'bg-red-600 hover:bg-red-500' : 'bg-green-700 hover:bg-green-600'} disabled:bg-gray-700 disabled:text-gray-500 text-white font-bold py-2 rounded-lg transition text-sm`}>
+                    {ip.hotIP ? `Enter Bidding War (${fmt(ip.price)} opening)` : `Acquire for ${fmt(ip.price)}`}
+                  </button>
+                </div>
+              );
+            })}
+          </div>
+        ) : (
+          <div className="text-gray-500 text-center py-8">
+            {marketIPs.length === 0 ? 'No IPs available this year. New listings arrive annually.' : 'No IPs match this filter.'}
+          </div>
+        )}
+
+        {/* Market Stats */}
+        <div className="mt-6 bg-gray-800 border border-gray-700 rounded-lg p-4">
+          <div className="text-gray-400 font-bold text-xs mb-2">IP Market Overview</div>
+          <div className="grid grid-cols-4 gap-3 text-center">
+            <div>
+              <div className="text-gray-500 text-xs">Available</div>
+              <div className="text-white font-bold">{marketIPs.length}</div>
+            </div>
+            <div>
+              <div className="text-gray-500 text-xs">Hot IPs</div>
+              <div className="text-red-400 font-bold">{marketIPs.filter(ip => ip.hotIP).length}</div>
+            </div>
+            <div>
+              <div className="text-gray-500 text-xs">Owned</div>
+              <div className="text-amber-400 font-bold">{ownedIPs.length}</div>
+            </div>
+            <div>
+              <div className="text-gray-500 text-xs">Total Invested</div>
+              <div className="text-green-400 font-bold text-sm">{fmt(ownedIPs.reduce((s, ip) => s + (ip.purchasePrice || 0), 0))}</div>
+            </div>
+          </div>
+        </div>
+      </div>
+    );
+  };
+
   const renderMarket = () => {
     const trendData = GENRES.map(g => ({ genre: g, trend: Math.round((state.genreTrends[g] || 0) * 100) }));
     return (
@@ -12138,7 +12747,7 @@ export default function MovieMogul() {
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
             {state.competitors.map((c, i) => (
               <div key={i} className="bg-gray-800 border border-gray-700 rounded-lg p-4">
-                <div className="text-white font-bold text-sm">{c.name}</div>
+                <div className="text-white font-bold text-sm cursor-pointer hover:text-amber-400 underline decoration-dotted" onClick={() => dispatch({ type: 'VIEW_RIVAL', idx: i })}>{c.name}</div>
                 <div className="flex items-center gap-2 mt-0.5">
                   <span className={`text-xs px-1.5 py-0.5 rounded font-bold ${c.tier === 'major' ? 'bg-amber-700 text-amber-200' : c.tier === 'mid' ? 'bg-blue-700 text-blue-200' : 'bg-green-700 text-green-200'}`}>
                     {(c.tier || 'mid').toUpperCase()}
@@ -12836,7 +13445,7 @@ export default function MovieMogul() {
                 <div key={film.id} className="bg-gray-800 border border-amber-700 rounded-lg p-4">
                   <div className="flex justify-between items-start mb-2">
                     <div>
-                      <div className="text-amber-400 font-bold">{film.title}</div>
+                      <div className="text-amber-400 font-bold cursor-pointer hover:text-amber-300 underline decoration-dotted" onClick={() => dispatch({ type: 'VIEW_FILM', filmId: film.id })}>{film.title}</div>
                       <div className="text-gray-400 text-xs">Q: {film.quality} | Critic: {film.criticScore} | {fmt(film.totalGross)} gross</div>
                     </div>
                     <div className="text-xs text-gray-500">Spent: {fmt(campaign.totalSpent)}</div>
@@ -13523,7 +14132,7 @@ export default function MovieMogul() {
             {state.films.filter(f => f.status === 'released' || f.status === 'completed').slice(-6).map(film => (
               <div key={film.id} className="bg-gray-800 border border-gray-700 rounded-lg p-3 flex justify-between items-center">
                 <div>
-                  <div className="text-white font-bold text-sm">{film.title} ({film.releasedYear})</div>
+                  <div className="text-white font-bold text-sm cursor-pointer hover:text-amber-400 underline decoration-dotted" onClick={() => dispatch({ type: 'VIEW_FILM', filmId: film.id })}>{film.title} ({film.releasedYear})</div>
                   <div className="text-gray-400 text-xs">Q: {film.quality} | {fmt(film.totalGross)}</div>
                 </div>
                 <div className="flex gap-2">
@@ -13550,7 +14159,7 @@ export default function MovieMogul() {
         <div className="text-gray-400 text-xs mb-3">Eligible talent: 5+ films and 3+ awards with your studio.</div>
         <div className="flex flex-wrap gap-2">
           {state.contracts.filter(t => {
-            const filmCount = state.films.filter(f => f.status === 'released' && (f.director?.id === t.id || f.actor?.id === t.id || f.writer?.id === t.id)).length;
+            const filmCount = state.films.filter(f => f.status === 'released' && (f.director?.id === t.id || f.actor?.id === t.id || f.writer?.id === t.id || f.composer?.id === t.id)).length;
             const awardCount = (state.awards || []).filter(a => a.talentId === t.id).length;
             const alreadyInducted = (state.hallOfFame || []).some(h => h.talentId === t.id);
             return filmCount >= 5 && awardCount >= 3 && !alreadyInducted;
@@ -13562,7 +14171,7 @@ export default function MovieMogul() {
             </button>
           ))}
           {state.contracts.filter(t => {
-            const filmCount = state.films.filter(f => f.status === 'released' && (f.director?.id === t.id || f.actor?.id === t.id || f.writer?.id === t.id)).length;
+            const filmCount = state.films.filter(f => f.status === 'released' && (f.director?.id === t.id || f.actor?.id === t.id || f.writer?.id === t.id || f.composer?.id === t.id)).length;
             const awardCount = (state.awards || []).filter(a => a.talentId === t.id).length;
             return filmCount >= 5 && awardCount >= 3 && !(state.hallOfFame || []).some(h => h.talentId === t.id);
           }).length === 0 && <div className="text-gray-500 text-xs">No talent eligible yet.</div>}
@@ -13909,10 +14518,25 @@ export default function MovieMogul() {
             {state.studioMotto && <div className="text-xs text-gray-500 italic">"{state.studioMotto}"</div>}
             {state.year >= 2190 && <div className="text-xs text-red-400">{(2200 - state.year) * 12 + (12 - state.month)} months until legacy is sealed!</div>}
           </div>
-          <button onClick={() => dispatch({ type: 'END_TURN' })}
-            className="bg-green-600 hover:bg-green-500 text-white font-bold px-8 py-3 rounded-lg text-lg transition shadow-lg shadow-green-900/30">
-            END TURN →
-          </button>
+          <div className="flex gap-2 items-center">
+            <button onClick={() => {
+              try {
+                const saveName = state.studioName || 'Untitled';
+                const saves = JSON.parse(localStorage.getItem('movieMogulSaves') || '{}');
+                saves[saveName] = JSON.stringify(state);
+                localStorage.setItem('movieMogulSaves', JSON.stringify(saves));
+                dispatch({ type: 'SET_DEV', key: 'errorMsg', value: '' });
+                alert('Game saved as "' + saveName + '"!');
+              } catch(e) { alert('Save failed: ' + e.message); }
+            }}
+              className="bg-gray-700 hover:bg-gray-600 text-gray-300 font-bold px-4 py-3 rounded-lg text-sm transition" title="Save Game">
+              Save
+            </button>
+            <button onClick={() => dispatch({ type: 'END_TURN' })}
+              className="bg-green-600 hover:bg-green-500 text-white font-bold px-8 py-3 rounded-lg text-lg transition shadow-lg shadow-green-900/30">
+              END TURN →
+            </button>
+          </div>
         </div>
 
         {/* Tab bar */}
@@ -13970,6 +14594,7 @@ export default function MovieMogul() {
         <div className="bg-gray-900 border border-gray-800 rounded-xl p-5 min-h-[400px]">
           {tab === 'dashboard' && renderDashboard()}
           {tab === 'develop' && renderDevelop()}
+          {tab === 'ip' && renderIPMarketplace()}
           {tab === 'production' && renderProduction()}
           {tab === 'release' && renderRelease()}
           {tab === 'talent' && renderTalent()}
@@ -13984,6 +14609,287 @@ export default function MovieMogul() {
           {tab === 'screening' && renderScreening()}
         </div>
       </div>
+
+      {/* ==================== ACHIEVEMENT TOAST POPUPS ==================== */}
+      {(state.achievementPopups || []).length > 0 && (
+        <div className="fixed top-4 right-4 z-50 space-y-2" style={{maxWidth: '340px'}}>
+          {(state.achievementPopups || []).slice(0, 3).map((a, i) => (
+            <div key={a.id} className="bg-gray-900 border-2 border-amber-500 rounded-xl p-4 shadow-2xl shadow-amber-900/30"
+              style={{animation: `slideInRight 0.4s ease-out ${i * 0.15}s both`}}>
+              <div className="flex justify-between items-start">
+                <div className="flex items-center gap-2">
+                  <span className="text-2xl">🏆</span>
+                  <div>
+                    <div className="text-amber-400 font-bold text-sm">Achievement Unlocked!</div>
+                    <div className="text-white font-bold text-base">{a.name}</div>
+                    <div className="text-gray-400 text-xs mt-0.5">{a.desc}</div>
+                  </div>
+                </div>
+                <button onClick={() => dispatch({ type: 'DISMISS_ACHIEVEMENT_POPUP', achievementId: a.id })}
+                  className="text-gray-500 hover:text-white text-lg leading-none ml-2">×</button>
+              </div>
+            </div>
+          ))}
+          {(state.achievementPopups || []).length > 1 && (
+            <button onClick={() => dispatch({ type: 'CLEAR_ACHIEVEMENT_POPUPS' })}
+              className="text-gray-500 hover:text-white text-xs underline">
+              Dismiss all
+            </button>
+          )}
+        </div>
+      )}
+
+      {/* ==================== RIVAL STUDIO PROFILE PANEL ==================== */}
+      {state.selectedRivalIdx !== null && state.selectedRivalIdx !== undefined && (() => {
+        const rival = state.competitors[state.selectedRivalIdx];
+        if (!rival) return null;
+        const rivalFilms = (state.allFilmHistory || []).filter(f => f.studio === rival.name).sort((a, b) => (b.releaseYear || 0) - (a.releaseYear || 0));
+        const rivalAwards = (state.annualAwards || []).flatMap(ya => (ya.awards || []).filter(a => a.studio === rival.name));
+        const studioValue = rival.cash + rival.totalGross * 0.15 + rival.reputation * 2e6 + (rival.prestige || 0) * 1e6 + (rival.awards || 0) * 5e6;
+        return (
+          <div className="fixed inset-0 bg-black/80 z-50 flex items-center justify-center p-4 overflow-y-auto" onClick={() => dispatch({ type: 'CLOSE_RIVAL' })}>
+            <div className="bg-gray-900 border border-gray-700 rounded-2xl max-w-3xl w-full max-h-[90vh] overflow-y-auto p-6" onClick={e => e.stopPropagation()}>
+              <div className="flex justify-between items-start mb-4">
+                <div>
+                  <div className="text-white font-bold text-2xl">{rival.name}</div>
+                  <div className="flex items-center gap-2 mt-1">
+                    <span className={`text-xs px-2 py-0.5 rounded font-bold ${rival.tier === 'major' ? 'bg-amber-700 text-amber-200' : rival.tier === 'mid' ? 'bg-blue-700 text-blue-200' : 'bg-green-700 text-green-200'}`}>
+                      {(rival.tier || 'mid').toUpperCase()}
+                    </span>
+                    <span className="text-gray-500 text-xs">Est. {rival.founded || '?'}</span>
+                    {rival.personality && <span className="text-xs bg-gray-700 text-amber-400 px-2 py-0.5 rounded">{rival.personality.name}</span>}
+                  </div>
+                  {rival.desc && <div className="text-gray-400 text-sm mt-2">{rival.desc}</div>}
+                </div>
+                <button onClick={() => dispatch({ type: 'CLOSE_RIVAL' })} className="text-gray-500 hover:text-white text-2xl leading-none">×</button>
+              </div>
+
+              {/* Stats Grid */}
+              <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mb-5">
+                <div className="bg-gray-800 rounded-lg p-3 text-center">
+                  <div className="text-gray-500 text-xs">Reputation</div>
+                  <div className="text-white font-bold text-xl">{rival.reputation}</div>
+                </div>
+                <div className="bg-gray-800 rounded-lg p-3 text-center">
+                  <div className="text-gray-500 text-xs">Prestige</div>
+                  <div className="text-purple-400 font-bold text-xl">{rival.prestige || 0}</div>
+                </div>
+                <div className="bg-gray-800 rounded-lg p-3 text-center">
+                  <div className="text-gray-500 text-xs">Total Gross</div>
+                  <div className="text-green-400 font-bold text-lg">{fmt(rival.totalGross)}</div>
+                </div>
+                <div className="bg-gray-800 rounded-lg p-3 text-center">
+                  <div className="text-gray-500 text-xs">Est. Value</div>
+                  <div className="text-amber-400 font-bold text-lg">{fmt(Math.round(studioValue))}</div>
+                </div>
+              </div>
+
+              <div className="grid grid-cols-3 gap-3 mb-5">
+                <div className="bg-gray-800 rounded-lg p-3 text-center">
+                  <div className="text-gray-500 text-xs">Films Released</div>
+                  <div className="text-white font-bold">{rival.filmsReleased || 0}</div>
+                </div>
+                <div className="bg-gray-800 rounded-lg p-3 text-center">
+                  <div className="text-gray-500 text-xs">Awards Won</div>
+                  <div className="text-amber-400 font-bold">{rival.awards || 0}</div>
+                </div>
+                <div className="bg-gray-800 rounded-lg p-3 text-center">
+                  <div className="text-gray-500 text-xs">Est. Cash</div>
+                  <div className="text-green-400 font-bold">{fmt(rival.cash)}</div>
+                </div>
+              </div>
+
+              {/* Personality & Strategy */}
+              {rival.personality && (
+                <div className="bg-gray-800 border border-gray-700 rounded-lg p-3 mb-4">
+                  <div className="text-gray-400 text-xs font-bold mb-1">Studio Personality</div>
+                  <div className="text-white font-bold text-sm">{rival.personality.name}</div>
+                  <div className="text-gray-400 text-xs">{rival.personality.desc}</div>
+                  {rival.personality.genreWeights && (
+                    <div className="mt-2 flex flex-wrap gap-1">
+                      {Object.entries(rival.personality.genreWeights).filter(([_, w]) => w > 1.1).sort((a, b) => b[1] - a[1]).slice(0, 5).map(([g, w]) => (
+                        <span key={g} className="text-xs bg-gray-700 text-amber-300 px-1.5 py-0.5 rounded">
+                          {g} ({Math.round(w * 100 - 100)}%+)
+                        </span>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              )}
+
+              {/* Recent Films */}
+              {rivalFilms.length > 0 && (
+                <div className="mb-4">
+                  <div className="text-gray-400 font-bold text-xs mb-2">Filmography ({rivalFilms.length} films)</div>
+                  <div className="space-y-1 max-h-48 overflow-y-auto">
+                    {rivalFilms.slice(0, 20).map((f, i) => (
+                      <div key={i} className="flex justify-between items-center bg-gray-800 rounded px-3 py-1.5 text-xs">
+                        <div>
+                          <span className="text-white font-bold">"{f.title}"</span>
+                          <span className="text-gray-500 ml-2">{f.genre} ({f.releaseYear})</span>
+                        </div>
+                        <div className="text-right">
+                          <span className="text-green-400">{fmt(f.gross || 0)}</span>
+                          {f.quality && <span className="text-gray-500 ml-2">Q:{f.quality}</span>}
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {/* Awards */}
+              {rivalAwards.length > 0 && (
+                <div>
+                  <div className="text-gray-400 font-bold text-xs mb-2">Award Wins ({rivalAwards.length})</div>
+                  <div className="flex flex-wrap gap-1">
+                    {rivalAwards.slice(0, 15).map((a, i) => (
+                      <span key={i} className="text-xs bg-amber-900/30 text-amber-400 px-2 py-0.5 rounded">{a.category}: "{a.film}"</span>
+                    ))}
+                    {rivalAwards.length > 15 && <span className="text-xs text-gray-500">+{rivalAwards.length - 15} more</span>}
+                  </div>
+                </div>
+              )}
+            </div>
+          </div>
+        );
+      })()}
+
+      {/* ==================== FILM DETAIL PANEL ==================== */}
+      {state.selectedFilmId !== null && state.selectedFilmId !== undefined && (() => {
+        const film = state.films.find(f => f.id === state.selectedFilmId);
+        if (!film) return null;
+        const cat = film.ipCategory ? (IP_CATEGORIES[film.ipCategory] || {}) : {};
+        const filmAwards = (state.awards || []).filter(a => a.film === film.title);
+        const dir = (state.worldTalent || []).find(t => t.id === film.directorId) || state.contracts.find(t => t.id === film.directorId);
+        const lead = (state.worldTalent || []).find(t => t.id === film.actorId) || state.contracts.find(t => t.id === film.actorId);
+        const wri = (state.worldTalent || []).find(t => t.id === film.writerId) || state.contracts.find(t => t.id === film.writerId);
+        const comp = (state.worldTalent || []).find(t => t.id === film.composerId) || state.contracts.find(t => t.id === film.composerId);
+        const profit = (film.totalGross || 0) - (film.budget || 0) - (film.marketingBudget || 0);
+        const roi = film.budget > 0 ? Math.round((profit / film.budget) * 100) : 0;
+        const franchise = film.franchiseId ? (state.franchises || []).find(f => f.id === film.franchiseId) : null;
+        return (
+          <div className="fixed inset-0 bg-black/80 z-50 flex items-center justify-center p-4 overflow-y-auto" onClick={() => dispatch({ type: 'CLOSE_FILM' })}>
+            <div className="bg-gray-900 border border-gray-700 rounded-2xl max-w-3xl w-full max-h-[90vh] overflow-y-auto p-6" onClick={e => e.stopPropagation()}>
+              <div className="flex justify-between items-start mb-4">
+                <div>
+                  <div className="text-white font-bold text-2xl">"{film.title}"</div>
+                  <div className="flex items-center gap-2 mt-1 flex-wrap">
+                    <span className="text-amber-400 text-xs font-bold uppercase">{film.genre}</span>
+                    {film.genre2 && <span className="text-purple-400 text-xs font-bold uppercase">/ {film.genre2}</span>}
+                    <span className="text-gray-500 text-xs">|</span>
+                    <span className="text-gray-400 text-xs capitalize">{film.filmType || 'original'}</span>
+                    {film.rating && <span className="text-gray-500 text-xs border border-gray-600 px-1 rounded">{film.rating}</span>}
+                    {film.releaseYear && <span className="text-gray-500 text-xs">Released {film.releaseYear}</span>}
+                  </div>
+                </div>
+                <button onClick={() => dispatch({ type: 'CLOSE_FILM' })} className="text-gray-500 hover:text-white text-2xl leading-none">×</button>
+              </div>
+
+              {/* Scores */}
+              <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mb-5">
+                <div className="bg-gray-800 rounded-lg p-3 text-center">
+                  <div className="text-gray-500 text-xs">Quality</div>
+                  <div className={`font-bold text-xl ${(film.quality || 0) >= 80 ? 'text-green-400' : (film.quality || 0) >= 60 ? 'text-amber-400' : 'text-red-400'}`}>{film.quality || '?'}</div>
+                </div>
+                <div className="bg-gray-800 rounded-lg p-3 text-center">
+                  <div className="text-gray-500 text-xs">Critics</div>
+                  <div className={`font-bold text-xl ${(film.criticScore || 0) >= 80 ? 'text-green-400' : (film.criticScore || 0) >= 60 ? 'text-amber-400' : 'text-red-400'}`}>{film.criticScore || '?'}</div>
+                </div>
+                <div className="bg-gray-800 rounded-lg p-3 text-center">
+                  <div className="text-gray-500 text-xs">Audience</div>
+                  <div className={`font-bold text-xl ${(film.audienceScore || 0) >= 80 ? 'text-green-400' : (film.audienceScore || 0) >= 60 ? 'text-amber-400' : 'text-red-400'}`}>{film.audienceScore || '?'}</div>
+                </div>
+                <div className="bg-gray-800 rounded-lg p-3 text-center">
+                  <div className="text-gray-500 text-xs">Status</div>
+                  <div className="text-white font-bold text-sm capitalize">{film.status}</div>
+                </div>
+              </div>
+
+              {/* Box Office */}
+              {film.status === 'released' && (
+                <div className="bg-gray-800 border border-gray-700 rounded-lg p-4 mb-4">
+                  <div className="text-gray-400 font-bold text-xs mb-2">Box Office Performance</div>
+                  <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+                    <div>
+                      <div className="text-gray-500 text-xs">Domestic</div>
+                      <div className="text-green-400 font-bold">{fmt(film.domestic || 0)}</div>
+                    </div>
+                    <div>
+                      <div className="text-gray-500 text-xs">International</div>
+                      <div className="text-green-400 font-bold">{fmt(film.international || 0)}</div>
+                    </div>
+                    <div>
+                      <div className="text-gray-500 text-xs">Total Gross</div>
+                      <div className="text-green-400 font-bold text-lg">{fmt(film.totalGross || 0)}</div>
+                    </div>
+                    <div>
+                      <div className="text-gray-500 text-xs">Profit / ROI</div>
+                      <div className={`font-bold ${profit >= 0 ? 'text-green-400' : 'text-red-400'}`}>{fmt(profit)} ({roi > 0 ? '+' : ''}{roi}%)</div>
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              {/* Budget Breakdown */}
+              <div className="bg-gray-800 border border-gray-700 rounded-lg p-4 mb-4">
+                <div className="text-gray-400 font-bold text-xs mb-2">Production Details</div>
+                <div className="grid grid-cols-2 md:grid-cols-3 gap-3 text-sm">
+                  <div><span className="text-gray-500">Budget:</span> <span className="text-white">{fmt(film.budget || 0)}</span></div>
+                  <div><span className="text-gray-500">Marketing:</span> <span className="text-white">{fmt(film.marketingBudget || 0)}</span></div>
+                  <div><span className="text-gray-500">Total Cost:</span> <span className="text-white">{fmt((film.budget || 0) + (film.marketingBudget || 0))}</span></div>
+                  {film.tone && <div><span className="text-gray-500">Tone:</span> <span className="text-white capitalize">{film.tone}</span></div>}
+                  {film.releaseWindow && <div><span className="text-gray-500">Release:</span> <span className="text-white capitalize">{film.releaseWindow}</span></div>}
+                  {film.isSleeper && <div><span className="text-amber-400 font-bold">Sleeper Hit! ({film.sleeperMult ? film.sleeperMult.toFixed(1) + 'x' : ''})</span></div>}
+                </div>
+              </div>
+
+              {/* Cast & Crew */}
+              <div className="bg-gray-800 border border-gray-700 rounded-lg p-4 mb-4">
+                <div className="text-gray-400 font-bold text-xs mb-2">Cast & Crew</div>
+                <div className="grid grid-cols-2 gap-2 text-sm">
+                  {dir && <div><span className="text-gray-500">Director:</span> <span className="text-white cursor-pointer hover:text-yellow-300" onClick={() => { dispatch({ type: 'CLOSE_FILM' }); dispatch({ type: 'SELECT_TALENT', talentId: dir.id }); }}>{dir.name}</span> <span className="text-gray-600 text-xs">(Skill: {dir.skill})</span></div>}
+                  {lead && <div><span className="text-gray-500">Lead:</span> <span className="text-white cursor-pointer hover:text-yellow-300" onClick={() => { dispatch({ type: 'CLOSE_FILM' }); dispatch({ type: 'SELECT_TALENT', talentId: lead.id }); }}>{lead.name}</span> <span className="text-gray-600 text-xs">(Skill: {lead.skill})</span></div>}
+                  {wri && <div><span className="text-gray-500">Writer:</span> <span className="text-white cursor-pointer hover:text-yellow-300" onClick={() => { dispatch({ type: 'CLOSE_FILM' }); dispatch({ type: 'SELECT_TALENT', talentId: wri.id }); }}>{wri.name}</span> <span className="text-gray-600 text-xs">(Skill: {wri.skill})</span></div>}
+                  {comp && <div><span className="text-gray-500">Composer:</span> <span className="text-white cursor-pointer hover:text-yellow-300" onClick={() => { dispatch({ type: 'CLOSE_FILM' }); dispatch({ type: 'SELECT_TALENT', talentId: comp.id }); }}>{comp.name}</span> <span className="text-gray-600 text-xs">(Skill: {comp.skill})</span></div>}
+                </div>
+              </div>
+
+              {/* Franchise */}
+              {franchise && (
+                <div className="bg-gray-800 border border-amber-700 rounded-lg p-3 mb-4">
+                  <div className="text-amber-400 font-bold text-xs">Part of: {franchise.name}</div>
+                  <div className="text-gray-400 text-xs">{(franchise.filmIds || []).length} films in franchise | Total Gross: {fmt(franchise.totalGross || 0)}</div>
+                </div>
+              )}
+
+              {/* Awards */}
+              {filmAwards.length > 0 && (
+                <div className="bg-gray-800 border border-amber-600 rounded-lg p-3 mb-4">
+                  <div className="text-amber-400 font-bold text-xs mb-1">Awards ({filmAwards.length})</div>
+                  <div className="flex flex-wrap gap-1">
+                    {filmAwards.map((a, i) => (
+                      <span key={i} className={`text-xs px-2 py-0.5 rounded ${a.isRazzie ? 'bg-red-900/30 text-red-400' : 'bg-amber-900/30 text-amber-300'}`}>
+                        {a.isRazzie ? '💩' : '🏆'} {a.type} ({a.year}) {a.show && `— ${a.show}`}
+                      </span>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {/* Logline */}
+              {film.logline && (
+                <div className="text-gray-400 text-sm italic border-t border-gray-700 pt-3">"{film.logline}"</div>
+              )}
+            </div>
+          </div>
+        );
+      })()}
+
+      {/* Achievement toast animation */}
+      <style>{`
+        @keyframes slideInRight { from { transform: translateX(120%); opacity: 0; } to { transform: translateX(0); opacity: 1; } }
+      `}</style>
     </div>
   );
 }
