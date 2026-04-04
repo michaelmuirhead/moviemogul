@@ -9865,6 +9865,9 @@ export default function MovieMogul() {
   const [mottoInput, setMottoInput] = useState('');
   const [scenarioIdx, setScenarioIdx] = useState(0);
   const [screeningSortBy, setScreeningSortBy] = useState('year');
+  const [musicSubTab, setMusicSubTab] = useState('artists');
+  const [collabSelect, setCollabSelect] = useState(null);
+  const [merchSubTab, setMerchSubTab] = useState('launch');
 
   // ---- Title Screen ----
   if (state.phase === 'title') {
@@ -13267,8 +13270,6 @@ export default function MovieMogul() {
     const mTours = state.musicTours || [];
     const mCharts = state.musicCharts || [];
     const mAwards = state.musicAwardsHistory || [];
-    const [musicSubTab, setMusicSubTab] = useState('artists');
-    const [collabSelect, setCollabSelect] = useState(null);
     if (!mL) return (
       <div className="space-y-4">
         <div className="text-white font-bold text-xl mb-2">🎵 Music Label</div>
@@ -13465,7 +13466,6 @@ export default function MovieMogul() {
     const releasedFilms = state.films.filter(f => f.status === 'released' && (f.totalGross || 0) > 0);
     const activeTVShows = (state.tvShows || []).filter(s => !['cancelled', 'ended'].includes(s.status));
     const activeDeals = (state.merchandiseDeals || []).filter(d => d.monthsLeft > 0);
-    const [merchSubTab, setMerchSubTab] = useState('launch');
     return (
       <div className="space-y-4">
         <div className="text-white font-bold text-xl mb-1">🛍️ Consumer Products & Merchandise</div>
