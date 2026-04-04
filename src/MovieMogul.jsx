@@ -4522,8 +4522,8 @@ function reducer(state, action) {
       }
 
       // ENHANCED: AI learning - track genre performance and pivot
+      let rivalStrategies = { ...(state.rivalStrategies || {}) };
       if (state.month === 12) {
-        let rivalStrategies = { ...(state.rivalStrategies || {}) };
         competitors.forEach(comp => {
           const compFilms = (state.allFilmHistory || []).filter(f => f.studio === comp.name && f.releasedYear === state.year);
           if (compFilms.length > 0) {
