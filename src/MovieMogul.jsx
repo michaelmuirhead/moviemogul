@@ -4372,6 +4372,7 @@ function reducer(state, action) {
 
       let newspaperQueue = [...(state.newspaperQueue || [])];
       let newspaperEdition = state.newspaperEdition || 0;
+      let contracts = state.contracts.map(t => ({ ...t }));
 
       let celebration = state.celebration;
 
@@ -5417,8 +5418,7 @@ function reducer(state, action) {
       const soundtrackRev = Math.round(films.filter(f => f.status === 'released').length * 15000);
       revenue += soundtrackRev;
 
-      // Talent contracts (declared early so academy graduates can push to it)
-      let contracts = state.contracts.map(t => ({ ...t }));
+      // Talent contracts — declaration moved to top of END_TURN to avoid TDZ in marketing phase
 
       // 5g. Talent academy progress
       let academy = state.academy.map(a => ({ ...a }));
