@@ -2882,6 +2882,26 @@ const calcBoxOffice = (quality, budget, marketing, year, genre, film) => {
 
 // ==================== REDUCER ====================
 
+
+// ==================== MUSIC LABEL ====================
+const MUSIC_GENRES = ['Pop', 'Rock', 'Hip-Hop', 'R&B', 'Country', 'Electronic', 'Jazz', 'Classical', 'Indie', 'Latin'];
+const ALBUM_TYPES = [
+  { id: 'soundtrack', name: 'Film Soundtrack', baseSales: 500000, costMult: 0.8, desc: 'Tied to a film release' },
+  { id: 'original', name: 'Original Album', baseSales: 800000, costMult: 1.0, desc: 'Standalone artist album' },
+  { id: 'compilation', name: 'Greatest Hits', baseSales: 1200000, costMult: 0.5, desc: 'Best-of compilation' },
+  { id: 'live', name: 'Live Album', baseSales: 300000, costMult: 0.6, desc: 'Concert recording' },
+];
+
+// ==================== PRODUCTION TYPES ====================
+const PRODUCTION_TYPES = [
+  { id: 'live_action', name: 'Live-Action', icon: '🎬', budgetMult: 1.0, qualityMod: 0, desc: 'Standard film production' },
+  { id: 'animation', name: 'Animated', icon: '🎨', budgetMult: 1.4, qualityMod: 0, merchMult: 3.0, desc: 'Higher budget, massive merch potential', genreBonus: ['Animation', 'Fantasy', 'Sci-Fi'] },
+  { id: 'documentary', name: 'Documentary', icon: '📹', budgetMult: 0.3, qualityMod: 5, prestigeMod: 3, desc: 'Low budget, high prestige potential', genreBonus: ['Documentary'] },
+];
+
+const DOC_SUBJECTS = ['Nature & Wildlife', 'True Crime', 'Political Expose', 'Historical Deep Dive', 'Social Justice', 'Music & Culture', 'Sports Legend', 'Science & Technology', 'War & Conflict', 'Environmental Crisis'];
+
+
 const INIT = {
   phase: 'title',
   studioName: '',
@@ -3129,6 +3149,14 @@ const INIT = {
   merchandiseDeals: [],       // [{filmId, categoryId, monthlyRevenue, monthsLeft}]
 
   // Event feed categories
+  // ---- WAVE 2 FEATURES ----
+  musicLabel: null,
+  musicArtists: [],
+  musicAlbums: [],
+  devProductionType: 'live_action',
+  tvEpisodeRatings: {},
+  tvNetworkDeals: [],
+
   logFilter: 'all',           // 'all' | 'boxoffice' | 'talent' | 'market' | 'streaming' | 'rivals' | 'production'
   // ---- FEATURE 7: STUDIO GENRE IDENTITY ----
   genreIdentity: {},          // genre -> {films: count, reputation: 0-100}
@@ -3303,6 +3331,9 @@ function reducer(state, action) {
         goldenDecade: null,
         merchandiseDeals: [],
         scenario: scenario.id,
+        // Wave 2
+        musicLabel: null, musicArtists: [], musicAlbums: [],
+        tvEpisodeRatings: {}, tvNetworkDeals: [], devProductionType: 'live_action',
         scenarioGoal,
         scenarioDeadline,
         gameLog: [
@@ -5306,6 +5337,56 @@ case 'REMASTER_FILM': {
         gameLog: [...state.gameLog, { text: `${talent.name} inducted into the Studio Hall of Fame! +3 prestige`, type: 'award' }],
       };
     }
+
+    // ==================== MUSIC LABEL ====================
+    case 'FOUND_MUSIC_LABEL': {
+      if (state.musicLabel) return { ...state, errorMsg: 'Already have a label!' };
+      if (state.cash < 10e6) return { ...state, errorMsg: 'Need $10M to found a music label.' };
+      return { ...state, cash: state.cash - 10e6,
+        musicLabel: { name: action.name || (state.studioName + ' Records'), founded: state.year, totalRevenue: 0 },
+        gameLog: [...state.gameLog, { text: 'Founded music label: ' + (action.name || state.studioName + ' Records') + '!', type: 'success' }], errorMsg: '' };
+    }
+    case 'SIGN_MUSIC_ARTIST': {
+      if (!state.musicLabel) return { ...state, errorMsg: 'Found a music label first!' };
+      const maS = randInt(30, 90), maP = randInt(20, 80);
+      const maSal = Math.round(maS * 8000 + maP * 5000 + randInt(50000, 200000));
+      if (state.cash < maSal) return { ...state, errorMsg: 'Not enough cash to sign artist.' };
+      const maG = action.genre || pick(MUSIC_GENRES);
+      const maArt = { id: state.nextId, name: makeName(Math.random() < 0.5 ? 'male' : 'female'), genre: maG, skill: maS, popularity: maP, salary: maSal, albums: 0, signedYear: state.year, morale: randInt(60, 90) };
+      return { ...state, cash: state.cash - maSal, nextId: state.nextId + 1, musicArtists: [...state.musicArtists, maArt],
+        gameLog: [...state.gameLog, { text: 'Signed ' + maArt.name + ' (' + maG + ', skill ' + maS + ') for ' + fmt(maSal), type: 'success' }], errorMsg: '' };
+    }
+    case 'DROP_MUSIC_ARTIST':
+      return { ...state, musicArtists: state.musicArtists.filter(a => a.id !== action.artistId),
+        gameLog: [...state.gameLog, { text: 'Dropped artist from label.', type: 'info' }] };
+    case 'RELEASE_ALBUM': {
+      if (!state.musicLabel) return { ...state, errorMsg: 'No music label!' };
+      const raA = state.musicArtists.find(a => a.id === action.artistId);
+      if (!raA) return { ...state, errorMsg: 'Artist not found.' };
+      const raT = ALBUM_TYPES.find(t => t.id === (action.albumType || 'original')) || ALBUM_TYPES[1];
+      const raCost = Math.round((raA.skill * 5000 + 200000) * raT.costMult);
+      if (state.cash < raCost) return { ...state, errorMsg: 'Need ' + fmt(raCost) + ' to produce album.' };
+      let raQ = clamp(raA.skill + randInt(-10, 15), 20, 99);
+      const raRec = (state.lotBuildings || []).find(b => b.buildingId === 'recording_studio');
+      if (raRec) raQ += raRec.level * 2;
+      let raS = Math.round(raT.baseSales * (raQ / 50) * (raA.popularity / 50) * (0.8 + Math.random() * 0.4));
+      let raR = Math.round(raS * 8);
+      let raFT = null;
+      if (action.filmId && raT.id === 'soundtrack') {
+        const raF = state.films.find(f => f.id === action.filmId);
+        if (raF) { raFT = raF.title; raS = Math.round(raS * (1 + (raF.quality || 50) / 100)); raR = Math.round(raS * 8); }
+      }
+      const raAlb = { id: state.nextId, title: action.title || (raA.name + ' - ' + raT.name), type: raT.id, artistId: raA.id, filmId: action.filmId || null, sales: raS, revenue: raR, releaseYear: state.year, quality: raQ };
+      return { ...state, cash: state.cash - raCost + raR, nextId: state.nextId + 1,
+        musicAlbums: [...state.musicAlbums, raAlb],
+        musicArtists: state.musicArtists.map(a => a.id === raA.id ? { ...a, albums: a.albums + 1, popularity: clamp(a.popularity + (raQ > 70 ? 5 : -2), 5, 99) } : a),
+        musicLabel: { ...state.musicLabel, totalRevenue: state.musicLabel.totalRevenue + raR },
+        gameLog: [...state.gameLog, { text: 'Released "' + raAlb.title + '" — ' + (raS/1e6).toFixed(1) + 'M units, ' + fmt(raR) + ' revenue' + (raFT ? ' (Soundtrack: ' + raFT + ')' : ''), type: raQ > 65 ? 'success' : 'info' }], errorMsg: '' };
+    }
+    case 'SET_PRODUCTION_TYPE':
+      return { ...state, devProductionType: action.prodType || 'live_action' };
+
+
     case 'END_TURN': {
       // Deep clone mutable parts
       let films = state.films.map(f => ({ ...f, events: [...(f.events || [])] }));
@@ -6650,6 +6731,48 @@ case 'REMASTER_FILM': {
           distDeal = null;
         }
       }
+
+
+      // 9c. Music Label monthly processing
+      let musicArtists = (state.musicArtists || []).map(a => ({ ...a }));
+      let musicLabel = state.musicLabel ? { ...state.musicLabel } : null;
+      let musicAlbums = [...(state.musicAlbums || [])];
+      if (musicLabel && musicArtists.length > 0) {
+        musicArtists.forEach(a => { cash -= Math.round(a.salary / 12); expenses += Math.round(a.salary / 12); });
+        musicArtists = musicArtists.map(a => ({ ...a, popularity: clamp(a.popularity + randInt(-3, 3), 5, 99), skill: clamp(a.skill + randInt(-1, 1), 10, 99) }));
+        const maCatRoy = musicAlbums.reduce((sum, alb) => sum + Math.round(alb.revenue * 0.01 * Math.max(0.05, 1.0 - Math.max(1, state.year - alb.releaseYear) * 0.15)), 0);
+        if (maCatRoy > 0) { cash += maCatRoy; revenue += maCatRoy; musicLabel.totalRevenue += maCatRoy; }
+      }
+
+      // 9d. TV Episode Ratings
+      let tvEpisodeRatings = { ...(state.tvEpisodeRatings || {}) };
+      tvShows.forEach(tvs => {
+        if (tvs.status === 'airing') {
+          if (!tvEpisodeRatings[tvs.id]) tvEpisodeRatings[tvs.id] = [];
+          const tvBR = Math.max(1, (tvs.quality || 50) / 10);
+          const tvR = clamp(parseFloat((tvBR + (Math.random() - 0.45) * 2 + (tvs.currentSeason > 3 ? -(tvs.currentSeason - 3) * 0.3 : 0)).toFixed(1)), 1.0, 10.0);
+          const tvV = Math.round((tvs.viewership || 500000) * (tvR / tvBR) * (0.8 + Math.random() * 0.4));
+          tvEpisodeRatings[tvs.id].push({ episode: tvs.turnsInStatus || 1, season: tvs.currentSeason, rating: tvR, viewers: tvV });
+          if (tvR < 3.0 && Math.random() < 0.2) {
+            tvs.cancellationRisk = (tvs.cancellationRisk || 0) + 25;
+            if (tvs.cancellationRisk >= 100) { tvs.status = 'cancelled'; log.push({ text: '"' + tvs.title + '" cancelled due to poor ratings!', type: 'warning', category: 'streaming' }); }
+            else log.push({ text: '"' + tvs.title + '" rated ' + tvR.toFixed(1) + ' — cancellation risk ' + tvs.cancellationRisk + '%', type: 'warning', category: 'streaming' });
+          }
+        }
+      });
+
+      // 9e. Talent Lifecycle — breakout stars (June)
+      if (state.month === 6) {
+        for (let bi = 0; bi < randInt(1, 2); bi++) {
+          const bkT = pick(['actor', 'actor', 'actor', 'director', 'writer']);
+          const bk = makeTalent(state.nextId + 900 + bi, bkT, [65, 88], [18, 26]);
+          bk.status = 'free'; bk.signedTo = null; bk.isBreakout = true; bk.popularity = clamp(bk.popularity + 20, 50, 99);
+          if (state.worldTalent) state.worldTalent.push(bk);
+          log.push({ text: 'BREAKOUT STAR: ' + bk.name + ' (' + bkT + ', age ' + bk.age + ', skill ' + bk.skill + ')!', type: 'success', category: 'talent' });
+          turnSummaryData.talent.push({ text: 'Breakout: ' + bk.name + ' (' + bkT + ')!' });
+        }
+      }
+
 
       // 10. Talent aging & drama (every December = end of year)
       if (state.month === 12) {
@@ -8124,6 +8247,8 @@ case 'REMASTER_FILM': {
         turnSummaryExpanded: {},
         tabBadges,
         logFilter: 'all',
+        // Wave 2
+        musicLabel, musicArtists, musicAlbums, tvEpisodeRatings,
         // ---- TALENT AGING & LIFECYCLE ----
         contracts: state.contracts.map(t => {
           const aged = { ...t, age: t.age + 1 };
@@ -9612,8 +9737,8 @@ export default function MovieMogul() {
   const inPipeline = state.films.filter(f => ['development', 'production', 'postproduction', 'script_dev', 'pre_production', 'principal_photography', 'post_production', 'marketing_campaign'].includes(f.status));
   const released = state.films.filter(f => f.status === 'released').slice().reverse();
   const awaitingRelease = state.films.filter(f => f.status === 'completed' || f.status === 'scheduled');
-  const tabs = ['dashboard', 'develop', 'ip', 'production', 'release', 'talent', 'studio', 'finance', 'market', 'streaming', 'catalog', 'press', 'academy', 'partners', 'screening'];
-  const tabIcons = { dashboard: '📊', develop: '🎬', ip: '🏷', production: '🎥', release: '🎞', talent: '⭐', studio: '🏢', finance: '💰', market: '📈', streaming: '📺', catalog: '📀', press: '📰', academy: '🎓', partners: '🌍', screening: '🎬' };
+  const tabs = ['dashboard', 'develop', 'ip', 'production', 'release', 'talent', 'studio', 'lot', 'music', 'finance', 'market', 'streaming', 'tv', 'catalog', 'press', 'academy', 'partners', 'screening'];
+  const tabIcons = { dashboard: '📊', develop: '🎬', ip: '🏷', production: '🎥', release: '🎞', talent: '⭐', studio: '🏢', lot: '🏗️', music: '🎵', finance: '💰', market: '📈', streaming: '📺', tv: '📺', catalog: '📀', press: '📰', academy: '🎓', partners: '🌍', screening: '🎬' };
 
   const facilityCosts = [0, 500000, 2000000, 5000000, 15000000, 50000000];
   const facilityNames = ['Garage Studio', 'Small Lot', 'Soundstages', 'VFX Lab', 'Backlot Complex', 'Premier Facilities'];
@@ -10409,6 +10534,20 @@ export default function MovieMogul() {
           <div className="text-xs text-gray-500 mt-2">Total allocated: {Object.values(state.devBudgetAlloc).reduce((a,b)=>a+b,0)}% | Remaining: {100 - Object.values(state.devBudgetAlloc).reduce((a,b)=>a+b,0)}%</div>
         </div>
 
+        {/* Production Type */}
+        <div className="bg-gray-800 border border-gray-700 rounded-lg p-4 mb-4">
+          <div className="text-white font-bold text-sm mb-2">Production Type</div>
+          <div className="flex gap-2">
+            {PRODUCTION_TYPES.map(pt => (
+              <button key={pt.id} onClick={() => dispatch({ type: 'SET_PRODUCTION_TYPE', prodType: pt.id })}
+                className={`px-3 py-1.5 rounded text-xs font-bold transition ${state.devProductionType === pt.id ? 'bg-blue-600 text-white' : 'bg-gray-700 text-gray-300 hover:bg-gray-600'}`}>
+                {pt.icon} {pt.name}
+              </button>
+            ))}
+          </div>
+          <div className="text-gray-500 text-xs mt-1">{PRODUCTION_TYPES.find(p => p.id === state.devProductionType)?.desc}</div>
+        </div>
+
         {/* Director vs Studio Control */}
         <div className="bg-gray-800 border border-gray-700 rounded-lg p-4">
           <div className="flex justify-between items-center mb-2">
@@ -10990,6 +11129,7 @@ export default function MovieMogul() {
       { type: 'actor', label: 'Actors', icon: '⭐' },
       { type: 'writer', label: 'Writers', icon: '📝' },
       { type: 'producer', label: 'Producers', icon: '🎯' },
+      { type: 'composer', label: 'Composers', icon: '🎵' },
     ];
 
     // Filter talent based on search and filters
@@ -11342,7 +11482,7 @@ export default function MovieMogul() {
                                   <div className="flex justify-between items-start mb-3">
                                     <div>
                                       <div className="text-amber-400 font-bold text-sm">Negotiating with {neg.talentName}</div>
-                                      <div className="text-gray-400 text-xs">{t.type.charAt(0).toUpperCase() + t.type.slice(1)} · Skill {t.skill} · Pop {t.popularity} · Star Power {sp}</div>
+                                      <div className="text-gray-400 text-xs">{t.type.charAt(0).toUpperCase() + t.type.slice(1)} · Age {t.age} · Skill {t.skill} · Pop {t.popularity} · Star Power {sp}</div>
                                     </div>
                                     {neg.perks && <div className="text-teal-400 text-xs bg-teal-900/30 px-2 py-1 rounded">Wants: {neg.perks}</div>}
                                   </div>
@@ -12722,6 +12862,265 @@ export default function MovieMogul() {
       </div>
     );
   };
+
+
+  // ==================== LOT TAB ====================
+  const renderLot = () => {
+    const lotBldgs = state.lotBuildings || [];
+    const lotCap = state.lotCapacity || 5;
+    return (
+      <div className="space-y-4">
+        <div className="text-white font-bold text-xl mb-2">🏗️ Studio Lot</div>
+        <div className="text-gray-400 text-sm mb-4">Build facilities on your lot for passive bonuses. {lotBldgs.length}/{lotCap} slots used.</div>
+        <div className="grid grid-cols-3 md:grid-cols-5 gap-2 mb-4">
+          {lotBldgs.map((b, i) => {
+            const def = LOT_BUILDINGS.find(d => d.id === b.buildingId);
+            const catIcon = def?.category === 'production' ? '🎬' : def?.category === 'set' ? '🏰' : def?.category === 'tech' ? '✨' : def?.category === 'post' ? '🖥️' : def?.category === 'creative' ? '📝' : def?.category === 'amenity' ? '🍽️' : def?.category === 'admin' ? '🏛️' : '🏆';
+            return (
+              <div key={i} className="bg-gray-800 border border-green-600 rounded-lg p-3 text-center">
+                <div className="text-2xl mb-1">{catIcon}</div>
+                <div className="text-white text-xs font-bold">{def?.name || b.buildingId}</div>
+                <div className="text-gray-400 text-[10px]">Lv {b.level}/{def?.maxLevel || 3}</div>
+                <div className="flex gap-1 justify-center mt-1">
+                  {b.level < (def?.maxLevel || 3) && (
+                    <button onClick={() => dispatch({ type: 'UPGRADE_LOT_BUILDING', buildingId: b.buildingId })}
+                      className="bg-blue-700 hover:bg-blue-600 text-white text-[10px] px-1.5 py-0.5 rounded">↑</button>
+                  )}
+                  <button onClick={() => dispatch({ type: 'DEMOLISH_LOT_BUILDING', buildingId: b.buildingId })}
+                    className="bg-red-800 hover:bg-red-700 text-white text-[10px] px-1.5 py-0.5 rounded">✕</button>
+                </div>
+              </div>
+            );
+          })}
+          {Array.from({ length: Math.max(0, lotCap - lotBldgs.length) }).map((_, i) => (
+            <div key={'e-' + i} className="bg-gray-900 border border-gray-700 border-dashed rounded-lg p-3 text-center">
+              <div className="text-gray-600 text-2xl">+</div>
+              <div className="text-gray-600 text-xs">Empty</div>
+            </div>
+          ))}
+        </div>
+        {lotBldgs.length > 0 && (
+          <div className="bg-gray-800 border border-gray-700 rounded-lg p-3 mb-4">
+            <div className="text-green-400 font-bold text-sm mb-2">Active Bonuses</div>
+            <div className="grid grid-cols-2 md:grid-cols-3 gap-2">
+              {lotBldgs.map((b, i) => {
+                const def = LOT_BUILDINGS.find(d => d.id === b.buildingId);
+                return (
+                  <div key={i} className="text-xs text-gray-300">
+                    <span className="text-white font-bold">{def?.name}</span> Lv{b.level}
+                    {def?.qualityBonus?.[b.level-1] > 0 && <span className="text-green-400"> +{def.qualityBonus[b.level-1]}q</span>}
+                    {def?.moraleMod?.[b.level-1] > 0 && <span className="text-blue-400"> +{def.moraleMod[b.level-1]} morale</span>}
+                    {def?.prestigeBonus?.[b.level-1] > 0 && <span className="text-amber-400"> +{def.prestigeBonus[b.level-1]} prestige</span>}
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+        )}
+        <div className="text-white font-bold text-lg mb-2">Available Facilities</div>
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-2">
+          {LOT_BUILDINGS.filter(lb => !lotBldgs.some(b => b.buildingId === lb.id)).map((lb, i) => (
+            <button key={i} onClick={() => dispatch({ type: 'BUILD_LOT_BUILDING', buildingId: lb.id })}
+              disabled={state.cash < lb.cost || lotBldgs.length >= lotCap}
+              className="bg-gray-800 border border-gray-600 hover:border-blue-400 rounded-lg p-3 text-left transition disabled:opacity-40">
+              <div className="text-white font-bold text-sm">{lb.name}</div>
+              <div className="text-gray-400 text-xs mb-1">{lb.desc}</div>
+              <div className="text-blue-400 text-xs">{fmt(lb.cost)} | {lb.category}</div>
+              {lb.genres && <div className="text-purple-400 text-xs mt-1">Genres: {lb.genres.join(', ')}</div>}
+            </button>
+          ))}
+        </div>
+      </div>
+    );
+  };
+
+  // ==================== MUSIC TAB ====================
+  const renderMusic = () => {
+    const mL = state.musicLabel;
+    const mA = state.musicArtists || [];
+    const mAlb = state.musicAlbums || [];
+    if (!mL) return (
+      <div className="space-y-4">
+        <div className="text-white font-bold text-xl mb-2">🎵 Music Label</div>
+        <div className="text-gray-400 text-sm mb-4">Found a music division to sign artists, produce soundtracks, and cross-promote.</div>
+        <div className="bg-gray-800 border border-gray-600 rounded-lg p-6 text-center">
+          <div className="text-4xl mb-3">🎶</div>
+          <div className="text-white font-bold text-lg mb-2">Start Your Music Label</div>
+          <div className="text-gray-400 text-sm mb-4">Cost: $10M</div>
+          <button onClick={() => dispatch({ type: 'FOUND_MUSIC_LABEL' })} disabled={state.cash < 10e6}
+            className="bg-purple-600 hover:bg-purple-500 disabled:opacity-40 text-white font-bold px-6 py-2 rounded-lg transition">Found Label ($10M)</button>
+        </div>
+      </div>
+    );
+    return (
+      <div className="space-y-4">
+        <div className="text-white font-bold text-xl">🎵 {mL.name}</div>
+        <div className="text-gray-400 text-sm">Founded {mL.founded} | Revenue: {fmt(mL.totalRevenue)} | Artists: {mA.length} | Albums: {mAlb.length}</div>
+        <div>
+          <div className="text-white font-bold text-lg mb-2">Signed Artists</div>
+          {mA.length === 0 ? <div className="text-gray-500 text-sm">No artists signed.</div> : (
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
+              {mA.map(a => (
+                <div key={a.id} className="bg-gray-800 border border-gray-600 rounded-lg p-3 flex justify-between items-center">
+                  <div>
+                    <div className="text-white font-bold text-sm">{a.name}</div>
+                    <div className="text-xs text-gray-400">{a.genre} | Skill: {a.skill} | Pop: {a.popularity} | Albums: {a.albums}</div>
+                    <div className="text-xs text-gray-500">Salary: {fmt(a.salary)}/yr</div>
+                  </div>
+                  <div className="flex gap-1">
+                    <button onClick={() => dispatch({ type: 'RELEASE_ALBUM', artistId: a.id, albumType: 'original' })}
+                      className="bg-purple-600 hover:bg-purple-500 text-white text-xs px-2 py-1 rounded">Album</button>
+                    {state.films.filter(f => f.status === 'released' || f.status === 'postproduction').length > 0 && (
+                      <button onClick={() => dispatch({ type: 'RELEASE_ALBUM', artistId: a.id, albumType: 'soundtrack', filmId: state.films.filter(f => f.status === 'released' || f.status === 'postproduction')[0]?.id })}
+                        className="bg-teal-600 hover:bg-teal-500 text-white text-xs px-2 py-1 rounded">Soundtrack</button>
+                    )}
+                    <button onClick={() => dispatch({ type: 'DROP_MUSIC_ARTIST', artistId: a.id })}
+                      className="bg-red-700 hover:bg-red-600 text-white text-xs px-2 py-1 rounded">Drop</button>
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+        <div>
+          <div className="text-white font-bold text-lg mb-2">Sign New Artist</div>
+          <div className="flex flex-wrap gap-2">
+            {MUSIC_GENRES.map(g => (
+              <button key={g} onClick={() => dispatch({ type: 'SIGN_MUSIC_ARTIST', genre: g })}
+                className="bg-gray-700 hover:bg-gray-600 text-white text-xs px-3 py-1.5 rounded transition">{g}</button>
+            ))}
+          </div>
+        </div>
+        {mAlb.length > 0 && (
+          <div>
+            <div className="text-white font-bold text-lg mb-2">Discography</div>
+            <div className="space-y-1 max-h-60 overflow-y-auto">
+              {[...mAlb].reverse().map(alb => (
+                <div key={alb.id} className="bg-gray-800 border border-gray-700 rounded p-2 flex justify-between">
+                  <div>
+                    <div className="text-white text-sm font-bold">{alb.title}</div>
+                    <div className="text-xs text-gray-400">{mA.find(a => a.id === alb.artistId)?.name || '?'} | {alb.type} | Q:{alb.quality} | {alb.releaseYear}</div>
+                  </div>
+                  <div className="text-right">
+                    <div className="text-green-400 text-sm font-bold">{fmt(alb.revenue)}</div>
+                    <div className="text-xs text-gray-400">{(alb.sales/1e6).toFixed(1)}M units</div>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+      </div>
+    );
+  };
+
+  // ==================== TV DEEP DIVE TAB ====================
+  const renderTVDeepDive = () => {
+    const tvList = state.tvShows || [];
+    const tvER = state.tvEpisodeRatings || {};
+    return (
+      <div className="space-y-4">
+        <div className="text-white font-bold text-xl mb-2">📺 TV Division</div>
+        <div className="text-gray-400 text-sm mb-4">Manage your TV empire — track episode ratings, renew or cancel shows.</div>
+        <div className="text-white font-bold text-lg mb-2">Active Shows ({tvList.filter(s => !['cancelled','ended'].includes(s.status)).length})</div>
+        {tvList.length === 0 ? <div className="text-gray-500 text-sm">No shows yet. Greenlight from Streaming tab or below.</div> : (
+          <div className="space-y-3">
+            {tvList.filter(s => !['cancelled','ended'].includes(s.status)).map(tvs => {
+              const eps = tvER[tvs.id] || [];
+              const avgR = eps.length > 0 ? (eps.reduce((s,e) => s + e.rating, 0) / eps.length).toFixed(1) : 'N/A';
+              const latest = eps[eps.length-1];
+              const tvFmt = TV_FORMATS.find(f => f.id === tvs.format);
+              return (
+                <div key={tvs.id} className="bg-gray-800 border border-gray-600 rounded-lg p-4">
+                  <div className="flex justify-between items-start mb-2">
+                    <div>
+                      <div className="text-white font-bold">{tvs.title}</div>
+                      <div className="text-xs text-gray-400">{tvFmt?.name || tvs.format} | S{tvs.currentSeason} | {tvs.episodes} eps</div>
+                    </div>
+                    <div className="text-right">
+                      <div className={'text-sm font-bold ' + (tvs.status === 'airing' ? 'text-green-400' : tvs.status === 'production' ? 'text-amber-400' : 'text-blue-400')}>{tvs.status.toUpperCase()}</div>
+                      {tvs.quality > 0 && <div className="text-xs text-gray-400">Q: {tvs.quality}</div>}
+                    </div>
+                  </div>
+                  {eps.length > 0 && (
+                    <div className="mb-2">
+                      <div className="text-xs text-gray-500 mb-1">Episode Ratings (Avg: {avgR})</div>
+                      <div className="flex gap-0.5 items-end h-10">
+                        {eps.slice(-12).map((ep, ei) => (
+                          <div key={ei} className="flex-1 rounded-t" title={'S' + ep.season + 'E' + ep.episode + ': ' + ep.rating}
+                            style={{ height: ((ep.rating / 10) * 100) + '%', background: ep.rating >= 7 ? '#22c55e' : ep.rating >= 5 ? '#eab308' : '#ef4444' }} />
+                        ))}
+                      </div>
+                      {latest && <div className="text-xs text-gray-500 mt-1">Latest: S{latest.season}E{latest.episode} — {latest.rating.toFixed(1)} ({(latest.viewers/1e6).toFixed(1)}M)</div>}
+                    </div>
+                  )}
+                  {tvs.cancellationRisk > 0 && (
+                    <div className="bg-red-900/30 border border-red-800 rounded p-2 mb-2">
+                      <div className="text-red-400 text-xs font-bold">⚠️ Cancellation Risk: {tvs.cancellationRisk}%</div>
+                    </div>
+                  )}
+                  <div className="flex gap-2">
+                    {tvs.status === 'airing' && tvs.turnsInStatus >= (tvs.turnsNeeded || tvs.episodes) && (
+                      <>
+                        <button onClick={() => dispatch({ type: 'RENEW_TV', showId: tvs.id })}
+                          className="bg-green-700 hover:bg-green-600 text-white text-xs px-3 py-1 rounded">Renew S{tvs.currentSeason + 1}</button>
+                        <button onClick={() => dispatch({ type: 'CANCEL_TV', showId: tvs.id })}
+                          className="bg-red-700 hover:bg-red-600 text-white text-xs px-3 py-1 rounded">Cancel</button>
+                      </>
+                    )}
+                    {tvs.monthlyRevenue > 0 && <div className="text-green-400 text-xs ml-auto">{fmt(tvs.monthlyRevenue)}/mo</div>}
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        )}
+        {tvList.filter(s => ['cancelled','ended'].includes(s.status)).length > 0 && (
+          <div>
+            <div className="text-white font-bold text-lg mb-2">Past Shows</div>
+            <div className="space-y-1">
+              {tvList.filter(s => ['cancelled','ended'].includes(s.status)).map(tvs => (
+                <div key={tvs.id} className={'bg-gray-800 border rounded p-2 flex justify-between ' + (tvs.status === 'ended' ? 'border-gray-600' : 'border-red-800')}>
+                  <div>
+                    <div className="text-white text-sm">{tvs.title}</div>
+                    <div className="text-xs text-gray-400">{tvs.seasons}S | Q:{tvs.quality}</div>
+                  </div>
+                  <div className={'text-xs ' + (tvs.status === 'ended' ? 'text-gray-400' : 'text-red-400')}>{tvs.status}</div>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+        <div className="bg-gray-800 border border-gray-600 rounded-lg p-4">
+          <div className="text-white font-bold mb-2">Greenlight New Show</div>
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-2">
+            {TV_FORMATS.map(f => (
+              <button key={f.id} onClick={() => dispatch({ type: 'SET_DEV', field: 'tvDevFormat', value: f.id })}
+                className={'p-2 rounded text-xs text-left transition border ' + (state.tvDevFormat === f.id ? 'bg-teal-800 border-teal-500 text-white' : 'bg-gray-700 border-gray-600 text-gray-300 hover:bg-gray-600')}>
+                <div className="font-bold">{f.name}</div>
+                <div className="text-gray-400">{f.episodesRange[0]}-{f.episodesRange[1]} eps</div>
+                <div className="text-gray-500">{fmt(f.baseCostPerEp)}/ep</div>
+              </button>
+            ))}
+          </div>
+          {state.tvDevFormat && (
+            <div className="mt-3 flex gap-2 items-center">
+              <select value={state.tvDevShowrunnerId || ''} onChange={e => dispatch({ type: 'SET_DEV', field: 'tvDevShowrunnerId', value: e.target.value ? parseInt(e.target.value) : null })}
+                className="bg-gray-700 text-white rounded px-2 py-1 text-xs flex-1">
+                <option value="">Select Showrunner...</option>
+                {state.contracts.filter(t => ['writer','producer','director'].includes(t.type)).map(t => (
+                  <option key={t.id} value={t.id}>{t.name} ({t.type}, {t.skill})</option>
+                ))}
+              </select>
+              <button onClick={() => dispatch({ type: 'GREENLIGHT_TV' })} disabled={!state.tvDevFormat}
+                className="bg-teal-600 hover:bg-teal-500 disabled:opacity-40 text-white text-xs px-4 py-1.5 rounded font-bold transition">Greenlight</button>
+            </div>
+          )}
+        </div>
+      </div>
+    );
+  };
+
 
   const renderMarket = () => {
     const trendData = GENRES.map(g => ({ genre: g, trend: Math.round((state.genreTrends[g] || 0) * 100) }));
@@ -14607,6 +15006,9 @@ export default function MovieMogul() {
           {tab === 'catalog' && renderCatalog()}
           {tab === 'partners' && renderPartners()}
           {tab === 'screening' && renderScreening()}
+          {tab === 'lot' && renderLot()}
+          {tab === 'music' && renderMusic()}
+          {tab === 'tv' && renderTVDeepDive()}
         </div>
       </div>
 
