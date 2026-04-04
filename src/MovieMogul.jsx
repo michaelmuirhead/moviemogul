@@ -245,16 +245,40 @@ const calcFlopSeverity = (film) => {
 };
 
 // ==================== SLEEPER HIT SYSTEM ====================
-const SLEEPER_HIT_THRESHOLD = { maxBudget: 25e6, minAudienceScore: 80 };
-const calcSleeperMultiplier = (film) => {
-  if (!film || film.budget > SLEEPER_HIT_THRESHOLD.maxBudget) return 1.0;
-  if ((film.audienceScore || 0) < SLEEPER_HIT_THRESHOLD.minAudienceScore) return 1.0;
-  // Higher audience score = bigger sleeper multiplier
-  const audienceExcess = (film.audienceScore - 80) / 20; // 0-1 range for scores 80-100
-  const qualityFactor = Math.max(0, (film.quality || 50) - 60) / 40; // bonus for quality above 60
-  const budgetFactor = 1.5 - (film.budget / SLEEPER_HIT_THRESHOLD.maxBudget); // smaller budget = bigger multiplier
-  return 1.0 + (audienceExcess * 0.8 + qualityFactor * 0.6) * budgetFactor; // up to ~2.9x for perfect conditions
+// Sleeper hits are RANDOM — good films have better odds, but it's never guaranteed.
+// Even mediocre films can occasionally catch lightning in a bottle.
+const calcSleeperResult = (film) => {
+  if (!film) return { isSleeper: false, mult: 1.0 };
+  const budgetM = (film.budget || 0) / 1e6;
+
+  // Base chance depends on budget: cheaper = more room to surprise
+  // Big-budget films can't really be "sleepers" — the expectations are too high
+  let baseChance = budgetM < 5 ? 0.20 : budgetM < 15 ? 0.14 : budgetM < 30 ? 0.08 : budgetM < 50 ? 0.03 : 0;
+  if (baseChance === 0) return { isSleeper: false, mult: 1.0 };
+
+  // Quality and audience score improve odds
+  const q = film.quality || 50;
+  const a = film.audienceScore || 50;
+  if (q >= 80) baseChance += 0.12;
+  else if (q >= 65) baseChance += 0.06;
+  if (a >= 85) baseChance += 0.15;
+  else if (a >= 70) baseChance += 0.08;
+
+  // Genre: Horror and Comedy have more sleeper potential historically
+  const sleeperGenres = ['Horror', 'Comedy', 'Thriller', 'Documentary'];
+  if (sleeperGenres.includes(film.genre)) baseChance += 0.05;
+
+  // Random gate: roll the dice
+  if (Math.random() > baseChance) return { isSleeper: false, mult: 1.0 };
+
+  // It's a sleeper! Multiplier is random within a range based on film quality
+  const minMult = 1.3;
+  const maxMult = q >= 80 ? 3.5 : q >= 65 ? 2.5 : 2.0;
+  const mult = minMult + Math.random() * (maxMult - minMult);
+  return { isSleeper: true, mult };
 };
+// Legacy wrapper for compatibility
+const calcSleeperMultiplier = (film) => calcSleeperResult(film).mult;
 
 // ==================== IP MARKETPLACE ====================
 const IP_CATEGORIES = {
@@ -909,6 +933,25 @@ const getEraMarketingMax = (year) => {
 };
 
 // BUDGET_TIERS and getBudgetTier are defined in the box office section above
+
+// Era gross ceiling multiplier — scales box office to period-accurate levels
+// In 1970 the biggest films grossed ~$100-200M. $1B wasn't hit until Titanic (1997).
+const getEraGrossMult = (year) => {
+  if (year < 1927) return 0.01;  // Silent: <$5M was huge
+  if (year < 1948) return 0.03;  // Golden Age: ~$10-20M hits
+  if (year < 1960) return 0.05;  // Post-War: ~$30-50M possible
+  if (year < 1975) return 0.10;  // Early New Hollywood: ~$50-100M
+  if (year < 1980) return 0.15;  // Jaws/Star Wars era: ~$200-300M
+  if (year < 1990) return 0.25;  // 80s blockbusters: ~$300-500M
+  if (year < 1998) return 0.40;  // Early 90s: ~$500-800M
+  if (year < 2005) return 0.55;  // Post-Titanic: $1B possible
+  if (year < 2010) return 0.70;  // Franchise era: $1-1.5B
+  if (year < 2015) return 0.85;  // Avatar era: $2B possible
+  if (year < 2025) return 1.00;  // Modern: full scale
+  if (year < 2045) return 1.15;  // Near future inflation
+  if (year < 2080) return 1.40;  // Far future
+  return 1.80;                    // Distant future
+};
 
 const getEraIntlMult = (year) => {
   if (year < 1980) return 0.3;
@@ -2649,6 +2692,8 @@ const calcQuality = (film, facilitiesLevel, genreTrend, specialization) => {
 const calcBoxOffice = (quality, budget, marketing, year, genre, film) => {
   const budgetM = budget / 1e6;
   const tier = getBudgetTier(budget);
+  const eraGrossMult = getEraGrossMult(year);
+  const eraGrossCeiling = tier.grossCeiling * eraGrossMult; // era-scaled ceiling
 
   // === REALISTIC BOX OFFICE SCALING ===
   const qNorm = clamp(quality, 0, 100) / 100;
@@ -2675,8 +2720,8 @@ const calcBoxOffice = (quality, budget, marketing, year, genre, film) => {
     }
   }
 
-  // Base domestic — use budget tier ceiling as scaling reference
-  let domestic = Math.min(budgetM * grossMult * marketMult * starPowerMult * 1e6, tier.grossCeiling * 0.4);
+  // Base domestic — use era-scaled ceiling as reference
+  let domestic = Math.min(budgetM * grossMult * marketMult * starPowerMult * 1e6, eraGrossCeiling * 0.4);
 
   // International ratio varies by genre
   const isGlobalGenre = ['Action', 'Sci-Fi', 'Animation', 'Fantasy'].includes(genre);
@@ -2698,9 +2743,9 @@ const calcBoxOffice = (quality, budget, marketing, year, genre, film) => {
     international += regionGross;
   });
 
-  // Cap total gross at tier ceiling
-  if (domestic + international > tier.grossCeiling) {
-    const scale = tier.grossCeiling / (domestic + international);
+  // Cap total gross at era-scaled ceiling
+  if (domestic + international > eraGrossCeiling) {
+    const scale = eraGrossCeiling / (domestic + international);
     domestic *= scale;
     international *= scale;
   }
@@ -2745,9 +2790,10 @@ const calcBoxOffice = (quality, budget, marketing, year, genre, film) => {
   if (film && film._twinFilmPenalty) { domestic *= (1 - film._twinFilmPenalty); international *= (1 - film._twinFilmPenalty); }
   if (film && film._leakedScript) { domestic *= 0.85; international *= 0.85; }
 
-  // Era revenue modifier
+  // Era revenue modifier (softened — gross ceiling already era-scaled)
+  // This now only adds a small nudge for production quality differences across eras
   if (film && film._eraBudgetMult) {
-    const eraRevMult = 0.7 + film._eraBudgetMult * 0.3;
+    const eraRevMult = 0.92 + film._eraBudgetMult * 0.08;
     domestic *= eraRevMult; international *= eraRevMult;
   }
 
@@ -2775,11 +2821,11 @@ const calcBoxOffice = (quality, budget, marketing, year, genre, film) => {
   domestic *= womMultiplier;
   international *= womMultiplier;
 
-  // === SLEEPER HIT ===
-  if (film && budgetM < 25 && audienceScorePreview >= 80 && quality >= 65) {
-    const sleeperMult = calcSleeperMultiplier({ ...film, audienceScore: audienceScorePreview, quality });
-    domestic *= sleeperMult;
-    international *= sleeperMult * 0.8; // sleepers are mostly domestic phenomena
+  // === SLEEPER HIT (random chance, not guaranteed) ===
+  const sleeperResult = film ? calcSleeperResult({ ...film, audienceScore: audienceScorePreview, quality, genre }) : { isSleeper: false, mult: 1.0 };
+  if (sleeperResult.isSleeper) {
+    domestic *= sleeperResult.mult;
+    international *= sleeperResult.mult * 0.7; // sleepers are mostly domestic phenomena
   }
 
   // === COMPUTE SPLIT SCORES (Critics vs Audience) ===
@@ -2809,7 +2855,7 @@ const calcBoxOffice = (quality, budget, marketing, year, genre, film) => {
   if (film && film.isIP && film.ipRecognition > 0) {
     const cat = IP_CATEGORIES[film.ipCategory] || {};
     const audienceFloor = (cat.audienceFloor || 0) * IP_AUDIENCE_MULT[film.ipAudience || 'medium'];
-    const floorDomestic = tier.grossCeiling * audienceFloor * 0.3; // floor is % of ceiling
+    const floorDomestic = eraGrossCeiling * audienceFloor * 0.3; // floor is % of era-scaled ceiling
     if (domestic < floorDomestic) domestic = floorDomestic;
   }
 
@@ -2830,7 +2876,7 @@ const calcBoxOffice = (quality, budget, marketing, year, genre, film) => {
     regionBreakdown,
     openingWeekend,
     budgetTier: tier.id,
-    isSleeper: budgetM < 25 && audienceScore >= 80 && quality >= 65,
+    isSleeper: sleeperResult.isSleeper,
   };
 };
 
@@ -3130,6 +3176,7 @@ function reducer(state, action) {
         makeTalent(2, 'actor', [35, 55]),
         makeTalent(3, 'writer', [35, 55]),
         makeTalent(4, 'producer', [35, 55]),
+        makeTalent(5, 'composer', [30, 50]),
       ];
       // Mark player's starting talent
       contracts.forEach(t => {
@@ -6558,7 +6605,8 @@ case 'REMASTER_FILM': {
           const pBonus = comp.personality ? comp.personality.qualityBonus : 0;
           let quality = clamp(randInt(35, 88) + Math.round(comp.reputation * 0.1) + pBonus, 25, 96);
           const bMult = comp.personality ? comp.personality.budgetMult : 1;
-          let budget = Math.round(randInt(10, 100) * 1e6 * bMult);
+          const [eraBudMin, eraBudMax] = getEraBudgetRange(state.year);
+          let budget = Math.round(randInt(eraBudMin, eraBudMax) * 1e6 * bMult);
           const mMult = comp.personality ? comp.personality.marketingMult : 1;
           // Apply AI content tax if regulation active
           const hasAITax = (state.activeRegulations || []).some(r => r.id === 'ai_content_tax');
@@ -6566,7 +6614,7 @@ case 'REMASTER_FILM': {
             quality = Math.max(25, Math.round(quality * 0.75)); // Reduce quality by 25%
             budget = Math.round(budget * 1.25); // Increase costs by 25%
           }
-          let gross = Math.round(budget * (quality >= 75 ? 3.0 : quality >= 55 ? 1.5 : 0.5) * (1 + Math.random()) * mMult);
+          let gross = Math.round(budget * (quality >= 75 ? 3.0 : quality >= 55 ? 1.5 : 0.5) * (1 + Math.random()) * mMult * getEraGrossMult(state.year));
           const availableTitles = RIVAL_FILM_TITLES.filter(t => !usedTitlesThisTurn.has(t));
           const title = availableTitles.length > 0 ? pick(availableTitles) : `${pick(RIVAL_FILM_TITLES)}: ${pick(['Reborn','Unleashed','Redux','Returns','Rising','Legacy','Untold','Chronicles','Awakening'])}`;
           usedTitlesThisTurn.add(title);
@@ -6775,7 +6823,7 @@ case 'REMASTER_FILM': {
             for (let i = 0; i < randInt(2, 3); i++) {
               const budget = randInt(5, 20) * 1e6;
               const quality = randInt(25, 50);
-              const gross = Math.round(budget * 0.8);
+              const gross = Math.round(budget * 0.8 * getEraGrossMult(state.year));
               const title = pick(RIVAL_FILM_TITLES) + ': ' + pick(['Unleashed', 'Rising', 'Returns', 'Redux']);
               rivalFilmsThisQ.push({
                 studio: floodStudio.name, title, genre: floodGenre, quality, budget, totalGross: gross, gross,
