@@ -155,8 +155,8 @@ const POST_PROD_DECISIONS = [
 
 // ==================== BOX OFFICE BUDGET TIERS ====================
 const BUDGET_TIERS = [
-  { id: 'micro', name: 'Micro-Budget', maxBudget: 5e6, maxM: 5, grossCeiling: 400e6, avgMultiplier: 3.0, hitMultiplier: 40, color: 'text-gray-400', desc: 'Indie territory. Sleeper hit potential.' },
-  { id: 'low', name: 'Low Budget', maxBudget: 25e6, maxM: 25, grossCeiling: 500e6, avgMultiplier: 2.5, hitMultiplier: 15, color: 'text-green-400', desc: 'Modest expectations. Good ROI potential.' },
+  { id: 'micro', name: 'Micro-Budget', maxBudget: 5e6, maxM: 5, grossCeiling: 200e6, avgMultiplier: 2.0, hitMultiplier: 30, color: 'text-gray-400', desc: 'Indie territory. Hard to profit, but sleeper hits possible.' },
+  { id: 'low', name: 'Low Budget', maxBudget: 25e6, maxM: 25, grossCeiling: 400e6, avgMultiplier: 2.0, hitMultiplier: 12, color: 'text-green-400', desc: 'Modest expectations. Needs quality to profit.' },
   { id: 'mid', name: 'Mid-Budget', maxBudget: 75e6, maxM: 75, grossCeiling: 800e6, avgMultiplier: 2.0, hitMultiplier: 8, color: 'text-blue-400', desc: 'The endangered middle. Risky but rewarding.' },
   { id: 'big', name: 'Big Budget', maxBudget: 150e6, maxM: 150, grossCeiling: 1.5e9, avgMultiplier: 1.8, hitMultiplier: 6, color: 'text-purple-400', desc: 'Major studio tentpole territory.' },
   { id: 'blockbuster', name: 'Blockbuster', maxBudget: 250e6, maxM: 250, grossCeiling: 2.2e9, avgMultiplier: 1.5, hitMultiplier: 5, color: 'text-amber-400', desc: 'Franchise-scale production.' },
@@ -380,10 +380,20 @@ const calcSplitScores = (quality, film, budget, marketing) => {
   if (film.filmType === 'reboot') { criticBase -= 4; audienceBase += 2; }
   if (film.filmType === 'adaptation') { criticBase -= 2; } // "not as good as the book"
 
-  // Budget affects expectations
-  if (budgetM >= 150) audienceBase += 5; // spectacle bonus for audiences
-  if (budgetM < 10) criticBase += 6; // indie cred
-  if (budgetM < 5) criticBase += 3; // micro-budget darling bonus
+  // Budget affects expectations — REBALANCED
+  // Audiences notice production value. Low budgets that don't deliver hurt audience scores.
+  if (budgetM >= 150) audienceBase += 4; // spectacle bonus (reduced from 5)
+  if (budgetM >= 200) audienceBase += 3; // mega-budget spectacle
+  // Indie cred: critics still love scrappy underdogs, BUT only if the quality justifies it
+  if (budgetM < 10 && quality >= 65) criticBase += 8; // genuine indie gem
+  if (budgetM < 10 && quality < 50) criticBase -= 5; // cheap AND bad = critics pile on
+  if (budgetM < 5 && quality >= 70) criticBase += 5; // micro-budget miracle
+  if (budgetM < 5 && quality < 45) criticBase -= 8; // unwatchable shoestring
+  // Audiences are harsher on cheap-looking films regardless of critic opinion
+  if (budgetM < 15 && quality < 60) audienceBase -= 8; // "looks cheap"
+  if (budgetM < 30 && quality < 50) audienceBase -= 5; // production value gap
+  // Big budgets get scrutinized harder by critics but give audiences what they expect
+  if (budgetM >= 100 && quality < 55) { criticBase -= 10; audienceBase -= 5; } // expensive disaster
 
   // Star power affects audience score
   const castStarPower = film.castMembers ? calcCastStarPower(film.castMembers) : (film.actor?.popularity || 50);
@@ -2525,44 +2535,66 @@ const calcStarPower = (actor) => {
 
 // ==================== THEATRICAL RUN SIMULATION ====================
 
-const simulateTheatricalRun = (totalGross, quality, genre, rating) => {
-  // Simulate week-by-week box office over a theatrical run
-  // Opening weekend: bigger for blockbusters, star power, marketing
-  // Typical drop-off: 40-60% per week, better legs for quality films
+const simulateTheatricalRun = (totalGross, quality, genre, rating, budget) => {
+  // Simulate week-by-week box office — now accounts for budget, screen count, and realistic drops
   const weeks = [];
+  const budgetM = (budget || 50e6) / 1e6;
   const isBlockbuster = ['Action', 'Sci-Fi', 'Animation', 'Fantasy'].includes(genre);
   const isPrestige = ['Drama', 'Documentary'].includes(genre);
 
-  // Opening weekend share: blockbusters front-load, prestige films have legs
-  let openingShare = isBlockbuster ? 0.30 + Math.random() * 0.10
-    : isPrestige ? 0.15 + Math.random() * 0.08
-    : 0.20 + Math.random() * 0.10;
+  // Screen count estimate based on budget (affects opening weekend size)
+  // Micro-budget: ~200-500 screens; Blockbuster: 3,500-4,500 screens
+  const screenCount = budgetM <= 5 ? randInt(150, 600)
+    : budgetM <= 25 ? randInt(800, 2200)
+    : budgetM <= 75 ? randInt(2000, 3200)
+    : budgetM <= 150 ? randInt(3000, 4000)
+    : randInt(3800, 4500);
 
-  // Quality affects legs (how slowly the film drops off)
-  const dropRate = quality >= 85 ? 0.30 + Math.random() * 0.10
-    : quality >= 70 ? 0.35 + Math.random() * 0.10
-    : quality >= 50 ? 0.45 + Math.random() * 0.10
-    : 0.55 + Math.random() * 0.15;
+  // Opening weekend share: blockbusters front-load, prestige films build slowly
+  // Also affected by screen count — wide releases front-load more
+  let openingShare = isBlockbuster ? 0.32 + Math.random() * 0.12
+    : isPrestige ? 0.12 + Math.random() * 0.08
+    : 0.22 + Math.random() * 0.10;
+  // Limited releases have smaller opening weekend share (they expand later)
+  if (screenCount < 800) openingShare *= 0.6;
+  else if (screenCount < 2000) openingShare *= 0.85;
 
-  // R-rated films tend to front-load more
+  // Quality affects legs (how slowly the film drops off) — MUCH steeper spread now
+  const dropRate = quality >= 85 ? 0.25 + Math.random() * 0.08  // excellent legs (A+ CinemaScore)
+    : quality >= 75 ? 0.32 + Math.random() * 0.08
+    : quality >= 65 ? 0.40 + Math.random() * 0.08
+    : quality >= 50 ? 0.50 + Math.random() * 0.10  // steep drops
+    : quality >= 35 ? 0.60 + Math.random() * 0.10  // audiences fleeing
+    : 0.70 + Math.random() * 0.10;  // catastrophic drop — "F" CinemaScore
+
+  // R-rated films front-load harder
   if (rating === 'R' || rating === 'NC-17') openingShare *= 1.15;
+  // PG/G family films have better legs (repeat viewings)
+  if ((rating === 'PG' || rating === 'G') && quality >= 60) openingShare *= 0.85;
 
   const openingGross = Math.round(totalGross * openingShare);
-  let remaining = totalGross - openingGross;
   let weeklyGross = openingGross;
   let cumulative = 0;
 
-  // Generate 12 weeks of data
-  for (let w = 1; w <= 12; w++) {
+  // Generate up to 16 weeks of data (great films stay in theaters longer)
+  const maxWeeks = quality >= 80 ? 16 : quality >= 60 ? 12 : 8;
+  for (let w = 1; w <= maxWeeks; w++) {
     if (w === 1) {
       weeklyGross = openingGross;
     } else {
-      // Apply drop-off with some variance
       const thisDropRate = dropRate + (Math.random() - 0.5) * 0.08;
       weeklyGross = Math.round(weeklyGross * (1 - thisDropRate));
-      // Occasional bump (word of mouth, awards buzz)
-      if (quality >= 75 && w >= 4 && Math.random() < 0.15) {
-        weeklyGross = Math.round(weeklyGross * 1.3); // 30% bump
+      // Word-of-mouth expansion (limited releases can expand to more screens)
+      if (quality >= 75 && w >= 3 && w <= 5 && screenCount < 2000 && Math.random() < 0.30) {
+        weeklyGross = Math.round(weeklyGross * 1.5); // platform expansion bump
+      }
+      // Awards buzz boost (prestige films in late weeks)
+      if (isPrestige && quality >= 70 && w >= 6 && Math.random() < 0.12) {
+        weeklyGross = Math.round(weeklyGross * 1.4);
+      }
+      // Holiday bump (generic — applies if film is still playing)
+      if (w >= 4 && Math.random() < 0.08) {
+        weeklyGross = Math.round(weeklyGross * 1.2);
       }
     }
     weeklyGross = Math.max(weeklyGross, 0);
@@ -2573,10 +2605,11 @@ const simulateTheatricalRun = (totalGross, quality, genre, rating) => {
       gross: weeklyGross,
       cumulative: Math.min(cumulative, totalGross),
       label: `Wk ${w}`,
+      screens: w === 1 ? screenCount : Math.max(50, Math.round(screenCount * Math.pow(1 - dropRate * 0.7, w - 1))),
     });
 
     // End theatrical run if weekly gross drops below threshold
-    if (w > 3 && weeklyGross < totalGross * 0.01) break;
+    if (w > 2 && weeklyGross < totalGross * 0.008) break;
   }
 
   // Normalize cumulative to match actual total gross
@@ -2597,12 +2630,40 @@ const simulateTheatricalRun = (totalGross, quality, genre, rating) => {
 
 const calcQuality = (film, facilitiesLevel, genreTrend, specialization) => {
   const d = film.director, a = film.actor, w = film.writer;
-  let base = d.skill * 0.30 + a.popularity * 0.10 + a.skill * 0.15 + w.skill * 0.25 + facilitiesLevel * 3;
-  // Career arc modifiers
-  if (d.age) base += (getCareerPhase(d.age).skillMod * 0.3);
-  if (a.age) base += (getCareerPhase(a.age).skillMod * 0.2);
+  const budgetM = film.budget / 1e6;
+
+  // === BUDGET EFFECTIVENESS FACTOR ===
+  // Models how much production resources amplify talent. A great script shines regardless,
+  // but directing and acting benefit from proper crew, equipment, locations, rehearsal time.
+  // $3M=0.48, $10M=0.55, $25M=0.67, $50M=0.80, $100M=0.93, $150M=0.98, $200M+=1.0
+  const budgetEff = Math.min(1.0, 0.45 + 0.55 * (1 - Math.exp(-budgetM / 50)));
+
+  // === GENRE-BUDGET INTERACTION ===
+  // VFX-heavy genres NEED budget. Character-driven genres can thrive on less.
+  const isVFXDependent = ['Sci-Fi', 'Action', 'Animation', 'Fantasy'].includes(film.genre);
+  const isPerformanceDriven = ['Drama', 'Romance', 'Comedy', 'Documentary', 'Musical'].includes(film.genre);
+  const genreBudgetPenalty = isVFXDependent && budgetM < 30 ? -Math.round((30 - budgetM) * 0.35) : 0;
+  const genreBudgetBonus = isPerformanceDriven && budgetM < 15 ? 5 : 0;
+
+  // === TALENT CONTRIBUTION (budget-aware) ===
+  // Writer skill: NOT budget-gated — a great script costs the same regardless
+  // Director skill: partially budget-gated (vision is free, but execution needs resources)
+  // Actor skill: partially budget-gated (talent shines through, but production supports it)
+  const writerBase = w.skill * 0.25;
+  const directorBase = d.skill * (0.15 + 0.15 * budgetEff);
+  const actorBase = (a.popularity * 0.10 + a.skill * 0.15) * (0.5 + 0.5 * budgetEff);
+  // Direct production value contribution from budget
+  const productionValue = Math.pow(budgetM, 0.45) * 3.0;
+  let base = writerBase + directorBase + actorBase + productionValue + facilitiesLevel * 2;
+
+  // Career arc modifiers (partially budget-gated)
+  if (d.age) base += (getCareerPhase(d.age).skillMod * 0.3) * (0.6 + 0.4 * budgetEff);
+  if (a.age) base += (getCareerPhase(a.age).skillMod * 0.2) * (0.6 + 0.4 * budgetEff);
   if (w.age) base += (getCareerPhase(w.age).skillMod * 0.25);
-  base += Math.log10(Math.max(film.budget / 1e6, 0.5) + 1) * 8; // +1 so $1M budget still contributes
+
+  // Apply genre-budget interaction
+  base += genreBudgetPenalty + genreBudgetBonus;
+
   // Morale affects quality
   const avgMorale = ((d.morale || 75) + (a.morale || 75) + (w.morale || 75)) / 3;
   base += (avgMorale - 75) * 0.15;
@@ -2685,7 +2746,29 @@ const calcQuality = (film, facilitiesLevel, genreTrend, specialization) => {
     if (film.themes.length === 2) base += 2; // thematic depth bonus
   }
 
-  if (!film._preview) base += (Math.random() - 0.5) * 12; // randomness only at greenlight, not during preview
+  if (!film._preview) base += (Math.random() - 0.5) * 14; // randomness only at greenlight, not during preview
+
+  // === DIMINISHING RETURNS AT HIGH QUALITY ===
+  // It gets exponentially harder to reach elite quality. Prevents trivial 90+ scores.
+  // 75 raw → 75; 85 raw → 81; 95 raw → 86; 110 raw → 90
+  if (base > 72) {
+    const excess = base - 72;
+    const compressionFactor = 0.72 - (excess / 220);
+    base = 72 + excess * Math.max(compressionFactor, 0.38);
+  }
+  // Low-budget quality ceiling by genre
+  // VFX-dependent genres hit a hard wall at low budgets
+  if (budgetM < 10 && isVFXDependent) {
+    base = Math.min(base, 60 + budgetM * 1.5);
+  }
+  // Performance-driven genres can punch above their weight but still have limits
+  if (budgetM < 5 && isPerformanceDriven) {
+    base = Math.min(base, 85);
+  }
+  if (budgetM < 5 && !isPerformanceDriven && !isVFXDependent) {
+    base = Math.min(base, 78);
+  }
+
   return Math.round(clamp(base, 5, 98));
 };
 
@@ -2695,33 +2778,60 @@ const calcBoxOffice = (quality, budget, marketing, year, genre, film) => {
   const eraGrossMult = getEraGrossMult(year);
   const eraGrossCeiling = tier.grossCeiling * eraGrossMult; // era-scaled ceiling
 
-  // === REALISTIC BOX OFFICE SCALING ===
+  // === REALISTIC BOX OFFICE SCALING (REBALANCED) ===
   const qNorm = clamp(quality, 0, 100) / 100;
 
-  // Quality-to-multiplier: steeper curve where bad films flop hard, good films earn well
-  // Most films lose money — only quality >60 starts reliably profiting
-  const qualityMult = 0.15 + Math.pow(qNorm, 2.5) * (tier.hitMultiplier - 0.15);
-  const variance = 0.2 + qNorm * 0.3;
+  // Quality-to-multiplier: MUCH steeper curve.
+  // quality 30 (bad): qNorm=0.3, pow(0.3,3.0)=0.027 → mult ≈ 0.27 → usually a flop
+  // quality 50 (mediocre): qNorm=0.5, pow(0.5,3.0)=0.125 → mult ≈ 0.72 → break-even if lucky
+  // quality 65 (decent): qNorm=0.65, pow(0.65,3.0)=0.274 → mult ≈ 1.43 → modest profit
+  // quality 75 (good): qNorm=0.75, pow(0.75,3.0)=0.422 → mult ≈ 2.14 → solid hit
+  // quality 85 (great): qNorm=0.85, pow(0.85,3.0)=0.614 → mult ≈ 3.06 → big hit
+  // quality 95 (masterpiece): qNorm=0.95, pow(0.95,3.0)=0.857 → mult ≈ 4.23 → potential blockbuster
+  const qualityMult = 0.15 + Math.pow(qNorm, 3.0) * (tier.hitMultiplier - 0.15);
+  const variance = 0.15 + qNorm * 0.25;
   const grossMult = qualityMult * (1 + (Math.random() - 0.5) * variance);
 
-  // Marketing affects awareness (opening weekend) more than total gross
+  // === BUDGET CREDIBILITY FACTOR ===
+  // Audiences and the market notice production value. A $3M film that's "quality 80"
+  // won't gross like a $150M "quality 80" film because it lacks spectacle, marketing reach, etc.
+  // This affects gross potential but NOT quality score.
+  const budgetCredibility = Math.min(1.0, 0.25 + 0.75 * (1 - Math.exp(-budgetM / 60)));
+  // $3M=0.29, $10M=0.37, $25M=0.51, $50M=0.68, $100M=0.87, $150M=0.96, $250M=1.0
+
+  // Marketing affects awareness — more important than before
   const marketRatio = Math.min(marketing / Math.max(budget, 1), 1.5);
-  const marketMult = 0.7 + marketRatio * 0.5; // undermarketed films can still succeed via word of mouth
+  const marketMult = 0.55 + marketRatio * 0.6; // undermarketed films struggle harder now
+  // But high quality can partially compensate for weak marketing (word of mouth)
+  const womRescue = qNorm > 0.75 ? 1 + (qNorm - 0.75) * 0.4 : 1.0;
 
   // Star power from cast affects opening weekend draw
   let starPowerMult = 1.0;
   if (film) {
     const castSP = film.castMembers ? calcCastStarPower(film.castMembers) : (film.actor?.popularity || 0);
-    starPowerMult = 1.0 + (castSP / 100) * 0.35; // up to +35% for max star power
-    // No-name cast: marketing is harder but sleeper potential exists
+    starPowerMult = 1.0 + (castSP / 100) * 0.30; // up to +30% for max star power
+    // No-name cast: much harder to draw audiences
     if (castSP < 20) {
-      starPowerMult = 0.75;
-      if (qNorm > 0.8) starPowerMult = 0.9; // quality compensates slightly
+      starPowerMult = 0.60;
+      if (qNorm > 0.8) starPowerMult = 0.80; // quality compensates somewhat
+    }
+    // Mid-level cast
+    if (castSP >= 20 && castSP < 40) {
+      starPowerMult = 0.85;
     }
   }
 
+  // === SCREEN COUNT FACTOR ===
+  // Low-budget films get limited releases → lower gross ceiling regardless of quality
+  // This is the #1 reason a $3M film can't out-gross a blockbuster even with equal quality
+  const screenFactor = budgetM <= 5 ? 0.15 + qNorm * 0.25 // limited release, expands if great
+    : budgetM <= 25 ? 0.35 + qNorm * 0.30
+    : budgetM <= 75 ? 0.60 + qNorm * 0.25
+    : budgetM <= 150 ? 0.80 + qNorm * 0.15
+    : 0.90 + qNorm * 0.10;
+
   // Base domestic — use era-scaled ceiling as reference
-  let domestic = Math.min(budgetM * grossMult * marketMult * starPowerMult * 1e6, eraGrossCeiling * 0.4);
+  let domestic = Math.min(budgetM * grossMult * marketMult * starPowerMult * womRescue * budgetCredibility * 1e6, eraGrossCeiling * 0.4 * screenFactor);
 
   // International ratio varies by genre
   const isGlobalGenre = ['Action', 'Sci-Fi', 'Animation', 'Fantasy'].includes(genre);
@@ -2814,10 +2924,16 @@ const calcBoxOffice = (quality, budget, marketing, year, genre, film) => {
     if (100 - film.studioControl >= 70) { domestic *= 0.96; }
   }
 
-  // === WORD OF MOUTH / LEGS ===
-  // High audience score = good holds = higher total. Low = frontloaded.
+  // === WORD OF MOUTH / LEGS (REBALANCED) ===
+  // High audience score = good holds = higher total. Low = frontloaded and dies fast.
   const audienceScorePreview = film ? calcSplitScores(quality, film, budget, marketing).audienceScore : 60;
-  const womMultiplier = audienceScorePreview >= 85 ? 1.25 : audienceScorePreview >= 70 ? 1.1 : audienceScorePreview >= 50 ? 1.0 : audienceScorePreview >= 30 ? 0.85 : 0.7;
+  // Steeper WOM curve: bad WOM is now devastating, great WOM is a bigger boost
+  const womMultiplier = audienceScorePreview >= 85 ? 1.35
+    : audienceScorePreview >= 75 ? 1.15
+    : audienceScorePreview >= 60 ? 1.0
+    : audienceScorePreview >= 45 ? 0.80
+    : audienceScorePreview >= 30 ? 0.60
+    : 0.40; // truly hated films: audiences actively warn others away
   domestic *= womMultiplier;
   international *= womMultiplier;
 
@@ -2890,6 +3006,36 @@ const ALBUM_TYPES = [
   { id: 'original', name: 'Original Album', baseSales: 800000, costMult: 1.0, desc: 'Standalone artist album' },
   { id: 'compilation', name: 'Greatest Hits', baseSales: 1200000, costMult: 0.5, desc: 'Best-of compilation' },
   { id: 'live', name: 'Live Album', baseSales: 300000, costMult: 0.6, desc: 'Concert recording' },
+];
+
+const TOUR_TYPES = [
+  { id: 'club', name: 'Club Tour', cost: 500000, baseDuration: 3, baseRevenue: 800000, popReq: 20, desc: 'Small intimate venues' },
+  { id: 'theater', name: 'Theater Tour', cost: 2e6, baseDuration: 4, baseRevenue: 5e6, popReq: 40, desc: 'Mid-size concert halls' },
+  { id: 'arena', name: 'Arena Tour', cost: 8e6, baseDuration: 6, baseRevenue: 25e6, popReq: 60, desc: 'Large arenas, massive crowds' },
+  { id: 'stadium', name: 'Stadium World Tour', cost: 25e6, baseDuration: 12, baseRevenue: 100e6, popReq: 80, desc: 'The biggest stages on Earth' },
+  { id: 'festival', name: 'Festival Headliner', cost: 1e6, baseDuration: 1, baseRevenue: 3e6, popReq: 50, desc: 'Headline a major music festival' },
+];
+
+const MUSIC_AWARDS_CATEGORIES = ['Album of the Year', 'Best New Artist', 'Song of the Year', 'Best Soundtrack', 'Best Live Performance'];
+
+const MERCH_EXPANDED_CATEGORIES = [
+  { id: 'toys', name: 'Toy Line', revenuePct: 0.08, minGross: 100e6, genres: ['Animation', 'Sci-Fi', 'Fantasy', 'Action'], desc: 'Action figures, playsets, collectibles', icon: '🧸' },
+  { id: 'apparel', name: 'Apparel', revenuePct: 0.04, minGross: 50e6, genres: null, desc: 'T-shirts, hats, branded clothing', icon: '👕' },
+  { id: 'games', name: 'Video Games', revenuePct: 0.10, minGross: 200e6, genres: ['Action', 'Sci-Fi', 'Fantasy', 'Horror'], desc: 'Console and mobile game tie-ins', icon: '🎮' },
+  { id: 'publishing', name: 'Publishing', revenuePct: 0.03, minGross: 30e6, genres: ['Fantasy', 'Sci-Fi', 'Drama', 'Mystery'], desc: 'Novelizations, art books, making-of', icon: '📚' },
+  { id: 'collectibles', name: 'Premium Collectibles', revenuePct: 0.06, minGross: 150e6, genres: ['Sci-Fi', 'Fantasy', 'Action', 'Horror'], desc: 'High-end statues, prop replicas, limited editions', icon: '🏆' },
+  { id: 'food_promo', name: 'Fast Food Tie-In', revenuePct: 0.05, minGross: 80e6, genres: ['Animation', 'Action', 'Comedy', 'Sci-Fi'], desc: 'Happy meal toys, branded cups, co-promos', icon: '🍔' },
+  { id: 'home_goods', name: 'Home & Décor', revenuePct: 0.03, minGross: 60e6, genres: null, desc: 'Themed bedding, posters, kitchenware', icon: '🏠' },
+  { id: 'costumes', name: 'Costumes & Cosplay', revenuePct: 0.04, minGross: 40e6, genres: ['Fantasy', 'Sci-Fi', 'Horror', 'Action'], desc: 'Halloween costumes, premium cosplay kits', icon: '🎭' },
+  { id: 'experiential', name: 'Experiential Events', revenuePct: 0.07, minGross: 250e6, genres: ['Sci-Fi', 'Fantasy', 'Action', 'Animation'], desc: 'Pop-up experiences, escape rooms, exhibitions', icon: '🎪' },
+];
+
+const LICENSING_PARTNERS = [
+  { id: 'mega_toy', name: 'MegaToy Corp', category: 'toys', revenueBonus: 1.3, upfrontFee: 5e6, exclusiveMonths: 36, desc: 'World\'s largest toymaker' },
+  { id: 'global_apparel', name: 'ThreadWorld', category: 'apparel', revenueBonus: 1.2, upfrontFee: 2e6, exclusiveMonths: 24, desc: 'Fast fashion juggernaut' },
+  { id: 'game_giant', name: 'PixelForge Games', category: 'games', revenueBonus: 1.5, upfrontFee: 10e6, exclusiveMonths: 48, desc: 'AAA game publisher' },
+  { id: 'lux_collect', name: 'Vault Collectibles', category: 'collectibles', revenueBonus: 1.4, upfrontFee: 3e6, exclusiveMonths: 24, desc: 'Premium collector market leader' },
+  { id: 'fast_food', name: 'BurgerVerse', category: 'food_promo', revenueBonus: 1.6, upfrontFee: 8e6, exclusiveMonths: 6, desc: 'Massive global fast food chain' },
 ];
 
 // ==================== PRODUCTION TYPES ====================
@@ -3153,6 +3299,12 @@ const INIT = {
   musicLabel: null,
   musicArtists: [],
   musicAlbums: [],
+  musicTours: [],
+  musicCharts: [],
+  musicAwardsHistory: [],
+  licensingPartners: [],
+  consumerProductsDiv: null,
+  totalMerchRevenue: 0,
   devProductionType: 'live_action',
   tvEpisodeRatings: {},
   tvNetworkDeals: [],
@@ -3333,6 +3485,7 @@ function reducer(state, action) {
         scenario: scenario.id,
         // Wave 2
         musicLabel: null, musicArtists: [], musicAlbums: [],
+        musicTours: [], musicCharts: [], musicAwardsHistory: [], licensingPartners: [], consumerProductsDiv: null, totalMerchRevenue: 0,
         tvEpisodeRatings: {}, tvNetworkDeals: [], devProductionType: 'live_action',
         scenarioGoal,
         scenarioDeadline,
@@ -5314,15 +5467,40 @@ case 'REMASTER_FILM': {
 
     case 'LAUNCH_MERCH': {
       const film = state.films.find(f => f.id === action.filmId && f.status === 'released');
-      const cat = MERCHANDISING_CATEGORIES.find(c => c.id === action.categoryId);
+      const cat = MERCH_EXPANDED_CATEGORIES.find(c => c.id === action.categoryId) || MERCHANDISING_CATEGORIES.find(c => c.id === action.categoryId);
       if (!film || !cat) return state;
       if (cat.genres && !cat.genres.includes(film.genre)) return { ...state, errorMsg: `${cat.name} not suitable for ${film.genre} films.` };
       if ((film.totalGross || 0) < cat.minGross) return { ...state, errorMsg: `Film needs ${fmt(cat.minGross)}+ gross for ${cat.name}.` };
-      const monthlyRev = Math.round((film.totalGross || 0) * cat.revenuePct / 24);
+      const existingDeal = (state.merchandiseDeals || []).find(d => d.filmId === action.filmId && d.categoryId === cat.id && d.monthsLeft > 0);
+      if (existingDeal) return { ...state, errorMsg: `Already have an active ${cat.name} deal for this film.` };
+      const prodType = PRODUCTION_TYPES.find(p => p.id === film.productionType);
+      let merchMult = prodType?.merchMult || 1.0;
+      const partner = action.partnerId ? LICENSING_PARTNERS.find(p => p.id === action.partnerId) : null;
+      if (partner) merchMult *= partner.revenueBonus;
+      const isHoliday = state.month >= 10 || state.month <= 1;
+      if (isHoliday) merchMult *= 1.25;
+      const duration = partner ? partner.exclusiveMonths : 24;
+      const monthlyRev = Math.round((film.totalGross || 0) * cat.revenuePct / duration * merchMult);
+      const upfront = partner ? partner.upfrontFee : 0;
+      return {
+        ...state, cash: state.cash + upfront,
+        merchandiseDeals: [...(state.merchandiseDeals || []), { filmId: action.filmId, categoryId: cat.id, monthlyRevenue: monthlyRev, monthsLeft: duration, partnerId: partner?.id || null, holiday: isHoliday }],
+        licensingPartners: partner ? [...(state.licensingPartners || []), { partnerId: partner.id, filmId: film.id, signedYear: state.year }] : (state.licensingPartners || []),
+        gameLog: [...state.gameLog, { text: `Launched ${cat.name}${partner ? ' (via ' + partner.name + ')' : ''} for "${film.title}" — ~${fmt(monthlyRev)}/mo for ${duration} months${isHoliday ? ' 🎄 Holiday Boost!' : ''}`, type: 'success' }],
+      };
+    }
+    case 'LAUNCH_TV_MERCH': {
+      const tvShow = (state.tvShows || []).find(s => s.id === action.showId);
+      if (!tvShow) return state;
+      const tvMCat = MERCH_EXPANDED_CATEGORIES.find(c => c.id === action.categoryId);
+      if (!tvMCat) return state;
+      const tvViewership = tvShow.viewership || 500000;
+      const tvPopFactor = Math.min(tvViewership / 5e6, 2.0);
+      const tvMRev = Math.round(tvPopFactor * 200000 * (tvMCat.revenuePct / 0.05));
       return {
         ...state,
-        merchandiseDeals: [...(state.merchandiseDeals || []), { filmId: action.filmId, categoryId: cat.id, monthlyRevenue: monthlyRev, monthsLeft: 24 }],
-        gameLog: [...state.gameLog, { text: `Launched ${cat.name} for "${film.title}" — ~${fmt(monthlyRev)}/mo for 24 months`, type: 'success' }],
+        merchandiseDeals: [...(state.merchandiseDeals || []), { showId: action.showId, categoryId: tvMCat.id, monthlyRevenue: tvMRev, monthsLeft: 18, source: 'tv' }],
+        gameLog: [...state.gameLog, { text: `Launched ${tvMCat.name} merch for "${tvShow.title}" — ~${fmt(tvMRev)}/mo`, type: 'success' }],
       };
     }
 
@@ -5382,6 +5560,83 @@ case 'REMASTER_FILM': {
         musicArtists: state.musicArtists.map(a => a.id === raA.id ? { ...a, albums: a.albums + 1, popularity: clamp(a.popularity + (raQ > 70 ? 5 : -2), 5, 99) } : a),
         musicLabel: { ...state.musicLabel, totalRevenue: state.musicLabel.totalRevenue + raR },
         gameLog: [...state.gameLog, { text: 'Released "' + raAlb.title + '" — ' + (raS/1e6).toFixed(1) + 'M units, ' + fmt(raR) + ' revenue' + (raFT ? ' (Soundtrack: ' + raFT + ')' : ''), type: raQ > 65 ? 'success' : 'info' }], errorMsg: '' };
+    }
+    case 'RELEASE_SINGLE': {
+      if (!state.musicLabel) return { ...state, errorMsg: 'No music label!' };
+      const rsA = state.musicArtists.find(a => a.id === action.artistId);
+      if (!rsA) return { ...state, errorMsg: 'Artist not found.' };
+      const rsCost = Math.round(rsA.skill * 2000 + 50000);
+      if (state.cash < rsCost) return { ...state, errorMsg: 'Need ' + fmt(rsCost) + ' to produce single.' };
+      let rsQ = clamp(rsA.skill + randInt(-5, 20), 20, 99);
+      const rsSales = Math.round(200000 * (rsQ / 50) * (rsA.popularity / 50) * (0.8 + Math.random() * 0.4));
+      const rsRev = Math.round(rsSales * 3);
+      const rsStreamRev = Math.round(rsSales * 0.004 * rsA.popularity);
+      const rsTotalRev = rsRev + rsStreamRev;
+      const isHit = rsQ > 75 && rsA.popularity > 50;
+      return { ...state, cash: state.cash - rsCost + rsTotalRev, nextId: state.nextId + 1,
+        musicAlbums: [...state.musicAlbums, { id: state.nextId, title: action.title || (rsA.name + ' - Single'), type: 'single', artistId: rsA.id, sales: rsSales, revenue: rsTotalRev, releaseYear: state.year, quality: rsQ, isSingle: true }],
+        musicArtists: state.musicArtists.map(a => a.id === rsA.id ? { ...a, popularity: clamp(a.popularity + (isHit ? 8 : -1), 5, 99) } : a),
+        musicLabel: { ...state.musicLabel, totalRevenue: state.musicLabel.totalRevenue + rsTotalRev },
+        gameLog: [...state.gameLog, { text: (isHit ? '🔥 HIT SINGLE! ' : '') + '"' + (action.title || rsA.name + ' - Single') + '" — ' + fmt(rsTotalRev) + ' revenue' + (isHit ? ' — climbing the charts!' : ''), type: isHit ? 'success' : 'info' }], errorMsg: '' };
+    }
+    case 'START_TOUR': {
+      if (!state.musicLabel) return { ...state, errorMsg: 'No music label!' };
+      const stA = state.musicArtists.find(a => a.id === action.artistId);
+      if (!stA) return { ...state, errorMsg: 'Artist not found.' };
+      if (stA.onTour) return { ...state, errorMsg: stA.name + ' is already on tour!' };
+      const stT = TOUR_TYPES.find(t => t.id === action.tourType);
+      if (!stT) return { ...state, errorMsg: 'Invalid tour type.' };
+      if (stA.popularity < stT.popReq) return { ...state, errorMsg: stA.name + ' needs ' + stT.popReq + '+ popularity for ' + stT.name + '.' };
+      if (state.cash < stT.cost) return { ...state, errorMsg: 'Need ' + fmt(stT.cost) + ' to launch tour.' };
+      const stRevMult = (stA.popularity / 50) * (stA.skill / 50) * (0.8 + Math.random() * 0.4);
+      const stTotalRev = Math.round(stT.baseRevenue * stRevMult);
+      const stMerchRev = Math.round(stTotalRev * 0.15);
+      return { ...state, cash: state.cash - stT.cost,
+        musicArtists: state.musicArtists.map(a => a.id === stA.id ? { ...a, onTour: true, tourType: stT.id, tourMonthsLeft: stT.baseDuration, tourRevenue: stTotalRev, tourMerchRevenue: stMerchRev } : a),
+        musicTours: [...(state.musicTours || []), { id: state.nextId, artistId: stA.id, tourType: stT.id, monthsLeft: stT.baseDuration, totalRevenue: stTotalRev, merchRevenue: stMerchRev, startYear: state.year }],
+        nextId: state.nextId + 1,
+        gameLog: [...state.gameLog, { text: stA.name + ' kicks off ' + stT.name + '! Expected revenue: ' + fmt(stTotalRev) + ' + ' + fmt(stMerchRev) + ' merch over ' + stT.baseDuration + ' months', type: 'success' }], errorMsg: '' };
+    }
+    case 'COLLAB_ARTISTS': {
+      if (!state.musicLabel) return { ...state, errorMsg: 'No music label!' };
+      const caA1 = state.musicArtists.find(a => a.id === action.artistId1);
+      const caA2 = state.musicArtists.find(a => a.id === action.artistId2);
+      if (!caA1 || !caA2) return { ...state, errorMsg: 'Both artists must be signed.' };
+      if (caA1.id === caA2.id) return { ...state, errorMsg: 'Cannot collaborate with self.' };
+      const caCost = Math.round((caA1.salary + caA2.salary) * 0.1 + 100000);
+      if (state.cash < caCost) return { ...state, errorMsg: 'Need ' + fmt(caCost) + ' for collaboration.' };
+      const caQ = clamp(Math.round((caA1.skill + caA2.skill) / 2 + randInt(0, 15)), 30, 99);
+      const caSales = Math.round(400000 * (caQ / 50) * ((caA1.popularity + caA2.popularity) / 80) * (0.8 + Math.random() * 0.4));
+      const caRev = Math.round(caSales * 5);
+      return { ...state, cash: state.cash - caCost + caRev, nextId: state.nextId + 1,
+        musicAlbums: [...state.musicAlbums, { id: state.nextId, title: caA1.name + ' x ' + caA2.name + ' - Collab', type: 'collab', artistId: caA1.id, collabArtistId: caA2.id, sales: caSales, revenue: caRev, releaseYear: state.year, quality: caQ }],
+        musicArtists: state.musicArtists.map(a => {
+          if (a.id === caA1.id) return { ...a, popularity: clamp(a.popularity + 5, 5, 99) };
+          if (a.id === caA2.id) return { ...a, popularity: clamp(a.popularity + 5, 5, 99) };
+          return a;
+        }),
+        musicLabel: { ...state.musicLabel, totalRevenue: state.musicLabel.totalRevenue + caRev },
+        gameLog: [...state.gameLog, { text: '🎤 ' + caA1.name + ' x ' + caA2.name + ' collab! Q:' + caQ + ' — ' + fmt(caRev) + ' revenue', type: 'success' }], errorMsg: '' };
+    }
+    case 'DEVELOP_ARTIST': {
+      const dvA = state.musicArtists.find(a => a.id === action.artistId);
+      if (!dvA) return { ...state, errorMsg: 'Artist not found.' };
+      const dvCost = Math.round(dvA.skill * 3000 + 100000);
+      if (state.cash < dvCost) return { ...state, errorMsg: 'Need ' + fmt(dvCost) + ' for artist development.' };
+      const dvSkillGain = randInt(2, 8);
+      const dvPopGain = randInt(1, 5);
+      return { ...state, cash: state.cash - dvCost,
+        musicArtists: state.musicArtists.map(a => a.id === dvA.id ? { ...a, skill: clamp(a.skill + dvSkillGain, 10, 99), popularity: clamp(a.popularity + dvPopGain, 5, 99) } : a),
+        gameLog: [...state.gameLog, { text: dvA.name + ' completed artist development — Skill +' + dvSkillGain + ', Pop +' + dvPopGain, type: 'success' }], errorMsg: '' };
+    }
+    case 'LAUNCH_MUSIC_MERCH': {
+      const lmmA = state.musicArtists.find(a => a.id === action.artistId);
+      if (!lmmA) return { ...state, errorMsg: 'Artist not found.' };
+      if (lmmA.popularity < 40) return { ...state, errorMsg: 'Artist needs 40+ popularity for merch.' };
+      const lmmRev = Math.round(lmmA.popularity * 5000 * (0.8 + Math.random() * 0.4));
+      return { ...state,
+        merchandiseDeals: [...(state.merchandiseDeals || []), { artistId: lmmA.id, categoryId: 'artist_merch', monthlyRevenue: lmmRev, monthsLeft: 12, source: 'music' }],
+        gameLog: [...state.gameLog, { text: 'Launched merch line for ' + lmmA.name + ' — ~' + fmt(lmmRev) + '/mo for 12 months', type: 'success' }], errorMsg: '' };
     }
     case 'SET_PRODUCTION_TYPE':
       return { ...state, devProductionType: action.prodType || 'live_action' };
@@ -5986,7 +6241,7 @@ case 'REMASTER_FILM': {
           }
         }
 
-        f.theatricalRun = simulateTheatricalRun(box.totalGross, f.quality, f.genre, f.rating || 'PG-13');
+        f.theatricalRun = simulateTheatricalRun(box.totalGross, f.quality, f.genre, f.rating || 'PG-13', f.budget);
 
         // Record filmography for all talent involved
         const talentToUpdate = {};
@@ -6733,15 +6988,72 @@ case 'REMASTER_FILM': {
       }
 
 
-      // 9c. Music Label monthly processing
+      // 9c. Music Label monthly processing (expanded)
       let musicArtists = (state.musicArtists || []).map(a => ({ ...a }));
       let musicLabel = state.musicLabel ? { ...state.musicLabel } : null;
       let musicAlbums = [...(state.musicAlbums || [])];
+      let musicTours = (state.musicTours || []).map(t => ({ ...t }));
+      let musicCharts = [...(state.musicCharts || [])];
+      let musicAwardsHistory = [...(state.musicAwardsHistory || [])];
       if (musicLabel && musicArtists.length > 0) {
+        // Artist salaries
         musicArtists.forEach(a => { cash -= Math.round(a.salary / 12); expenses += Math.round(a.salary / 12); });
+        // Skill/pop drift
         musicArtists = musicArtists.map(a => ({ ...a, popularity: clamp(a.popularity + randInt(-3, 3), 5, 99), skill: clamp(a.skill + randInt(-1, 1), 10, 99) }));
+        // Catalog royalties
         const maCatRoy = musicAlbums.reduce((sum, alb) => sum + Math.round(alb.revenue * 0.01 * Math.max(0.05, 1.0 - Math.max(1, state.year - alb.releaseYear) * 0.15)), 0);
         if (maCatRoy > 0) { cash += maCatRoy; revenue += maCatRoy; musicLabel.totalRevenue += maCatRoy; }
+        // Streaming royalties (passive — grows with catalog size and artist popularity)
+        const maStreamRoy = musicAlbums.reduce((sum, alb) => {
+          const artist = musicArtists.find(a => a.id === alb.artistId);
+          if (!artist) return sum;
+          return sum + Math.round(artist.popularity * 50 * Math.max(0.1, 1.0 - (state.year - alb.releaseYear) * 0.1));
+        }, 0);
+        if (maStreamRoy > 0) { cash += maStreamRoy; revenue += maStreamRoy; musicLabel.totalRevenue += maStreamRoy; }
+        // Tour revenue processing
+        musicTours = musicTours.map(t => {
+          if (t.monthsLeft <= 0) return t;
+          t.monthsLeft -= 1;
+          const monthlyTourRev = Math.round(t.totalRevenue / (TOUR_TYPES.find(tt => tt.id === t.tourType)?.baseDuration || 6));
+          const monthlyMerchRev = Math.round(t.merchRevenue / (TOUR_TYPES.find(tt => tt.id === t.tourType)?.baseDuration || 6));
+          cash += monthlyTourRev + monthlyMerchRev;
+          revenue += monthlyTourRev + monthlyMerchRev;
+          musicLabel.totalRevenue += monthlyTourRev + monthlyMerchRev;
+          if (t.monthsLeft === 0) {
+            const tourArtist = musicArtists.find(a => a.id === t.artistId);
+            if (tourArtist) {
+              musicArtists = musicArtists.map(a => a.id === t.artistId ? { ...a, onTour: false, popularity: clamp(a.popularity + 5, 5, 99) } : a);
+            }
+            log.push({ text: (tourArtist?.name || 'Artist') + '\'s ' + (TOUR_TYPES.find(tt => tt.id === t.tourType)?.name || 'tour') + ' wrapped! Total earned: ' + fmt(t.totalRevenue + t.merchRevenue), type: 'success' });
+          }
+          return t;
+        });
+        // Music Charts — monthly top 5
+        if (musicAlbums.length > 0) {
+          const recentAlbums = musicAlbums.filter(a => state.year - a.releaseYear <= 1).sort((a, b) => (b.quality * (musicArtists.find(x => x.id === b.artistId)?.popularity || 50)) - (a.quality * (musicArtists.find(x => x.id === a.artistId)?.popularity || 50)));
+          if (recentAlbums.length > 0) {
+            musicCharts = [{ year: state.year, month: state.month, top5: recentAlbums.slice(0, 5).map((a, i) => ({ rank: i + 1, title: a.title, quality: a.quality, artistId: a.artistId })) }, ...musicCharts].slice(0, 24);
+          }
+        }
+        // Annual Music Awards (every January)
+        if (state.month === 1 && musicAlbums.filter(a => a.releaseYear === state.year - 1).length > 0) {
+          const lastYearAlbums = musicAlbums.filter(a => a.releaseYear === state.year - 1);
+          const bestAlbum = lastYearAlbums.sort((a, b) => b.quality - a.quality)[0];
+          const bestArtist = musicArtists.sort((a, b) => b.popularity - a.popularity)[0];
+          const awards = [];
+          if (bestAlbum && bestAlbum.quality > 70) awards.push({ category: 'Album of the Year', winner: bestAlbum.title, year: state.year });
+          if (bestArtist) awards.push({ category: 'Artist of the Year', winner: bestArtist.name, year: state.year });
+          const soundtracks = lastYearAlbums.filter(a => a.type === 'soundtrack');
+          if (soundtracks.length > 0) {
+            const bestST = soundtracks.sort((a, b) => b.quality - a.quality)[0];
+            if (bestST.quality > 65) awards.push({ category: 'Best Soundtrack', winner: bestST.title, year: state.year });
+          }
+          if (awards.length > 0) {
+            musicAwardsHistory = [...musicAwardsHistory, ...awards];
+            awards.forEach(aw => log.push({ text: '🏆 Music Award: ' + aw.category + ' — ' + aw.winner + '!', type: 'award' }));
+            if (bestArtist) musicArtists = musicArtists.map(a => a.id === bestArtist.id ? { ...a, popularity: clamp(a.popularity + 10, 5, 99) } : a);
+          }
+        }
       }
 
       // 9d. TV Episode Ratings
@@ -7941,15 +8253,21 @@ case 'REMASTER_FILM': {
         revenue += homeVideoRev;
       }
 
-      // --- MERCHANDISE DEALS REVENUE ---
+      // --- MERCHANDISE DEALS REVENUE (expanded) ---
       let merchDeals = (state.merchandiseDeals || []).map(d => ({ ...d }));
       let merchDealRev = 0;
+      let totalMerchRevenue = state.totalMerchRevenue || 0;
+      const isHolidaySeason = state.month >= 10 || state.month <= 1;
       merchDeals = merchDeals.filter(d => {
         if (d.monthsLeft <= 0) return false;
         d.monthsLeft -= 1;
-        merchDealRev += d.monthlyRevenue;
+        let monthRev = d.monthlyRevenue;
+        if (isHolidaySeason) monthRev = Math.round(monthRev * 1.4);
+        if (state.month === 12) monthRev = Math.round(monthRev * 1.3);
+        merchDealRev += monthRev;
         return true;
       });
+      totalMerchRevenue += merchDealRev;
       if (merchDealRev > 0) { cash += merchDealRev; revenue += merchDealRev; }
 
       // --- LOT BUILDING MAINTENANCE ---
@@ -8248,7 +8566,8 @@ case 'REMASTER_FILM': {
         tabBadges,
         logFilter: 'all',
         // Wave 2
-        musicLabel, musicArtists, musicAlbums, tvEpisodeRatings,
+        musicLabel, musicArtists, musicAlbums, musicTours, musicCharts, musicAwardsHistory, tvEpisodeRatings,
+                totalMerchRevenue,
         // ---- TALENT AGING & LIFECYCLE ----
         contracts: state.contracts.map(t => {
           const aged = { ...t, age: t.age + 1 };
@@ -9737,8 +10056,8 @@ export default function MovieMogul() {
   const inPipeline = state.films.filter(f => ['development', 'production', 'postproduction', 'script_dev', 'pre_production', 'principal_photography', 'post_production', 'marketing_campaign'].includes(f.status));
   const released = state.films.filter(f => f.status === 'released').slice().reverse();
   const awaitingRelease = state.films.filter(f => f.status === 'completed' || f.status === 'scheduled');
-  const tabs = ['dashboard', 'develop', 'ip', 'production', 'release', 'talent', 'studio', 'lot', 'music', 'finance', 'market', 'streaming', 'tv', 'catalog', 'press', 'academy', 'partners', 'screening'];
-  const tabIcons = { dashboard: '📊', develop: '🎬', ip: '🏷', production: '🎥', release: '🎞', talent: '⭐', studio: '🏢', lot: '🏗️', music: '🎵', finance: '💰', market: '📈', streaming: '📺', tv: '📺', catalog: '📀', press: '📰', academy: '🎓', partners: '🌍', screening: '🎬' };
+  const tabs = ['dashboard', 'develop', 'ip', 'production', 'release', 'talent', 'studio', 'lot', 'music', 'merch', 'finance', 'market', 'streaming', 'tv', 'catalog', 'press', 'academy', 'partners', 'screening'];
+  const tabIcons = { dashboard: '📊', develop: '🎬', ip: '🏷', production: '🎥', release: '🎞', talent: '⭐', studio: '🏢', lot: '🏗️', music: '🎵', merch: '🛍️', finance: '💰', market: '📈', streaming: '📺', tv: '📺', catalog: '📀', press: '📰', academy: '🎓', partners: '🌍', screening: '🎬' };
 
   const facilityCosts = [0, 500000, 2000000, 5000000, 15000000, 50000000];
   const facilityNames = ['Garage Studio', 'Small Lot', 'Soundstages', 'VFX Lab', 'Backlot Complex', 'Premier Facilities'];
@@ -10324,6 +10643,12 @@ export default function MovieMogul() {
           <div className="flex justify-between items-center mb-2">
             <div className="text-white font-bold text-sm">Production Budget: {fmt(state.devBudgetM * 1e6)}</div>
             <span className={`text-xs font-bold ${getBudgetTier(state.devBudgetM).color}`}>{getBudgetTier(state.devBudgetM).name}</span>
+          <div className="text-xs mt-1">
+            <span className="text-gray-500">Production Value: </span>
+            <span className={state.devBudgetM <= 5 ? 'text-red-400' : state.devBudgetM <= 25 ? 'text-yellow-400' : state.devBudgetM <= 75 ? 'text-blue-400' : 'text-green-400'}>
+              {state.devBudgetM <= 5 ? 'Shoestring — great scripts can shine, but production value limited' : state.devBudgetM <= 15 ? 'Lean — strong performances possible, limited spectacle' : state.devBudgetM <= 30 ? 'Solid — good production value, talent mostly unlocked' : state.devBudgetM <= 75 ? 'Professional — strong production across the board' : state.devBudgetM <= 150 ? 'Premium — top-tier production, talent fully supported' : 'World-Class — no resource constraints'}
+            </span>
+          </div>
           </div>
           <input type="range" min={script.budgetMin} max={script.budgetMax} step={script.budgetMax > 100 ? 5 : 1} value={state.devBudgetM}
             onChange={e => dispatch({ type: 'SET_DEV', key: 'devBudgetM', value: parseInt(e.target.value) })}
@@ -12934,45 +13259,91 @@ export default function MovieMogul() {
     );
   };
 
-  // ==================== MUSIC TAB ====================
+  // ==================== MUSIC TAB (EXPANDED) ====================
   const renderMusic = () => {
     const mL = state.musicLabel;
     const mA = state.musicArtists || [];
     const mAlb = state.musicAlbums || [];
+    const mTours = state.musicTours || [];
+    const mCharts = state.musicCharts || [];
+    const mAwards = state.musicAwardsHistory || [];
+    const [musicSubTab, setMusicSubTab] = useState('artists');
+    const [collabSelect, setCollabSelect] = useState(null);
     if (!mL) return (
       <div className="space-y-4">
         <div className="text-white font-bold text-xl mb-2">🎵 Music Label</div>
-        <div className="text-gray-400 text-sm mb-4">Found a music division to sign artists, produce soundtracks, and cross-promote.</div>
+        <div className="text-gray-400 text-sm mb-4">Found a music division to sign artists, produce soundtracks, release singles, launch tours, and cross-promote.</div>
         <div className="bg-gray-800 border border-gray-600 rounded-lg p-6 text-center">
           <div className="text-4xl mb-3">🎶</div>
           <div className="text-white font-bold text-lg mb-2">Start Your Music Label</div>
-          <div className="text-gray-400 text-sm mb-4">Cost: $10M</div>
+          <div className="text-gray-400 text-sm mb-4">Cost: $10M — Unlock artist management, tours, singles, collaborations, and music awards.</div>
           <button onClick={() => dispatch({ type: 'FOUND_MUSIC_LABEL' })} disabled={state.cash < 10e6}
             className="bg-purple-600 hover:bg-purple-500 disabled:opacity-40 text-white font-bold px-6 py-2 rounded-lg transition">Found Label ($10M)</button>
         </div>
       </div>
     );
+    const activeTours = mTours.filter(t => t.monthsLeft > 0);
     return (
       <div className="space-y-4">
         <div className="text-white font-bold text-xl">🎵 {mL.name}</div>
-        <div className="text-gray-400 text-sm">Founded {mL.founded} | Revenue: {fmt(mL.totalRevenue)} | Artists: {mA.length} | Albums: {mAlb.length}</div>
-        <div>
-          <div className="text-white font-bold text-lg mb-2">Signed Artists</div>
+        <div className="text-gray-400 text-sm">Founded {mL.founded} | Revenue: {fmt(mL.totalRevenue)} | Artists: {mA.length} | Albums: {mAlb.length} | Tours: {activeTours.length} active</div>
+        {/* Sub-tabs */}
+        <div className="flex gap-2 flex-wrap">
+          {['artists', 'tours', 'discography', 'charts', 'awards'].map(st => (
+            <button key={st} onClick={() => setMusicSubTab(st)}
+              className={`px-3 py-1 rounded text-sm font-bold transition ${musicSubTab === st ? 'bg-purple-600 text-white' : 'bg-gray-700 text-gray-300 hover:bg-gray-600'}`}>
+              {st === 'artists' ? '🎤 Artists' : st === 'tours' ? '🎪 Tours' : st === 'discography' ? '💿 Discography' : st === 'charts' ? '📊 Charts' : '🏆 Awards'}
+            </button>
+          ))}
+        </div>
+        {/* ARTISTS SUB-TAB */}
+        {musicSubTab === 'artists' && (<div className="space-y-4">
+          <div className="text-white font-bold text-lg mb-2">Signed Artists ({mA.length})</div>
           {mA.length === 0 ? <div className="text-gray-500 text-sm">No artists signed.</div> : (
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
+            <div className="grid grid-cols-1 gap-3">
               {mA.map(a => (
-                <div key={a.id} className="bg-gray-800 border border-gray-600 rounded-lg p-3 flex justify-between items-center">
-                  <div>
-                    <div className="text-white font-bold text-sm">{a.name}</div>
-                    <div className="text-xs text-gray-400">{a.genre} | Skill: {a.skill} | Pop: {a.popularity} | Albums: {a.albums}</div>
-                    <div className="text-xs text-gray-500">Salary: {fmt(a.salary)}/yr</div>
+                <div key={a.id} className="bg-gray-800 border border-gray-600 rounded-lg p-4">
+                  <div className="flex justify-between items-start mb-2">
+                    <div>
+                      <div className="text-white font-bold">{a.name} {a.onTour ? '🎪 On Tour' : ''}</div>
+                      <div className="text-xs text-gray-400">{a.genre} | Skill: {a.skill} | Pop: {a.popularity} | Albums: {a.albums || 0}</div>
+                      <div className="text-xs text-gray-500">Salary: {fmt(a.salary)}/yr | Morale: {a.morale || 70}%</div>
+                    </div>
                   </div>
-                  <div className="flex gap-1">
+                  <div className="flex flex-wrap gap-1 mt-2">
                     <button onClick={() => dispatch({ type: 'RELEASE_ALBUM', artistId: a.id, albumType: 'original' })}
                       className="bg-purple-600 hover:bg-purple-500 text-white text-xs px-2 py-1 rounded">Album</button>
+                    <button onClick={() => dispatch({ type: 'RELEASE_SINGLE', artistId: a.id })}
+                      className="bg-indigo-600 hover:bg-indigo-500 text-white text-xs px-2 py-1 rounded">Single</button>
                     {state.films.filter(f => f.status === 'released' || f.status === 'postproduction').length > 0 && (
                       <button onClick={() => dispatch({ type: 'RELEASE_ALBUM', artistId: a.id, albumType: 'soundtrack', filmId: state.films.filter(f => f.status === 'released' || f.status === 'postproduction')[0]?.id })}
                         className="bg-teal-600 hover:bg-teal-500 text-white text-xs px-2 py-1 rounded">Soundtrack</button>
+                    )}
+                    <button onClick={() => dispatch({ type: 'RELEASE_ALBUM', artistId: a.id, albumType: 'compilation' })}
+                      disabled={a.albums < 3} className="bg-yellow-700 hover:bg-yellow-600 disabled:opacity-30 text-white text-xs px-2 py-1 rounded">Greatest Hits</button>
+                    <button onClick={() => dispatch({ type: 'DEVELOP_ARTIST', artistId: a.id })}
+                      className="bg-blue-600 hover:bg-blue-500 text-white text-xs px-2 py-1 rounded">Develop</button>
+                    <button onClick={() => dispatch({ type: 'LAUNCH_MUSIC_MERCH', artistId: a.id })}
+                      disabled={a.popularity < 40} className="bg-pink-600 hover:bg-pink-500 disabled:opacity-30 text-white text-xs px-2 py-1 rounded">Merch</button>
+                    {!a.onTour && (
+                      <select onChange={(e) => e.target.value && dispatch({ type: 'START_TOUR', artistId: a.id, tourType: e.target.value })}
+                        className="bg-gray-700 text-white text-xs px-2 py-1 rounded" defaultValue="">
+                        <option value="" disabled>Tour...</option>
+                        {TOUR_TYPES.filter(t => a.popularity >= t.popReq).map(t => (
+                          <option key={t.id} value={t.id}>{t.name} ({fmt(t.cost)})</option>
+                        ))}
+                      </select>
+                    )}
+                    {collabSelect === a.id ? (
+                      <div className="flex gap-1">
+                        {mA.filter(x => x.id !== a.id).map(x => (
+                          <button key={x.id} onClick={() => { dispatch({ type: 'COLLAB_ARTISTS', artistId1: a.id, artistId2: x.id }); setCollabSelect(null); }}
+                            className="bg-orange-600 hover:bg-orange-500 text-white text-xs px-2 py-1 rounded">{x.name}</button>
+                        ))}
+                        <button onClick={() => setCollabSelect(null)} className="bg-gray-600 text-white text-xs px-2 py-1 rounded">Cancel</button>
+                      </div>
+                    ) : mA.length > 1 && (
+                      <button onClick={() => setCollabSelect(a.id)} className="bg-orange-700 hover:bg-orange-600 text-white text-xs px-2 py-1 rounded">Collab</button>
                     )}
                     <button onClick={() => dispatch({ type: 'DROP_MUSIC_ARTIST', artistId: a.id })}
                       className="bg-red-700 hover:bg-red-600 text-white text-xs px-2 py-1 rounded">Drop</button>
@@ -12981,8 +13352,6 @@ export default function MovieMogul() {
               ))}
             </div>
           )}
-        </div>
-        <div>
           <div className="text-white font-bold text-lg mb-2">Sign New Artist</div>
           <div className="flex flex-wrap gap-2">
             {MUSIC_GENRES.map(g => (
@@ -12990,16 +13359,55 @@ export default function MovieMogul() {
                 className="bg-gray-700 hover:bg-gray-600 text-white text-xs px-3 py-1.5 rounded transition">{g}</button>
             ))}
           </div>
-        </div>
-        {mAlb.length > 0 && (
+        </div>)}
+        {/* TOURS SUB-TAB */}
+        {musicSubTab === 'tours' && (<div className="space-y-3">
+          <div className="text-white font-bold text-lg mb-2">🎪 Active Tours ({activeTours.length})</div>
+          {activeTours.length === 0 ? <div className="text-gray-500 text-sm">No active tours. Send an artist on tour from the Artists tab.</div> : (
+            <div className="space-y-2">
+              {activeTours.map(t => {
+                const tourArtist = mA.find(a => a.id === t.artistId);
+                const tourDef = TOUR_TYPES.find(tt => tt.id === t.tourType);
+                return (
+                  <div key={t.id} className="bg-gray-800 border border-gray-600 rounded-lg p-4">
+                    <div className="flex justify-between items-start">
+                      <div>
+                        <div className="text-white font-bold">{tourArtist?.name || 'Unknown'} — {tourDef?.name || t.tourType}</div>
+                        <div className="text-xs text-gray-400">{t.monthsLeft} months remaining | Est. Revenue: {fmt(t.totalRevenue)} + {fmt(t.merchRevenue)} merch</div>
+                      </div>
+                      <div className="text-green-400 font-bold">{fmt(Math.round((t.totalRevenue + t.merchRevenue) / (tourDef?.baseDuration || 6)))}/mo</div>
+                    </div>
+                    <div className="mt-2 w-full bg-gray-700 rounded-full h-2">
+                      <div className="bg-purple-500 h-2 rounded-full" style={{ width: `${Math.round((1 - t.monthsLeft / (tourDef?.baseDuration || 6)) * 100)}%` }}></div>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          )}
+          <div className="text-white font-bold text-lg mb-2 mt-4">Tour History</div>
+          <div className="space-y-1 max-h-40 overflow-y-auto">
+            {mTours.filter(t => t.monthsLeft <= 0).reverse().map(t => {
+              const tourArtist = mA.find(a => a.id === t.artistId);
+              return (
+                <div key={t.id} className="bg-gray-800 border border-gray-700 rounded p-2 flex justify-between">
+                  <div className="text-gray-300 text-sm">{tourArtist?.name || '?'} — {TOUR_TYPES.find(tt => tt.id === t.tourType)?.name || t.tourType} ({t.startYear})</div>
+                  <div className="text-green-400 text-sm font-bold">{fmt(t.totalRevenue + t.merchRevenue)}</div>
+                </div>
+              );
+            })}
+          </div>
+        </div>)}
+        {/* DISCOGRAPHY SUB-TAB */}
+        {musicSubTab === 'discography' && mAlb.length > 0 && (
           <div>
-            <div className="text-white font-bold text-lg mb-2">Discography</div>
-            <div className="space-y-1 max-h-60 overflow-y-auto">
+            <div className="text-white font-bold text-lg mb-2">💿 Full Discography ({mAlb.length})</div>
+            <div className="space-y-1 max-h-96 overflow-y-auto">
               {[...mAlb].reverse().map(alb => (
                 <div key={alb.id} className="bg-gray-800 border border-gray-700 rounded p-2 flex justify-between">
                   <div>
-                    <div className="text-white text-sm font-bold">{alb.title}</div>
-                    <div className="text-xs text-gray-400">{mA.find(a => a.id === alb.artistId)?.name || '?'} | {alb.type} | Q:{alb.quality} | {alb.releaseYear}</div>
+                    <div className="text-white text-sm font-bold">{alb.title} {alb.isSingle ? '🎵' : alb.type === 'collab' ? '🤝' : '💿'}</div>
+                    <div className="text-xs text-gray-400">{mA.find(a => a.id === alb.artistId)?.name || '?'}{alb.collabArtistId ? ' x ' + (mA.find(a => a.id === alb.collabArtistId)?.name || '?') : ''} | {alb.type} | Q:{alb.quality} | {alb.releaseYear}</div>
                   </div>
                   <div className="text-right">
                     <div className="text-green-400 text-sm font-bold">{fmt(alb.revenue)}</div>
@@ -13010,6 +13418,158 @@ export default function MovieMogul() {
             </div>
           </div>
         )}
+        {musicSubTab === 'discography' && mAlb.length === 0 && <div className="text-gray-500 text-sm">No releases yet.</div>}
+        {/* CHARTS SUB-TAB */}
+        {musicSubTab === 'charts' && (<div className="space-y-3">
+          <div className="text-white font-bold text-lg mb-2">📊 Music Charts</div>
+          {mCharts.length === 0 ? <div className="text-gray-500 text-sm">No chart data yet. Release music to start charting.</div> : (
+            <div className="space-y-3">
+              {mCharts.slice(0, 6).map((ch, ci) => (
+                <div key={ci} className="bg-gray-800 border border-gray-600 rounded-lg p-3">
+                  <div className="text-gray-400 text-xs mb-2">Top 5 — {ch.month}/{ch.year}</div>
+                  {ch.top5.map(entry => (
+                    <div key={entry.rank} className="flex justify-between text-sm py-0.5">
+                      <span className="text-yellow-400 font-bold w-6">#{entry.rank}</span>
+                      <span className="text-white flex-1 ml-2">{entry.title}</span>
+                      <span className="text-gray-400">Q:{entry.quality}</span>
+                    </div>
+                  ))}
+                </div>
+              ))}
+            </div>
+          )}
+        </div>)}
+        {/* AWARDS SUB-TAB */}
+        {musicSubTab === 'awards' && (<div className="space-y-3">
+          <div className="text-white font-bold text-lg mb-2">🏆 Music Awards</div>
+          {mAwards.length === 0 ? <div className="text-gray-500 text-sm">No awards yet. Release quality music to compete.</div> : (
+            <div className="space-y-2">
+              {[...mAwards].reverse().map((aw, i) => (
+                <div key={i} className="bg-gray-800 border border-gray-700 rounded-lg p-3 flex justify-between items-center">
+                  <div>
+                    <div className="text-yellow-400 font-bold text-sm">{aw.category}</div>
+                    <div className="text-white text-sm">{aw.winner}</div>
+                  </div>
+                  <div className="text-gray-400 text-xs">{aw.year}</div>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>)}
+      </div>
+    );
+  };
+
+  // ==================== MERCHANDISE TAB ====================
+  const renderMerchandise = () => {
+    const releasedFilms = state.films.filter(f => f.status === 'released' && (f.totalGross || 0) > 0);
+    const activeTVShows = (state.tvShows || []).filter(s => !['cancelled', 'ended'].includes(s.status));
+    const activeDeals = (state.merchandiseDeals || []).filter(d => d.monthsLeft > 0);
+    const [merchSubTab, setMerchSubTab] = useState('launch');
+    return (
+      <div className="space-y-4">
+        <div className="text-white font-bold text-xl mb-1">🛍️ Consumer Products & Merchandise</div>
+        <div className="text-gray-400 text-sm mb-2">Total Merch Revenue: {fmt(state.totalMerchRevenue || 0)} | Active Deals: {activeDeals.length} | Monthly: {fmt(activeDeals.reduce((s, d) => s + d.monthlyRevenue, 0))}/mo</div>
+        {(state.month >= 10 || state.month <= 1) && <div className="text-yellow-400 text-xs font-bold">🎄 Holiday Season Boost Active! +40% merch revenue (Dec: +70%)</div>}
+        <div className="flex gap-2 flex-wrap mb-2">
+          {['launch', 'active', 'partners', 'tv_merch'].map(st => (
+            <button key={st} onClick={() => setMerchSubTab(st)}
+              className={`px-3 py-1 rounded text-sm font-bold transition ${merchSubTab === st ? 'bg-pink-600 text-white' : 'bg-gray-700 text-gray-300 hover:bg-gray-600'}`}>
+              {st === 'launch' ? '🚀 Launch' : st === 'active' ? '📦 Active Deals' : st === 'partners' ? '🤝 Partners' : '📺 TV Merch'}
+            </button>
+          ))}
+        </div>
+        {/* LAUNCH SUB-TAB */}
+        {merchSubTab === 'launch' && (<div className="space-y-3">
+          <div className="text-white font-bold text-lg mb-2">Launch Merchandise</div>
+          {releasedFilms.length === 0 ? <div className="text-gray-500 text-sm">Release films to launch merchandise.</div> : (
+            <div className="space-y-3">
+              {releasedFilms.slice(0, 10).map(film => (
+                <div key={film.id} className="bg-gray-800 border border-gray-600 rounded-lg p-3">
+                  <div className="text-white font-bold text-sm mb-1">"{film.title}" — {film.genre} | Gross: {fmt(film.totalGross || 0)}</div>
+                  <div className="flex flex-wrap gap-1">
+                    {MERCH_EXPANDED_CATEGORIES.filter(c => !c.genres || c.genres.includes(film.genre)).filter(c => (film.totalGross || 0) >= c.minGross).filter(c => !activeDeals.find(d => d.filmId === film.id && d.categoryId === c.id)).map(cat => (
+                      <button key={cat.id} onClick={() => dispatch({ type: 'LAUNCH_MERCH', filmId: film.id, categoryId: cat.id })}
+                        className="bg-pink-700 hover:bg-pink-600 text-white text-xs px-2 py-1 rounded">{cat.icon} {cat.name}</button>
+                    ))}
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>)}
+        {/* ACTIVE DEALS */}
+        {merchSubTab === 'active' && (<div className="space-y-2">
+          <div className="text-white font-bold text-lg mb-2">Active Deals ({activeDeals.length})</div>
+          {activeDeals.length === 0 ? <div className="text-gray-500 text-sm">No active deals.</div> : activeDeals.map((d, i) => {
+            const cat = MERCH_EXPANDED_CATEGORIES.find(c => c.id === d.categoryId) || MERCHANDISING_CATEGORIES.find(c => c.id === d.categoryId);
+            const film = d.filmId ? state.films.find(f => f.id === d.filmId) : null;
+            const tvShow = d.showId ? (state.tvShows || []).find(s => s.id === d.showId) : null;
+            const artist = d.artistId ? (state.musicArtists || []).find(a => a.id === d.artistId) : null;
+            const partner = d.partnerId ? LICENSING_PARTNERS.find(p => p.id === d.partnerId) : null;
+            const source = film ? film.title : tvShow ? tvShow.title : artist ? artist.name : '?';
+            return (
+              <div key={i} className="bg-gray-800 border border-gray-700 rounded-lg p-3 flex justify-between items-center">
+                <div>
+                  <div className="text-white text-sm font-bold">{cat?.icon || '📦'} {cat?.name || d.categoryId}{partner ? ' (via ' + partner.name + ')' : ''}</div>
+                  <div className="text-gray-400 text-xs">"{source}" — {d.monthsLeft} months left {d.source === 'tv' ? '📺' : d.source === 'music' ? '🎵' : '🎬'}</div>
+                </div>
+                <div className="text-green-400 text-sm font-bold">{fmt(d.monthlyRevenue)}/mo</div>
+              </div>
+            );
+          })}
+        </div>)}
+        {/* LICENSING PARTNERS */}
+        {merchSubTab === 'partners' && (<div className="space-y-3">
+          <div className="text-white font-bold text-lg mb-2">Licensing Partners</div>
+          <div className="text-gray-400 text-sm mb-2">Partner with major brands for enhanced revenue and upfront fees.</div>
+          {releasedFilms.length === 0 ? <div className="text-gray-500 text-sm">Release films first.</div> : (
+            <div className="space-y-2">
+              {LICENSING_PARTNERS.map(partner => {
+                const partnerCat = MERCH_EXPANDED_CATEGORIES.find(c => c.id === partner.category);
+                const eligibleFilms = releasedFilms.filter(f => partnerCat && (!partnerCat.genres || partnerCat.genres.includes(f.genre)) && (f.totalGross || 0) >= (partnerCat.minGross || 0));
+                return (
+                  <div key={partner.id} className="bg-gray-800 border border-gray-600 rounded-lg p-4">
+                    <div className="flex justify-between items-start">
+                      <div>
+                        <div className="text-white font-bold">{partner.name}</div>
+                        <div className="text-xs text-gray-400">{partner.desc} | Category: {partnerCat?.name || partner.category}</div>
+                        <div className="text-xs text-teal-400">Revenue Bonus: {Math.round((partner.revenueBonus - 1) * 100)}% | Upfront: {fmt(partner.upfrontFee)} | Duration: {partner.exclusiveMonths}mo</div>
+                      </div>
+                    </div>
+                    {eligibleFilms.length > 0 && (
+                      <div className="flex flex-wrap gap-1 mt-2">
+                        {eligibleFilms.slice(0, 5).map(f => (
+                          <button key={f.id} onClick={() => dispatch({ type: 'LAUNCH_MERCH', filmId: f.id, categoryId: partner.category, partnerId: partner.id })}
+                            className="bg-teal-700 hover:bg-teal-600 text-white text-xs px-2 py-1 rounded">"{f.title}"</button>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                );
+              })}
+            </div>
+          )}
+        </div>)}
+        {/* TV MERCH */}
+        {merchSubTab === 'tv_merch' && (<div className="space-y-3">
+          <div className="text-white font-bold text-lg mb-2">📺 TV Show Merchandise</div>
+          {activeTVShows.length === 0 ? <div className="text-gray-500 text-sm">No active TV shows.</div> : (
+            <div className="space-y-2">
+              {activeTVShows.map(tvs => (
+                <div key={tvs.id} className="bg-gray-800 border border-gray-600 rounded-lg p-3">
+                  <div className="text-white font-bold text-sm mb-1">"{tvs.title}" — Viewers: {((tvs.viewership || 500000)/1e6).toFixed(1)}M</div>
+                  <div className="flex flex-wrap gap-1">
+                    {MERCH_EXPANDED_CATEGORIES.slice(0, 5).filter(c => !activeDeals.find(d => d.showId === tvs.id && d.categoryId === c.id)).map(cat => (
+                      <button key={cat.id} onClick={() => dispatch({ type: 'LAUNCH_TV_MERCH', showId: tvs.id, categoryId: cat.id })}
+                        className="bg-pink-700 hover:bg-pink-600 text-white text-xs px-2 py-1 rounded">{cat.icon} {cat.name}</button>
+                    ))}
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>)}
       </div>
     );
   };
@@ -15008,6 +15568,7 @@ export default function MovieMogul() {
           {tab === 'screening' && renderScreening()}
           {tab === 'lot' && renderLot()}
           {tab === 'music' && renderMusic()}
+              {tab === 'merch' && renderMerchandise()}
           {tab === 'tv' && renderTVDeepDive()}
         </div>
       </div>
