@@ -1007,9 +1007,10 @@ const makeTalent = (id, type, skillRange, ageRange) => {
     age,
     gender,
     morale: randInt(60, 90),        // 0-100, affects quality contribution
-    contractYears: randInt(2, 5),    // years left on contract
+    picturesRemaining: randInt(2, 5), // films left on contract (picture deal)
     filmography: 0,                  // films made with your studio
     careerFilms: 0,                  // total films with any studio
+    filmographyLog: [],              // detailed filmography entries
     genreBonus: pick(GENRES),        // keep legacy field
     genreSpecialties: genreSpecs,    // new: array of 1-2 genres
     personality: personality,        // personality from gameContent
@@ -1416,14 +1417,16 @@ const getCareerStage = (talent) => {
   return CAREER_STAGES[0];
 };
 
-// ==================== SYSTEM 4: AGENT DEAL TYPES ====================
-const AGENT_DEAL_TYPES = [
-  { id: 'standard', name: 'Standard Contract', salaryMult: 1.0, years: 3, desc: 'Basic deal — annual salary, no frills.' },
-  { id: 'option', name: 'Option Deal', salaryMult: 0.7, years: 1, optionYears: 2, desc: '1-year deal with 2-year option. Cheaper but they can walk.' },
-  { id: 'backend', name: 'Back-End Deal', salaryMult: 0.5, profitSharePct: 5, years: 3, desc: 'Lower salary, 5% of net profits per film.' },
-  { id: 'exclusive', name: 'Exclusive Multi-Year', salaryMult: 1.4, years: 5, exclusive: true, desc: 'Premium deal — they work only for you.' },
-  { id: 'perFilm', name: 'Per-Film Deal', salaryMult: 1.3, years: 0, perFilm: true, desc: 'No commitment — hire per project at premium rates.' },
+// ==================== SYSTEM 4: PICTURE DEAL TYPES ====================
+const PICTURE_DEAL_TYPES = [
+  { id: 'single', name: '1-Picture Deal', pictures: 1, salaryMult: 1.3, desc: 'One film only — premium rate, no commitment.' },
+  { id: 'two_pic', name: '2-Picture Deal', pictures: 2, salaryMult: 1.1, desc: 'Short commitment — slight discount per film.' },
+  { id: 'standard', name: '3-Picture Deal', pictures: 3, salaryMult: 1.0, desc: 'Industry standard — fair rate, solid commitment.' },
+  { id: 'multi', name: '5-Picture Deal', pictures: 5, salaryMult: 0.85, desc: 'Major commitment — bulk discount but locks both sides in.' },
+  { id: 'franchise', name: '7-Picture Deal', pictures: 7, salaryMult: 0.75, exclusive: true, desc: 'Franchise-level deal — deep discount, exclusive commitment.' },
 ];
+// Keep old name for any legacy references
+const AGENT_DEAL_TYPES = PICTURE_DEAL_TYPES;
 
 // ==================== CULTURAL MOVEMENTS ====================
 const CULTURAL_MOVEMENTS = [
@@ -1490,11 +1493,36 @@ const getTalentMoodLabel = (moodScore) => {
   return 'Difficult';
 };
 
+const calcTrackRecord = (talent) => {
+  const log = (talent.filmographyLog || []).slice(-5);
+  if (log.length === 0) return { score: 50, streak: 'none', hits: 0, flops: 0 };
+  let score = 50;
+  let hits = 0, flops = 0;
+  log.forEach((entry, i) => {
+    const recency = 1 + (i / log.length) * 0.5;
+    if (entry.isHit) { score += 8 * recency; hits++; }
+    else { score -= 6 * recency; flops++; }
+    if (entry.awards && entry.awards.length > 0) score += 5 * entry.awards.length * recency;
+    if (entry.totalGross > 500e6) score += 10 * recency;
+    if (entry.totalGross > 1e9) score += 15 * recency;
+  });
+  const streak = hits >= 3 ? 'hot' : flops >= 3 ? 'cold' : 'mixed';
+  return { score: Math.round(Math.max(0, Math.min(100, score))), streak, hits, flops };
+};
+
 const calcSalaryDemand = (talent) => {
   let base = talent.salary || 500000;
   if (talent.awards && talent.awards > 0) base *= 1 + talent.awards * 0.15;
   if (talent.consecutiveHits && talent.consecutiveHits >= 2) base *= 1.3;
   if (talent.lastFilmQuality && talent.lastFilmQuality < 40) base *= 0.8;
+
+  // Track record salary adjustments
+  const tr = calcTrackRecord(talent);
+  if (tr.streak === 'hot') base *= 1.4;
+  if (tr.streak === 'cold') base *= 0.7;
+  const awardBonus = (talent.filmographyLog || []).reduce((count, entry) => count + (entry.awards ? entry.awards.length : 0), 0);
+  if (awardBonus > 0) base *= Math.pow(1.05, Math.min(awardBonus, 10));
+
   const phase = CAREER_PHASES.find(p => talent.age >= p.minAge && talent.age <= p.maxAge);
   if (phase) base *= phase.salaryMod;
   return Math.round(base);
@@ -2766,13 +2794,37 @@ function reducer(state, action) {
         t.signedTo = 'player';
       });
 
-      // Create initial world talent pool (60-80 talent)
-      const poolSize = randInt(60, 80);
+      // Create initial world talent pool (90-120 talent with realistic type distribution)
       const worldTalent = [];
-      const types = ['actor', 'director', 'writer', 'producer'];
       let nextId = 100;
-      for (let i = 0; i < poolSize; i++) {
-        const talent = makeTalent(nextId++, pick(types), [20, 85]);
+      // Actors: 40-50 (the largest pool — many compete for roles)
+      const actorCount = randInt(40, 50);
+      for (let i = 0; i < actorCount; i++) {
+        const talent = makeTalent(nextId++, 'actor', [15, 90], i < 5 ? [35, 55] : i < 15 ? [28, 45] : [18, 35]);
+        talent.status = 'free';
+        talent.signedTo = null;
+        worldTalent.push(talent);
+      }
+      // Directors: 15-20
+      const directorCount = randInt(15, 20);
+      for (let i = 0; i < directorCount; i++) {
+        const talent = makeTalent(nextId++, 'director', [20, 88], i < 3 ? [40, 60] : i < 8 ? [30, 50] : [22, 38]);
+        talent.status = 'free';
+        talent.signedTo = null;
+        worldTalent.push(talent);
+      }
+      // Writers: 10-15
+      const writerCount = randInt(10, 15);
+      for (let i = 0; i < writerCount; i++) {
+        const talent = makeTalent(nextId++, 'writer', [20, 85], i < 3 ? [35, 55] : [22, 40]);
+        talent.status = 'free';
+        talent.signedTo = null;
+        worldTalent.push(talent);
+      }
+      // Producers: 5-8
+      const producerCount = randInt(5, 8);
+      for (let i = 0; i < producerCount; i++) {
+        const talent = makeTalent(nextId++, 'producer', [25, 80], [28, 50]);
         talent.status = 'free';
         talent.signedTo = null;
         worldTalent.push(talent);
@@ -3455,12 +3507,17 @@ function reducer(state, action) {
       let t = state.worldTalent.find(x => x.id === action.id);
       if (!t) t = state.availableTalent.find(x => x.id === action.id);
       if (!t) return state;
-      const updatedTalent = { ...t, status: 'player', signedTo: 'player' };
+      // Sign at original rate with standard 3-picture deal (or use pending negotiation deal if available)
+      const dealId = state.pendingNegotiation?.selectedDeal || 'standard';
+      const deal = PICTURE_DEAL_TYPES.find(d => d.id === dealId) || PICTURE_DEAL_TYPES[2];
+      const updatedTalent = { ...t, status: 'player', signedTo: 'player', picturesRemaining: deal.pictures, salary: Math.round(t.salary * deal.salaryMult) };
       return {
         ...state,
         contracts: [...state.contracts, updatedTalent],
         worldTalent: state.worldTalent.filter(x => x.id !== action.id),
         availableTalent: state.availableTalent.filter(x => x.id !== action.id),
+        pendingNegotiation: null,
+        gameLog: [...state.gameLog, { text: `Signed ${t.name} at original rate — ${deal.pictures}-picture deal at ${fmt(updatedTalent.salary)}/picture.`, type: 'success' }],
       };
     }
 
@@ -4236,17 +4293,22 @@ function reducer(state, action) {
       let talent = state.worldTalent.find(t => t.id === action.talentId);
       if (!talent) talent = state.availableTalent.find(t => t.id === action.talentId);
       if (!talent) return state;
-      // Agent counter-offers: higher salary, perks, exclusive deal
-      const salaryMult = 1 + Math.random() * 0.5; // 0-50% higher
+      // Agent counter-offers: higher per-picture salary, perks, minimum pictures
+      const salaryMult = 1 + Math.random() * 0.5; // 0-50% higher per picture
       const counterSalary = Math.round(talent.salary * salaryMult);
-      const wantsExclusive = Math.random() < 0.3;
       const wantsPerks = Math.random() < 0.5;
       const perks = wantsPerks ? pick(['Private trailer on all sets', 'First-class travel', 'Profit participation (2%)', 'Creative control clause', 'Personal chef on set']) : null;
+      // Agent demands minimum picture count based on talent's star power
+      const minPictures = talent.skill >= 75 ? 3 : talent.skill >= 50 ? 2 : 1;
       return {
         ...state,
-        pendingNegotiation: { talentId: talent.id, originalSalary: talent.salary, counterOffer: counterSalary, exclusive: wantsExclusive, perks, talentName: talent.name },
+        pendingNegotiation: { talentId: talent.id, originalSalary: talent.salary, counterOffer: counterSalary, perks, talentName: talent.name, talentType: talent.type, talentSkill: talent.skill, minPictures, selectedDeal: 'standard' },
       };
     }
+
+    case 'SET_NEGOTIATION_DEAL':
+      if (!state.pendingNegotiation) return state;
+      return { ...state, pendingNegotiation: { ...state.pendingNegotiation, selectedDeal: action.dealId } };
 
     case 'ACCEPT_NEGOTIATION': {
       if (!state.pendingNegotiation) return state;
@@ -4254,14 +4316,17 @@ function reducer(state, action) {
       let talent = state.worldTalent.find(t => t.id === neg.talentId);
       if (!talent) talent = state.availableTalent.find(t => t.id === neg.talentId);
       if (!talent) return { ...state, pendingNegotiation: null };
-      const updatedTalent = { ...talent, status: 'player', signedTo: 'player', salary: neg.counterOffer, contractYears: neg.exclusive ? talent.contractYears + 2 : talent.contractYears };
+      const deal = PICTURE_DEAL_TYPES.find(d => d.id === (neg.selectedDeal || 'standard')) || PICTURE_DEAL_TYPES[2];
+      if (deal.pictures < neg.minPictures) return { ...state, errorMsg: `${neg.talentName}'s agent demands at least a ${neg.minPictures}-picture deal.` };
+      const perPictureSalary = Math.round(neg.counterOffer * deal.salaryMult);
+      const updatedTalent = { ...talent, status: 'player', signedTo: 'player', salary: perPictureSalary, picturesRemaining: deal.pictures };
       return {
         ...state,
         contracts: [...state.contracts, updatedTalent],
         worldTalent: state.worldTalent.filter(t => t.id !== neg.talentId),
         availableTalent: state.availableTalent.filter(t => t.id !== neg.talentId),
         pendingNegotiation: null,
-        gameLog: [...state.gameLog, { text: `Signed ${neg.talentName} after negotiations. Salary: ${fmt(neg.counterOffer)}/yr${neg.exclusive ? ' (exclusive deal)' : ''}${neg.perks ? ` — Perk: ${neg.perks}` : ''}.`, type: 'success' }],
+        gameLog: [...state.gameLog, { text: `Signed ${neg.talentName} — ${deal.pictures}-picture deal at ${fmt(perPictureSalary)}/picture (total: ${fmt(perPictureSalary * deal.pictures)})${neg.perks ? ` — Perk: ${neg.perks}` : ''}.`, type: 'success' }],
       };
     }
 
@@ -4505,6 +4570,18 @@ function reducer(state, action) {
             const dirPrevHits = (state.films || []).filter(pf => pf.status === 'released' && pf.director?.id === f.director?.id && pf.genre === f.genre && (pf.profit || 0) > 0);
             if (dirPrevHits.length > 0) quality = clamp(quality + DIRECTOR_PROVEN_BONUS, 5, 98);
 
+            // Track record bonuses
+            if (f.director) {
+              const dirTr = calcTrackRecord(f.director);
+              if (dirTr.streak === 'hot') quality = clamp(quality + 3, 5, 98);
+              if (dirTr.streak === 'cold') quality = clamp(quality - 3, 5, 98);
+            }
+            if (f.actor) {
+              const actTr = calcTrackRecord(f.actor);
+              if (actTr.streak === 'hot') quality = clamp(quality + 2, 5, 98);
+              if (actTr.streak === 'cold') quality = clamp(quality - 3, 5, 98);
+            }
+
             // Multi-cast quality contribution
             if (f.castMembers && f.castMembers.length > 1) {
               let castBonus = 0;
@@ -4554,6 +4631,24 @@ function reducer(state, action) {
 
             log.push({ text: `🎬 "${f.title}" has wrapped all production! Quality: ${quality}/100. Schedule its release.`, type: 'success', category: 'production' });
             turnSummaryData.production.push({ title: f.title, update: `Production complete! Quality: ${quality}/100 — ready to schedule release`, phase: 'completed' });
+
+            // Decrement pictures remaining for all talent who worked on this film
+            const filmTalentIds = new Set();
+            if (f.director?.id) filmTalentIds.add(f.director.id);
+            if (f.actor?.id) filmTalentIds.add(f.actor.id);
+            if (f.writer?.id) filmTalentIds.add(f.writer.id);
+            if (f.producer?.id) filmTalentIds.add(f.producer.id);
+            if (f.castMembers) f.castMembers.forEach(cm => { if (cm.id) filmTalentIds.add(cm.id); });
+            contracts = contracts.map(t => {
+              if (filmTalentIds.has(t.id)) {
+                const updated = { ...t, picturesRemaining: Math.max(0, (t.picturesRemaining || 0) - 1), filmography: (t.filmography || 0) + 1, careerFilms: (t.careerFilms || 0) + 1 };
+                if (updated.picturesRemaining <= 0) {
+                  log.push({ text: `${t.name}'s picture deal has been fulfilled after "${f.title}". Time to renegotiate!`, type: 'warning', category: 'talent' });
+                }
+                return updated;
+              }
+              return t;
+            });
           }
         }
         return f;
@@ -4844,6 +4939,67 @@ function reducer(state, action) {
         }
 
         f.theatricalRun = simulateTheatricalRun(box.totalGross, f.quality, f.genre, f.rating || 'PG-13');
+
+        // Record filmography for all talent involved
+        const talentToUpdate = {};
+        const recordFilmography = (talent, role) => {
+          if (!talent || !talent.id) return;
+          if (!talentToUpdate[talent.id]) {
+            talentToUpdate[talent.id] = { talent: { ...talent }, roles: [] };
+          }
+          talentToUpdate[talent.id].roles.push(role);
+        };
+
+        if (f.director) recordFilmography(f.director, 'director');
+        if (f.actor) recordFilmography(f.actor, 'lead');
+        if (f.writer) recordFilmography(f.writer, 'writer');
+        if (f.producer) recordFilmography(f.producer, 'producer');
+        if (f.castMembers) f.castMembers.forEach(cm => recordFilmography(cm, 'supporting'));
+
+        Object.values(talentToUpdate).forEach(item => {
+          const t = item.talent;
+          const role = item.roles[0];
+          const filmEntry = {
+            title: f.title,
+            year: state.year,
+            role,
+            genre: f.genre,
+            budget: f.budget,
+            domestic: f.domestic,
+            international: f.international,
+            totalGross: f.totalGross,
+            profit: f.profit,
+            quality: f.quality,
+            criticScore: f.criticScore,
+            audienceScore: f.audienceScore,
+            awards: f.awards || [],
+            isHit: f.profit > 0,
+          };
+
+          if (!t.filmographyLog) t.filmographyLog = [];
+          t.filmographyLog.push(filmEntry);
+
+          // Update contract talent if they exist
+          contracts = contracts.map(ct => {
+            if (ct.id === t.id) {
+              return { ...ct, filmographyLog: t.filmographyLog };
+            }
+            return ct;
+          });
+        });
+
+        // Check for track record changes and log salary adjustments
+        Object.values(talentToUpdate).forEach(item => {
+          const t = item.talent;
+          const prevTr = calcTrackRecord({ filmographyLog: (t.filmographyLog || []).slice(0, -1) });
+          const newTr = calcTrackRecord(t);
+
+          if (prevTr.streak !== 'hot' && newTr.streak === 'hot') {
+            log.push({ text: `🔥 After starring in the ${fmt(f.totalGross)} hit "${f.title}", ${t.name}'s salary demands have skyrocketed!`, type: 'success', category: 'talent' });
+          } else if (prevTr.streak !== 'cold' && newTr.streak === 'cold') {
+            log.push({ text: `❌ ${t.name}'s value has plummeted after another flop.`, type: 'warning', category: 'talent' });
+          }
+        });
 
         revenue += f.profit;
         tGross += box.totalGross;
@@ -5508,7 +5664,7 @@ function reducer(state, action) {
       // 10. Talent aging & drama (every December = end of year)
       if (state.month === 12) {
         contracts = contracts.map(t => {
-          const updated = { ...t, age: t.age + 1, contractYears: t.contractYears - 1 };
+          const updated = { ...t, age: t.age + 1 };
           // Skill evolution by age
           if (updated.age < 25) {
             updated.skill = clamp(updated.skill + randInt(1, 4), 0, 99); // prodigies improve fast
@@ -5533,11 +5689,10 @@ function reducer(state, action) {
         });
         const retireeIds = new Set(retirees.map(t => t.id));
         contracts = contracts.filter(t => !retireeIds.has(t.id));
-        // Contract expiry
-        const expired = contracts.filter(t => t.contractYears <= 0);
+        // Picture deal expiry — talent whose pictures remaining hit 0 become free agents
+        const expired = contracts.filter(t => (t.picturesRemaining || 0) <= 0);
         expired.forEach(t => {
-          log.push({ text: `${t.name}'s contract has expired. Re-sign them or they'll leave.`, type: 'warning', category: 'talent' });
-          t.contractYears = 0; // mark for re-sign (player can still use them this turn)
+          log.push({ text: `${t.name}'s picture deal has expired (no pictures remaining). Re-sign them or they'll leave!`, type: 'warning', category: 'talent' });
         });
       }
 
@@ -6780,12 +6935,16 @@ function reducer(state, action) {
             return aged;
           }).filter(Boolean);
 
-          // Add 0-2 new talent to world pool each turn (ages 18-25, as fresh talent)
-          const newTalentCount = randInt(0, 2);
+          // Add new talent to world pool each turn (3-5 per year = ~30% chance of 1, plus occasional batch)
+          const newTalentRoll = Math.random();
+          const newTalentCount = newTalentRoll < 0.35 ? 0 : newTalentRoll < 0.75 ? 1 : 2; // avg ~0.7/turn = ~8/yr
+          const typeWeights = [['actor', 0.5], ['director', 0.22], ['writer', 0.18], ['producer', 0.1]];
           let newNextId = state.nextId;
           for (let i = 0; i < newTalentCount; i++) {
-            const types = ['actor', 'director', 'writer', 'producer'];
-            const newTalent = makeTalent(newNextId++, pick(types), [15, 35], [18, 25]);
+            const roll = Math.random();
+            let accum = 0; let chosenType = 'actor';
+            for (const [t, w] of typeWeights) { accum += w; if (roll < accum) { chosenType = t; break; } }
+            const newTalent = makeTalent(newNextId++, chosenType, [15, 45], [18, 25]);
             newTalent.status = 'free';
             newTalent.signedTo = null;
             world.push(newTalent);
@@ -6793,7 +6952,7 @@ function reducer(state, action) {
 
           return world;
         })(),
-        nextId: state.nextId + randInt(0, 2),  // increment for new talent
+        nextId: state.nextId + 2,  // increment for new talent
         competitors: state.competitors.map(rival => {
           const updated = { ...rival };
           // Rivals may sign free talent (15% chance) - just log it
@@ -7497,6 +7656,48 @@ function ReleasedCard({ film, onCreateFranchise, onRemaster, currentYear, curren
   );
 }
 
+function FilmographyPanel({ talent }) {
+  const [expanded, setExpanded] = useState(false);
+  const filmography = talent.filmographyLog || [];
+  const tr = calcTrackRecord(talent);
+
+  if (filmography.length === 0) return null;
+
+  return (
+    <div className="bg-gray-900 border border-gray-700 rounded-lg p-3 mt-2">
+      <button
+        onClick={() => setExpanded(!expanded)}
+        className="w-full text-left text-sm text-gray-300 hover:text-white font-bold flex justify-between items-center"
+      >
+        <span>Filmography ({filmography.length} films)</span>
+        <span className={`text-xs transition ${expanded ? 'rotate-180' : ''}`}>▼</span>
+      </button>
+      {expanded && (
+        <div className="mt-2 text-xs text-gray-400 space-y-1 max-h-48 overflow-y-auto">
+          {filmography.slice().reverse().map((film, idx) => (
+            <div key={idx} className="border-t border-gray-800 pt-1">
+              <div className="text-white font-bold">{film.title} ({film.year})</div>
+              <div className="flex gap-2 flex-wrap">
+                <span className={film.isHit ? 'text-green-400' : 'text-red-400'}>{film.isHit ? 'Hit' : 'Flop'}</span>
+                <span className="text-gray-500">•</span>
+                <span>{fmt(film.totalGross)} gross</span>
+                <span className="text-gray-500">•</span>
+                <span>Quality: {film.quality}</span>
+                {film.awards && film.awards.length > 0 && (
+                  <>
+                    <span className="text-gray-500">•</span>
+                    <span className="text-yellow-400">{film.awards.length} award(s)</span>
+                  </>
+                )}
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
+
 function TalentCard({ talent, action, actionLabel, actionColor, disabled }) {
   const typeColors = { director: 'text-amber-400', actor: 'text-blue-400', writer: 'text-green-400' };
   const typeBg = { director: 'bg-amber-900/30 border-amber-700', actor: 'bg-blue-900/30 border-blue-700', writer: 'bg-green-900/30 border-green-700' };
@@ -7504,6 +7705,8 @@ function TalentCard({ talent, action, actionLabel, actionColor, disabled }) {
   const tierColor = talent.skill >= 80 ? 'text-amber-300' : talent.skill >= 60 ? 'text-blue-300' : talent.skill >= 40 ? 'text-gray-300' : 'text-gray-500';
   const phase = getCareerPhase(talent.age);
   const phaseColor = { rising: 'text-green-400', peak: 'text-amber-400', veteran: 'text-blue-400', legend: 'text-purple-400', declining: 'text-red-400' };
+  const tr = calcTrackRecord(talent);
+  const lastThreeFilms = (talent.filmographyLog || []).slice(-3);
   return (
     <div className={`border rounded-lg p-3 ${typeBg[talent.type] || 'bg-gray-800 border-gray-700'}`}>
       <div className="flex justify-between items-start mb-1">
@@ -7514,6 +7717,22 @@ function TalentCard({ talent, action, actionLabel, actionColor, disabled }) {
           <span className={`text-xs ml-2 ${phaseColor[phase.id] || 'text-gray-400'}`}>{phase.name}</span>
         </div>
       </div>
+      {lastThreeFilms.length > 0 && (
+        <div className="flex gap-1 mb-2">
+          {lastThreeFilms.map((film, idx) => {
+            const hasAwards = film.awards && film.awards.length > 0;
+            const color = hasAwards ? 'bg-yellow-500' : film.isHit ? 'bg-green-500' : 'bg-red-500';
+            return (
+              <div key={idx} className={`w-2 h-2 rounded-full ${color} cursor-help`} title={`${film.title} (${film.year}): ${film.isHit ? 'Hit' : 'Flop'}${hasAwards ? ', ' + film.awards.length + ' award(s)' : ''}`}></div>
+            );
+          })}
+        </div>
+      )}
+      {tr.streak !== 'none' && (
+        <div className={`text-xs mb-1 font-bold ${tr.streak === 'hot' ? 'text-green-400' : tr.streak === 'cold' ? 'text-red-400' : 'text-yellow-400'}`}>
+          Track Record: {tr.streak === 'hot' ? 'HOT' : tr.streak === 'cold' ? 'COLD' : 'MIXED'} ({tr.hits}H/{tr.flops}F)
+        </div>
+      )}
       <div className="text-xs text-gray-400 space-y-0.5 mb-1.5">
         <div className="flex gap-3 flex-wrap">
           <span>Skill: <span className="text-white">{talent.skill}</span></span>
@@ -7522,7 +7741,7 @@ function TalentCard({ talent, action, actionLabel, actionColor, disabled }) {
         </div>
         <div className="flex gap-3 flex-wrap">
           <span>Salary: <span className="text-green-400">{fmt(talent.salary)}/yr</span></span>
-          {talent.contractYears !== undefined && <span>Contract: <span className={`${talent.contractYears <= 1 ? 'text-red-300' : 'text-white'}`}>{talent.contractYears}yr</span></span>}
+          {talent.picturesRemaining !== undefined && talent.status === 'player' && <span>Pictures: <span className={`${talent.picturesRemaining <= 1 ? 'text-red-300' : 'text-white'}`}>{talent.picturesRemaining} remaining</span></span>}
         </div>
         {talent.morale !== undefined && (
           <div className="flex items-center gap-1">
@@ -9534,9 +9753,12 @@ export default function MovieMogul() {
                         <span className="text-gray-500 text-xs">({roleTalent.length})</span>
                         <span className="text-gray-600 text-xs ml-auto">{fmt(roleSalary)}/yr</span>
                       </div>
-                      <div className="space-y-1.5">
+                      <div className="space-y-2">
                         {roleTalent.map(t => (
-                          <TalentCard key={t.id} talent={t} action={() => dispatch({ type: 'RELEASE_TALENT', id: t.id })} actionLabel="Release" actionColor="bg-red-600" />
+                          <div key={t.id}>
+                            <TalentCard talent={t} action={() => dispatch({ type: 'RELEASE_TALENT', id: t.id })} actionLabel="Release" actionColor="bg-red-600" />
+                            <FilmographyPanel talent={t} />
+                          </div>
                         ))}
                       </div>
                     </div>
@@ -9568,10 +9790,69 @@ export default function MovieMogul() {
                       <div className="space-y-1.5">
                         {roleTalent.map(t => {
                           const sp = calcStarPower(t);
+                          const isNegotiating = state.pendingNegotiation && state.pendingNegotiation.talentId === t.id;
                           return (
-                            <div key={t.id} className="relative">
-                              <TalentCard talent={t} action={() => dispatch({ type: 'NEGOTIATE_TALENT', talentId: t.id })} actionLabel="Negotiate" actionColor="bg-amber-600" />
-                              {sp > 40 && <div className="absolute top-1 right-20 text-xs text-amber-400 font-bold">Star:{sp}</div>}
+                            <div key={t.id}>
+                              <div className="relative">
+                                <TalentCard talent={t} action={() => {
+                                  if (isNegotiating) { dispatch({ type: 'REJECT_NEGOTIATION' }); }
+                                  else { dispatch({ type: 'NEGOTIATE_TALENT', talentId: t.id }); }
+                                }} actionLabel={isNegotiating ? 'Cancel' : 'Negotiate'} actionColor={isNegotiating ? 'bg-gray-600' : 'bg-amber-600'} />
+                                {sp > 40 && <div className="absolute top-1 right-20 text-xs text-amber-400 font-bold">Star:{sp}</div>}
+                              </div>
+                              {isNegotiating && (() => {
+                                const neg = state.pendingNegotiation;
+                                const selectedDeal = PICTURE_DEAL_TYPES.find(d => d.id === (neg.selectedDeal || 'standard')) || PICTURE_DEAL_TYPES[2];
+                                const perPictureCost = Math.round(neg.counterOffer * selectedDeal.salaryMult);
+                                const totalCost = perPictureCost * selectedDeal.pictures;
+                                const dealBlocked = selectedDeal.pictures < (neg.minPictures || 1);
+                                return (
+                                <div className="bg-gray-900 border-l-4 border-amber-500 rounded-b-lg p-4 -mt-1 ml-2 mr-2">
+                                  <div className="flex justify-between items-start mb-3">
+                                    <div>
+                                      <div className="text-amber-400 font-bold text-sm">Negotiating with {neg.talentName}</div>
+                                      <div className="text-gray-400 text-xs">{t.type.charAt(0).toUpperCase() + t.type.slice(1)} · Skill {t.skill} · Pop {t.popularity} · Star Power {sp}</div>
+                                    </div>
+                                    {neg.perks && <div className="text-teal-400 text-xs bg-teal-900/30 px-2 py-1 rounded">Wants: {neg.perks}</div>}
+                                  </div>
+                                  <div className="text-gray-400 text-xs mb-2">Agent's asking price: <span className="text-amber-400 font-bold">{fmt(neg.counterOffer)}</span>/picture <span className="text-gray-500">(was {fmt(neg.originalSalary)})</span></div>
+                                  {neg.minPictures > 1 && <div className="text-purple-400 text-xs mb-2">Agent demands minimum {neg.minPictures}-picture commitment</div>}
+                                  <div className="text-white font-bold text-xs mb-2">Choose Picture Deal:</div>
+                                  <div className="grid grid-cols-5 gap-1.5 mb-3">
+                                    {PICTURE_DEAL_TYPES.map(deal => {
+                                      const isSelected = (neg.selectedDeal || 'standard') === deal.id;
+                                      const blocked = deal.pictures < (neg.minPictures || 1);
+                                      const dealCostPer = Math.round(neg.counterOffer * deal.salaryMult);
+                                      return (
+                                        <button key={deal.id} onClick={() => !blocked && dispatch({ type: 'SET_NEGOTIATION_DEAL', dealId: deal.id })}
+                                          disabled={blocked}
+                                          className={`p-2 rounded text-xs text-center border transition ${isSelected ? 'bg-amber-700 border-amber-400 text-white' : blocked ? 'bg-gray-800 border-gray-700 text-gray-600 cursor-not-allowed' : 'bg-gray-800 border-gray-600 text-gray-300 hover:bg-gray-700'}`}>
+                                          <div className="font-bold">{deal.pictures} pic{deal.pictures > 1 ? 's' : ''}</div>
+                                          <div className="text-xs mt-0.5">{fmt(dealCostPer)}/pic</div>
+                                          <div className="text-gray-500 text-xs">Total: {fmt(dealCostPer * deal.pictures)}</div>
+                                        </button>
+                                      );
+                                    })}
+                                  </div>
+                                  <div className="bg-gray-800 rounded p-2 mb-3 text-sm">
+                                    <span className="text-gray-400">Deal: </span>
+                                    <span className="text-white font-bold">{selectedDeal.pictures}-picture</span>
+                                    <span className="text-gray-400"> at </span>
+                                    <span className="text-amber-400 font-bold">{fmt(perPictureCost)}/picture</span>
+                                    <span className="text-gray-400"> = </span>
+                                    <span className="text-green-400 font-bold">{fmt(totalCost)} total</span>
+                                  </div>
+                                  <div className="flex gap-2">
+                                    <button onClick={() => dispatch({ type: 'ACCEPT_NEGOTIATION' })} disabled={dealBlocked}
+                                      className="bg-green-600 hover:bg-green-500 disabled:opacity-40 text-white font-bold px-4 py-2 rounded transition text-sm">Accept Deal</button>
+                                    <button onClick={() => dispatch({ type: 'SIGN_TALENT', id: neg.talentId })} disabled={dealBlocked}
+                                      className="bg-blue-600 hover:bg-blue-500 disabled:opacity-40 text-white font-bold px-4 py-2 rounded transition text-sm">Sign at Original ({fmt(Math.round(neg.originalSalary * selectedDeal.salaryMult))})</button>
+                                    <button onClick={() => dispatch({ type: 'REJECT_NEGOTIATION' })}
+                                      className="bg-red-700 hover:bg-red-600 text-white font-bold px-3 py-2 rounded transition text-sm">Walk Away</button>
+                                  </div>
+                                </div>
+                                );
+                              })()}
                             </div>
                           );
                         })}
@@ -9587,33 +9868,91 @@ export default function MovieMogul() {
         {/* ALL TALENT VIEW */}
         {state.talentView === 'allTalent' && (
           <div>
-            <div className="text-purple-400 font-bold text-sm mb-3">All Industry Talent ({displayAll.length})</div>
-            {displayAll.length === 0 ? (
+            <div className="text-purple-400 font-bold text-sm mb-3">All Industry Talent ({displayAll.length + state.contracts.length})</div>
+            {displayAll.length === 0 && state.contracts.length === 0 ? (
               <div className="text-gray-500 text-sm">No talent matching your filters.</div>
             ) : (
-              <div className="space-y-4 max-h-[600px] overflow-y-auto">
-                {displayAll.slice(0, 50).map(t => {
-                  const statusColor = t.status === 'player' ? 'bg-green-900 border-green-600' : t.status === 'free' ? 'bg-blue-900 border-blue-600' : 'bg-red-900 border-red-600';
-                  const statusLabel = t.status === 'player' ? 'Your Roster' : t.status === 'free' ? 'Free Agent' : `Signed: ${t.signedTo}`;
+              <div className="space-y-1.5 max-h-[600px] overflow-y-auto">
+                {sortTalent(filterTalent([...state.contracts.map(c => ({...c})), ...allWorldTalent])).slice(0, 80).map(t => {
+                  const statusColor = t.status === 'player' ? 'border-green-600' : t.status === 'free' ? 'border-blue-600' : 'border-red-600';
+                  const statusBg = t.status === 'player' ? 'bg-green-900' : t.status === 'free' ? 'bg-blue-900' : 'bg-red-900';
+                  const statusLabel = t.status === 'player' ? 'Your Roster' : t.status === 'free' ? 'Free Agent' : `${t.signedTo}`;
+                  const isNegotiating = state.pendingNegotiation && state.pendingNegotiation.talentId === t.id;
                   return (
-                    <div key={t.id} className={`bg-gray-700 border ${statusColor} rounded p-2 text-xs`}>
-                      <div className="flex justify-between items-start">
-                        <div>
-                          <div className="text-white font-bold">{t.name} {t.gender === 'female' ? '♀' : '♂'}</div>
-                          <div className="text-gray-300">{t.type.charAt(0).toUpperCase() + t.type.slice(1)} | Age {t.age} | Skill {t.skill}</div>
-                          {t.personality && <div className="text-amber-400">{t.personality.name}</div>}
-                          {t.genreSpecialties && t.genreSpecialties.length > 0 && <div className="text-teal-400">Specialties: {t.genreSpecialties.join(', ')}</div>}
-                        </div>
-                        <div className="text-right">
-                          <div className={`text-xs font-bold px-2 py-1 rounded ${statusColor}`}>{statusLabel}</div>
-                          {t.status === 'free' && (
-                            <button onClick={() => dispatch({ type: 'NEGOTIATE_TALENT', talentId: t.id })}
-                              className="mt-1 bg-amber-600 hover:bg-amber-500 text-white text-xs px-2 py-1 rounded transition">
-                              Sign
-                            </button>
-                          )}
+                    <div key={t.id}>
+                      <div className={`bg-gray-700 border ${statusColor} rounded-lg p-3 text-xs`}>
+                        <div className="flex justify-between items-start">
+                          <div className="flex-1">
+                            <div className="flex items-center gap-2">
+                              <span className="text-white font-bold text-sm">{t.name}</span>
+                              <span className="text-gray-400">{t.gender === 'female' ? '♀' : '♂'}</span>
+                              <span className={`px-1.5 py-0.5 rounded text-xs font-bold ${t.type === 'actor' ? 'bg-blue-800 text-blue-300' : t.type === 'director' ? 'bg-amber-800 text-amber-300' : t.type === 'writer' ? 'bg-green-800 text-green-300' : 'bg-purple-800 text-purple-300'}`}>{t.type}</span>
+                              {t.personality && <span className="text-gray-500 text-xs">{t.personality.name}</span>}
+                            </div>
+                            <div className="flex gap-3 mt-1 text-gray-400">
+                              <span>Skill: <span className="text-white">{t.skill}</span></span>
+                              <span>Pop: <span className="text-white">{t.popularity}</span></span>
+                              <span>Age: <span className="text-white">{t.age}</span></span>
+                              <span>Salary: <span className="text-green-400">{fmt(t.salary)}</span></span>
+                            </div>
+                            {t.genreSpecialties && t.genreSpecialties.length > 0 && (
+                              <div className="flex gap-1 mt-1">{t.genreSpecialties.map(g => <span key={g} className="bg-gray-600 text-teal-300 px-1.5 py-0.5 rounded text-xs">{g}</span>)}</div>
+                            )}
+                          </div>
+                          <div className="text-right flex flex-col items-end gap-1">
+                            <span className={`text-xs font-bold px-2 py-1 rounded ${statusBg} ${statusColor}`}>{statusLabel}</span>
+                            {t.status === 'free' && !isNegotiating && (
+                              <button onClick={() => dispatch({ type: 'NEGOTIATE_TALENT', talentId: t.id })}
+                                className="bg-amber-600 hover:bg-amber-500 text-white text-xs px-3 py-1 rounded transition font-bold">Negotiate</button>
+                            )}
+                            {t.status === 'free' && isNegotiating && (
+                              <button onClick={() => dispatch({ type: 'REJECT_NEGOTIATION' })}
+                                className="bg-gray-600 hover:bg-gray-500 text-white text-xs px-3 py-1 rounded transition font-bold">Cancel</button>
+                            )}
+                            {t.status === 'rival' && (
+                              <span className="text-red-400 text-xs">Under Contract</span>
+                            )}
+                          </div>
                         </div>
                       </div>
+                      {isNegotiating && (() => {
+                        const neg = state.pendingNegotiation;
+                        const selectedDeal = PICTURE_DEAL_TYPES.find(d => d.id === (neg.selectedDeal || 'standard')) || PICTURE_DEAL_TYPES[2];
+                        const perPictureCost = Math.round(neg.counterOffer * selectedDeal.salaryMult);
+                        const totalCost = perPictureCost * selectedDeal.pictures;
+                        const dealBlocked = selectedDeal.pictures < (neg.minPictures || 1);
+                        return (
+                        <div className="bg-gray-900 border-l-4 border-amber-500 rounded-b-lg p-4 -mt-1 ml-2 mr-2">
+                          <div className="text-amber-400 font-bold text-sm mb-2">Negotiating with {neg.talentName}</div>
+                          <div className="text-gray-400 text-xs mb-2">Asking: {fmt(neg.counterOffer)}/picture {neg.minPictures > 1 ? `· Min ${neg.minPictures} pictures` : ''}</div>
+                          <div className="grid grid-cols-5 gap-1 mb-2">
+                            {PICTURE_DEAL_TYPES.map(deal => {
+                              const isSelected = (neg.selectedDeal || 'standard') === deal.id;
+                              const blocked = deal.pictures < (neg.minPictures || 1);
+                              return (
+                                <button key={deal.id} onClick={() => !blocked && dispatch({ type: 'SET_NEGOTIATION_DEAL', dealId: deal.id })}
+                                  disabled={blocked}
+                                  className={`p-1.5 rounded text-xs text-center border transition ${isSelected ? 'bg-amber-700 border-amber-400 text-white' : blocked ? 'bg-gray-800 border-gray-700 text-gray-600 cursor-not-allowed' : 'bg-gray-800 border-gray-600 text-gray-300 hover:bg-gray-700'}`}>
+                                  <div className="font-bold">{deal.pictures}pic</div>
+                                  <div className="text-xs">{fmt(Math.round(neg.counterOffer * deal.salaryMult))}</div>
+                                </button>
+                              );
+                            })}
+                          </div>
+                          <div className="bg-gray-800 rounded p-2 mb-2 text-xs">
+                            <span className="text-white font-bold">{selectedDeal.pictures}-picture</span> at <span className="text-amber-400 font-bold">{fmt(perPictureCost)}/pic</span> = <span className="text-green-400 font-bold">{fmt(totalCost)} total</span>
+                          </div>
+                          <div className="flex gap-2">
+                            <button onClick={() => dispatch({ type: 'ACCEPT_NEGOTIATION' })} disabled={dealBlocked}
+                              className="bg-green-600 hover:bg-green-500 disabled:opacity-40 text-white font-bold px-3 py-1.5 rounded transition text-xs">Accept</button>
+                            <button onClick={() => dispatch({ type: 'SIGN_TALENT', id: neg.talentId })} disabled={dealBlocked}
+                              className="bg-blue-600 hover:bg-blue-500 disabled:opacity-40 text-white font-bold px-3 py-1.5 rounded transition text-xs">Original Rate</button>
+                            <button onClick={() => dispatch({ type: 'REJECT_NEGOTIATION' })}
+                              className="bg-red-700 hover:bg-red-600 text-white font-bold px-3 py-1.5 rounded transition text-xs">Walk Away</button>
+                          </div>
+                        </div>
+                        );
+                      })()}
                     </div>
                   );
                 })}
@@ -9658,24 +9997,7 @@ export default function MovieMogul() {
           </div>
         </div>
 
-        {/* Negotiation Modal */}
-        {state.pendingNegotiation && (
-          <div className="bg-gray-800 border border-amber-500 rounded-lg p-5 mt-4">
-            <div className="text-amber-400 font-bold text-lg mb-2">Talent Negotiation</div>
-            <div className="text-white mb-1">{state.pendingNegotiation.talentName}'s agent counters:</div>
-            <div className="text-gray-300 text-sm mb-1">Salary demand: <span className="text-amber-400 font-bold">{fmt(state.pendingNegotiation.counterOffer)}</span>/yr (was {fmt(state.pendingNegotiation.originalSalary)})</div>
-            {state.pendingNegotiation.exclusive && <div className="text-purple-400 text-sm">Demands exclusive deal (+2 years contract)</div>}
-            {state.pendingNegotiation.perks && <div className="text-teal-400 text-sm">Perk request: {state.pendingNegotiation.perks}</div>}
-            <div className="flex gap-3 mt-3">
-              <button onClick={() => dispatch({ type: 'ACCEPT_NEGOTIATION' })}
-                className="bg-green-600 hover:bg-green-500 text-white font-bold px-4 py-2 rounded transition">Accept Deal</button>
-              <button onClick={() => dispatch({ type: 'REJECT_NEGOTIATION' })}
-                className="bg-red-600 hover:bg-red-500 text-white font-bold px-4 py-2 rounded transition">Walk Away</button>
-              <button onClick={() => dispatch({ type: 'SIGN_TALENT', id: state.pendingNegotiation.talentId })}
-                className="bg-gray-600 hover:bg-gray-500 text-white font-bold px-4 py-2 rounded transition">Sign at Original Rate</button>
-            </div>
-          </div>
-        )}
+        {/* Inline negotiation is now shown directly under each talent card */}
 
         {/* TALENT MOODS & RELATIONSHIPS */}
         {state.contracts.length > 0 && (
