@@ -908,7 +908,14 @@ const makeGenreTrends = (year) => {
   return base;
 };
 
-const makeName = () => `${pick(FIRST_NAMES)} ${pick(LAST_NAMES)}`;
+// Split first names by gender (first half male, second half female for simplicity)
+const maleFirstNames = FIRST_NAMES.slice(0, Math.floor(FIRST_NAMES.length / 2));
+const femaleFirstNames = FIRST_NAMES.slice(Math.floor(FIRST_NAMES.length / 2));
+
+const makeName = (gender) => {
+  const firstName = gender === 'female' ? pick(femaleFirstNames) : gender === 'male' ? pick(maleFirstNames) : pick(FIRST_NAMES);
+  return `${firstName} ${pick(LAST_NAMES)}`;
+};
 
 const TRAITS = {
   actor: [
@@ -981,21 +988,41 @@ const makeTalent = (id, type, skillRange, ageRange) => {
   if (trait.effect.salaryIncrease) salary = Math.round(salary * (1 + trait.effect.salaryIncrease));
   const popularity = clamp(Math.round(skill * 0.7 + randInt(-10, 30)), 10, 99);
   const age = ageRange ? randInt(ageRange[0], ageRange[1]) : randInt(18, 72);
+  const gender = Math.random() < 0.5 ? 'male' : 'female';
+  const retireAge = randInt(60, 75);
+  const deathAge = randInt(Math.max(70, retireAge), 90);
+  const personality = gameContent.talentPersonalities ? pick(gameContent.talentPersonalities) : null;
+  const genreSpecs = [];
+  if (Math.random() < 0.7) {
+    genreSpecs.push(pick(GENRES));
+    if (Math.random() < 0.3) genreSpecs.push(pick(GENRES.filter(g => !genreSpecs.includes(g))));
+  }
   return {
     id,
-    name: makeName(),
+    name: makeName(gender),
     type,
     skill,
     popularity,
     salary,
     age,
+    gender,
     morale: randInt(60, 90),        // 0-100, affects quality contribution
     contractYears: randInt(2, 5),    // years left on contract
     filmography: 0,                  // films made with your studio
-    genreBonus: pick(GENRES),
+    careerFilms: 0,                  // total films with any studio
+    genreBonus: pick(GENRES),        // keep legacy field
+    genreSpecialties: genreSpecs,    // new: array of 1-2 genres
+    personality: personality,        // personality from gameContent
     trait: trait.name,
     traitDesc: trait.desc,
     traitEffect: trait.effect,
+    status: 'free',                  // 'free' | 'player' | 'rival'
+    signedTo: null,                  // null | 'player' | rival studio name
+    retireAge,
+    deathAge,
+    isRetired: false,
+    awardsWon: 0,
+    notableFilms: [],                // [{title, year, gross}] max 5
     // Profit participation demands (high-skill talent demands backend deals)
     profitParticipation: skill >= 75 ? Math.round((skill - 60) * 0.1 * 10) / 10 : 0, // 0-4% of gross
     demands: (() => {
@@ -2495,6 +2522,13 @@ const INIT = {
   films: [],
   contracts: [],
   availableTalent: [],
+  worldTalent: [],                  // all free agents and rival-signed talent
+  talentView: 'roster',             // 'roster' | 'freeAgents' | 'allTalent'
+  talentSearch: '',
+  talentTypeFilter: null,
+  talentGenreFilter: null,
+  talentSort: 'skill',
+  selectedTalentId: null,
   franchises: [],
   streamingPlatform: null,
   awards: [],
@@ -2726,13 +2760,36 @@ function reducer(state, action) {
         makeTalent(3, 'writer', [35, 55]),
         makeTalent(4, 'producer', [35, 55]),
       ];
-      const avail = Array.from({ length: 10 }, (_, i) => {
-        const types = ['actor', 'director', 'writer', 'producer'];
-        return makeTalent(10 + i, pick(types), [25, 90]);
+      // Mark player's starting talent
+      contracts.forEach(t => {
+        t.status = 'player';
+        t.signedTo = 'player';
       });
-      // Add initial showrunner to available talent
-      const showrunner = makeTalent(21, 'showrunner', [30, 50]);
-      avail.push(showrunner);
+
+      // Create initial world talent pool (60-80 talent)
+      const poolSize = randInt(60, 80);
+      const worldTalent = [];
+      const types = ['actor', 'director', 'writer', 'producer'];
+      let nextId = 100;
+      for (let i = 0; i < poolSize; i++) {
+        const talent = makeTalent(nextId++, pick(types), [20, 85]);
+        talent.status = 'free';
+        talent.signedTo = null;
+        worldTalent.push(talent);
+      }
+
+      // Assign 3-5 talent to each active rival studio
+      const rivals = makeCompetitors(scenario.startYear || 1970);
+      rivals.forEach(rival => {
+        const talentCount = randInt(3, 5);
+        for (let i = 0; i < talentCount && worldTalent.length > 0; i++) {
+          const idx = randInt(0, worldTalent.length - 1);
+          const t = worldTalent.splice(idx, 1)[0];
+          t.status = 'rival';
+          t.signedTo = rival.name;
+        }
+      });
+
       const spec = SPECIALIZATIONS[action.specialization || 0];
       const startYear = scenario.startYear || 1970;
       const startCash = scenario.startCash || 2000000;
@@ -2753,12 +2810,13 @@ function reducer(state, action) {
         reputation: startRep,
         prestige: startPres,
         contracts,
-        availableTalent: avail,
+        worldTalent,
+        availableTalent: [],  // kept for compatibility, will be populated from worldTalent
         scripts: [],
         ipMarketplace: generateIPMarketplace(startYear, []),
         ownedIPs: [],
         pendingScreenplays: [],
-        competitors: makeCompetitors(startYear),
+        competitors: rivals,
         genreTrends: makeGenreTrends(startYear),
         cashHistory: [{ turn: 0, year: startYear, month: 1, cash: startCash }],
         activeMovements: getActiveMovements(startYear),
@@ -2771,7 +2829,7 @@ function reducer(state, action) {
           { text: `${action.name} founded in ${startYear} with ${fmt(startCash)} seed funding. ${scenario.goalDesc}`, type: 'info' },
           ...(spec.name !== 'None' ? [{ text: `Studio specialization: ${spec.name} — ${spec.desc}`, type: 'info' }] : []),
         ],
-        nextId: 100,
+        nextId,
       };
     }
 
@@ -3393,17 +3451,28 @@ function reducer(state, action) {
     }
 
     case 'SIGN_TALENT': {
-      const t = state.availableTalent.find(x => x.id === action.id);
+      // Try to find in worldTalent first (new system), then availableTalent (legacy)
+      let t = state.worldTalent.find(x => x.id === action.id);
+      if (!t) t = state.availableTalent.find(x => x.id === action.id);
       if (!t) return state;
+      const updatedTalent = { ...t, status: 'player', signedTo: 'player' };
       return {
         ...state,
-        contracts: [...state.contracts, t],
+        contracts: [...state.contracts, updatedTalent],
+        worldTalent: state.worldTalent.filter(x => x.id !== action.id),
         availableTalent: state.availableTalent.filter(x => x.id !== action.id),
       };
     }
 
     case 'RELEASE_TALENT': {
-      return { ...state, contracts: state.contracts.filter(t => t.id !== action.id) };
+      const talent = state.contracts.find(t => t.id === action.id);
+      if (!talent) return state;
+      const releasedTalent = { ...talent, status: 'free', signedTo: null };
+      return {
+        ...state,
+        contracts: state.contracts.filter(t => t.id !== action.id),
+        worldTalent: [...state.worldTalent, releasedTalent],
+      };
     }
 
     case 'UPGRADE_FACILITIES': {
@@ -4149,9 +4218,10 @@ function reducer(state, action) {
       if (state.cash < trainingCost) return { ...state, errorMsg: 'Need $1M to start training!' };
       const type = action.talentType || 'actor';
       const potential = randInt(50, 95);
+      const gender = Math.random() < 0.5 ? 'male' : 'female';
       const trainee = {
-        id: state.nextId, name: makeName(), type, skill: randInt(15, 30),
-        turnsLeft: randInt(8, 16), potential,
+        id: state.nextId, name: makeName(gender), type, skill: randInt(15, 30),
+        turnsLeft: randInt(8, 16), potential, gender,
       };
       return {
         ...state,
@@ -4163,7 +4233,8 @@ function reducer(state, action) {
     }
 
     case 'NEGOTIATE_TALENT': {
-      const talent = state.availableTalent.find(t => t.id === action.talentId);
+      let talent = state.worldTalent.find(t => t.id === action.talentId);
+      if (!talent) talent = state.availableTalent.find(t => t.id === action.talentId);
       if (!talent) return state;
       // Agent counter-offers: higher salary, perks, exclusive deal
       const salaryMult = 1 + Math.random() * 0.5; // 0-50% higher
@@ -4180,12 +4251,14 @@ function reducer(state, action) {
     case 'ACCEPT_NEGOTIATION': {
       if (!state.pendingNegotiation) return state;
       const neg = state.pendingNegotiation;
-      const talent = state.availableTalent.find(t => t.id === neg.talentId);
+      let talent = state.worldTalent.find(t => t.id === neg.talentId);
+      if (!talent) talent = state.availableTalent.find(t => t.id === neg.talentId);
       if (!talent) return { ...state, pendingNegotiation: null };
-      const updatedTalent = { ...talent, salary: neg.counterOffer, contractYears: neg.exclusive ? talent.contractYears + 2 : talent.contractYears };
+      const updatedTalent = { ...talent, status: 'player', signedTo: 'player', salary: neg.counterOffer, contractYears: neg.exclusive ? talent.contractYears + 2 : talent.contractYears };
       return {
         ...state,
         contracts: [...state.contracts, updatedTalent],
+        worldTalent: state.worldTalent.filter(t => t.id !== neg.talentId),
         availableTalent: state.availableTalent.filter(t => t.id !== neg.talentId),
         pendingNegotiation: null,
         gameLog: [...state.gameLog, { text: `Signed ${neg.talentName} after negotiations. Salary: ${fmt(neg.counterOffer)}/yr${neg.exclusive ? ' (exclusive deal)' : ''}${neg.perks ? ` — Perk: ${neg.perks}` : ''}.`, type: 'success' }],
@@ -4194,6 +4267,21 @@ function reducer(state, action) {
 
     case 'REJECT_NEGOTIATION':
       return { ...state, pendingNegotiation: null, gameLog: [...state.gameLog, { text: 'Negotiations fell through.', type: 'warning' }] };
+
+    case 'SET_TALENT_VIEW':
+      return { ...state, talentView: action.view };
+
+    case 'SET_TALENT_SEARCH':
+      return { ...state, talentSearch: action.search };
+
+    case 'SET_TALENT_FILTER':
+      return { ...state, talentTypeFilter: action.typeFilter, talentGenreFilter: action.genreFilter };
+
+    case 'SET_TALENT_SORT':
+      return { ...state, talentSort: action.sort };
+
+    case 'SELECT_TALENT':
+      return { ...state, selectedTalentId: action.talentId };
 
     case 'END_TURN': {
       // Deep clone mutable parts
@@ -6671,6 +6759,52 @@ function reducer(state, action) {
         turnSummaryExpanded: {},
         tabBadges,
         logFilter: 'all',
+        // ---- TALENT AGING & LIFECYCLE ----
+        contracts: state.contracts.map(t => {
+          const aged = { ...t, age: t.age + 1 };
+          if (aged.age >= aged.deathAge) return null; // talent dies
+          if (aged.age >= aged.retireAge && !aged.isRetired) {
+            aged.isRetired = true;
+            log.push({ text: `${t.name} has retired at age ${t.age}.`, type: 'info', category: 'talent' });
+          }
+          return aged;
+        }).filter(Boolean),
+        worldTalent: (() => {
+          let world = state.worldTalent.map(t => {
+            const aged = { ...t, age: t.age + 1 };
+            if (aged.age >= aged.deathAge) return null; // talent dies
+            if (aged.age >= aged.retireAge && !aged.isRetired) {
+              aged.isRetired = true;
+              log.push({ text: `${t.name} (${t.status === 'rival' ? 'rival-signed' : 'free agent'}) has retired at age ${t.age}.`, type: 'info', category: 'talent' });
+            }
+            return aged;
+          }).filter(Boolean);
+
+          // Add 0-2 new talent to world pool each turn (ages 18-25, as fresh talent)
+          const newTalentCount = randInt(0, 2);
+          let newNextId = state.nextId;
+          for (let i = 0; i < newTalentCount; i++) {
+            const types = ['actor', 'director', 'writer', 'producer'];
+            const newTalent = makeTalent(newNextId++, pick(types), [15, 35], [18, 25]);
+            newTalent.status = 'free';
+            newTalent.signedTo = null;
+            world.push(newTalent);
+          }
+
+          return world;
+        })(),
+        nextId: state.nextId + randInt(0, 2),  // increment for new talent
+        competitors: state.competitors.map(rival => {
+          const updated = { ...rival };
+          // Rivals may sign free talent (15% chance) - just log it
+          if (Math.random() < 0.15 && state.worldTalent.length > 0) {
+            const freeTalent = state.worldTalent.filter(t => t.status === 'free' && !t.isRetired);
+            if (freeTalent.length > 0) {
+              log.push({ text: `${rival.name} signed ${pick(freeTalent).name}.`, type: 'info', category: 'market' });
+            }
+          }
+          return updated;
+        }),
       };
     }
 
@@ -8639,14 +8773,14 @@ export default function MovieMogul() {
                   <option key={t.id} value={t.id}>{t.name} (Skill:{t.skill}{t.profitParticipation > 0 ? `, ${t.profitParticipation}%` : ''}) {t.demands && t.demands.length > 0 ? `⚠${t.demands.length}` : ''} — {t.trait || 'No trait'}</option>
                 ))}
               </select>
-              {key === 'devDirectorId' && state.devDirectorId && selectedScript && (() => {
+              {key === 'devDirectorId' && state.devDirectorId && script && (() => {
                 const d = state.contracts.find(t => t.id === state.devDirectorId);
                 if (!d) return null;
-                const isExpert = d.genreBonus === selectedScript.genre;
-                const isMismatch = d.genreBonus && d.genreBonus !== selectedScript.genre;
+                const isExpert = d.genreBonus === script.genre;
+                const isMismatch = d.genreBonus && d.genreBonus !== script.genre;
                 return (isExpert || isMismatch) ? (
                   <div className={`mt-1 text-xs ${isExpert ? 'text-green-400' : 'text-red-400'}`}>
-                    {isExpert ? `★ Genre expert in ${selectedScript.genre} (+${DIRECTOR_GENRE_EXPERTISE_BONUS} quality)` : `⚠ Mismatch: ${d.genreBonus} specialist directing ${selectedScript.genre} (${DIRECTOR_GENRE_MISMATCH_PENALTY} quality)`}
+                    {isExpert ? `★ Genre expert in ${script.genre} (+${DIRECTOR_GENRE_EXPERTISE_BONUS} quality)` : `⚠ Mismatch: ${d.genreBonus} specialist directing ${script.genre} (${DIRECTOR_GENRE_MISMATCH_PENALTY} quality)`}
                   </div>
                 ) : null;
               })()}
@@ -8668,14 +8802,14 @@ export default function MovieMogul() {
                     {state.contracts.filter(t => t.type === 'actor' && t.id !== state.devActorId && t.id !== state.devSupporting1Id && t.id !== state.devSupporting2Id && t.id !== state.devEnsembleId || t.id === state[key]).map(t => {
                       const stage = getCareerStage ? getCareerStage(t) : '';
                       return (
-                        <option key={t.id} value={t.id}>{t.name} (Pop:{t.popularity} Skill:{t.skill}) {t.genreBonus === (selectedScript?.genre) ? '★' : ''} — ${Math.round((t.salary || 0) / 1e6)}M</option>
+                        <option key={t.id} value={t.id}>{t.name} (Pop:{t.popularity} Skill:{t.skill}) {t.genreBonus === (script?.genre) ? '★' : ''} — ${Math.round((t.salary || 0) / 1e6)}M</option>
                       );
                     })}
                   </select>
                   {state[key] && (() => {
                     const t = state.contracts.find(c => c.id === state[key]);
                     if (!t) return null;
-                    const isGenreMatch = t.genreBonus === selectedScript?.genre;
+                    const isGenreMatch = t.genreBonus === script?.genre;
                     return (
                       <div className="mt-1 flex gap-2 text-xs">
                         <span className={isGenreMatch ? 'text-green-400' : 'text-gray-500'}>{isGenreMatch ? '★ Genre fit' : 'No genre bonus'}</span>
@@ -9271,12 +9405,51 @@ export default function MovieMogul() {
     const totalSalary = state.contracts.reduce((s, t) => s + t.salary, 0);
     const avgMorale = state.contracts.length > 0 ? Math.round(state.contracts.reduce((s, t) => s + (t.morale || 75), 0) / state.contracts.length) : 0;
 
+    // Populate availableTalent from worldTalent if not already done
+    const freeAgents = state.worldTalent ? state.worldTalent.filter(t => t.status === 'free' && !t.isRetired) : [];
+    const rivalTalent = state.worldTalent ? state.worldTalent.filter(t => t.status === 'rival' && !t.isRetired) : [];
+    const allWorldTalent = [...freeAgents, ...rivalTalent];
+
     const roleConfig = [
       { type: 'director', label: 'Directors', icon: '🎬' },
       { type: 'actor', label: 'Actors', icon: '⭐' },
       { type: 'writer', label: 'Writers', icon: '📝' },
       { type: 'producer', label: 'Producers', icon: '🎯' },
     ];
+
+    // Filter talent based on search and filters
+    const filterTalent = (talentArray) => {
+      return talentArray.filter(t => {
+        if (state.talentSearch && !t.name.toLowerCase().includes(state.talentSearch.toLowerCase())) return false;
+        if (state.talentTypeFilter && t.type !== state.talentTypeFilter) return false;
+        if (state.talentGenreFilter && t.genreSpecialties && !t.genreSpecialties.includes(state.talentGenreFilter)) return false;
+        return true;
+      });
+    };
+
+    // Sort talent
+    const sortTalent = (talentArray) => {
+      const sorted = [...talentArray];
+      const sortKey = state.talentSort || 'skill';
+      sorted.sort((a, b) => {
+        switch (sortKey) {
+          case 'skill': return b.skill - a.skill;
+          case 'popularity': return b.popularity - a.popularity;
+          case 'salary': return b.salary - a.salary;
+          case 'age': return a.age - b.age;
+          default: return 0;
+        }
+      });
+      return sorted;
+    };
+
+    const filteredRoster = filterTalent(state.contracts);
+    const filteredFreeAgents = filterTalent(freeAgents);
+    const filteredAllTalent = filterTalent(allWorldTalent);
+
+    const displayRoster = sortTalent(filteredRoster);
+    const displayFree = sortTalent(filteredFreeAgents);
+    const displayAll = sortTalent(filteredAllTalent);
 
     return (
       <div>
@@ -9285,7 +9458,7 @@ export default function MovieMogul() {
           <div>
             <div className="text-white font-bold text-lg">Talent Management</div>
             <div className="text-gray-400 text-sm">
-              Roster: {state.contracts.length} | Annual salary: {fmt(totalSalary)} | Avg morale: <span className={`${avgMorale >= 70 ? 'text-green-400' : avgMorale >= 40 ? 'text-yellow-400' : 'text-red-400'}`}>{avgMorale}</span>
+              World Pool: {state.worldTalent?.length || 0} | Your Roster: {state.contracts.length} | Free Agents: {freeAgents.length} | Annual salary: {fmt(totalSalary)} | Avg morale: <span className={`${avgMorale >= 70 ? 'text-green-400' : avgMorale >= 40 ? 'text-yellow-400' : 'text-red-400'}`}>{avgMorale}</span>
             </div>
           </div>
           <button onClick={() => dispatch({ type: 'BOOST_MORALE' })} disabled={state.cash < 500000 || state.contracts.length === 0}
@@ -9296,16 +9469,61 @@ export default function MovieMogul() {
 
         <WalkOfFame stars={state.walkOfFame || []} />
 
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-          {/* YOUR ROSTER - grouped by role */}
+        {/* View Toggle */}
+        <div className="flex gap-2 mb-4">
+          <button onClick={() => dispatch({ type: 'SET_TALENT_VIEW', view: 'roster' })}
+            className={`px-4 py-2 rounded text-sm font-bold transition ${state.talentView === 'roster' ? 'bg-green-600 text-white' : 'bg-gray-700 text-gray-300 hover:bg-gray-600'}`}>
+            Your Roster ({state.contracts.length})
+          </button>
+          <button onClick={() => dispatch({ type: 'SET_TALENT_VIEW', view: 'freeAgents' })}
+            className={`px-4 py-2 rounded text-sm font-bold transition ${state.talentView === 'freeAgents' ? 'bg-blue-600 text-white' : 'bg-gray-700 text-gray-300 hover:bg-gray-600'}`}>
+            Free Agents ({freeAgents.length})
+          </button>
+          <button onClick={() => dispatch({ type: 'SET_TALENT_VIEW', view: 'allTalent' })}
+            className={`px-4 py-2 rounded text-sm font-bold transition ${state.talentView === 'allTalent' ? 'bg-purple-600 text-white' : 'bg-gray-700 text-gray-300 hover:bg-gray-600'}`}>
+            All Talent ({allWorldTalent.length})
+          </button>
+        </div>
+
+        {/* Search & Filter Bar */}
+        <div className="bg-gray-800 border border-gray-700 rounded-lg p-3 mb-4">
+          <div className="grid grid-cols-1 md:grid-cols-4 gap-2 text-sm">
+            <input type="text" placeholder="Search by name..." value={state.talentSearch}
+              onChange={e => dispatch({ type: 'SET_TALENT_SEARCH', search: e.target.value })}
+              className="bg-gray-700 text-white rounded px-3 py-2 text-sm border border-gray-600 focus:border-amber-500 outline-none" />
+            <select value={state.talentTypeFilter || ''}
+              onChange={e => dispatch({ type: 'SET_TALENT_FILTER', typeFilter: e.target.value || null, genreFilter: state.talentGenreFilter })}
+              className="bg-gray-700 text-white rounded px-3 py-2 text-sm border border-gray-600 focus:border-amber-500 outline-none">
+              <option value="">All Types</option>
+              {['actor', 'director', 'writer', 'producer'].map(t => <option key={t} value={t}>{t.charAt(0).toUpperCase() + t.slice(1)}</option>)}
+            </select>
+            <select value={state.talentGenreFilter || ''}
+              onChange={e => dispatch({ type: 'SET_TALENT_FILTER', typeFilter: state.talentTypeFilter, genreFilter: e.target.value || null })}
+              className="bg-gray-700 text-white rounded px-3 py-2 text-sm border border-gray-600 focus:border-amber-500 outline-none">
+              <option value="">All Genres</option>
+              {GENRES.map(g => <option key={g} value={g}>{g}</option>)}
+            </select>
+            <select value={state.talentSort || 'skill'}
+              onChange={e => dispatch({ type: 'SET_TALENT_SORT', sort: e.target.value })}
+              className="bg-gray-700 text-white rounded px-3 py-2 text-sm border border-gray-600 focus:border-amber-500 outline-none">
+              <option value="skill">Sort: Skill</option>
+              <option value="popularity">Sort: Popularity</option>
+              <option value="salary">Sort: Salary</option>
+              <option value="age">Sort: Age</option>
+            </select>
+          </div>
+        </div>
+
+        {/* ROSTER VIEW */}
+        {state.talentView === 'roster' && (
           <div>
-            <div className="text-amber-400 font-bold text-sm mb-3">Your Roster ({state.contracts.length})</div>
-            {state.contracts.length === 0 ? (
+            <div className="text-amber-400 font-bold text-sm mb-3">Your Roster ({displayRoster.length})</div>
+            {displayRoster.length === 0 ? (
               <div className="text-gray-500 text-sm">No talent signed. Sign some from the available pool!</div>
             ) : (
               <div className="space-y-4 max-h-[600px] overflow-y-auto">
                 {roleConfig.map(role => {
-                  const roleTalent = state.contracts.filter(t => t.type === role.type);
+                  const roleTalent = displayRoster.filter(t => t.type === role.type);
                   if (roleTalent.length === 0) return null;
                   const roleSalary = roleTalent.reduce((s, t) => s + t.salary, 0);
                   return (
@@ -9327,38 +9545,82 @@ export default function MovieMogul() {
               </div>
             )}
           </div>
+        )}
 
-          {/* AVAILABLE FOR SIGNING - grouped by role */}
+        {/* FREE AGENTS VIEW */}
+        {state.talentView === 'freeAgents' && (
           <div>
-            <div className="text-amber-400 font-bold text-sm mb-3">Available for Signing ({state.availableTalent.length})</div>
-            <div className="space-y-4 max-h-[600px] overflow-y-auto">
-              {roleConfig.map(role => {
-                const roleTalent = state.availableTalent.filter(t => t.type === role.type);
-                if (roleTalent.length === 0) return null;
-                return (
-                  <div key={role.type}>
-                    <div className="flex items-center gap-2 mb-2 px-1">
-                      <span className="text-lg">{role.icon}</span>
-                      <span className="text-white font-bold text-sm">{role.label}</span>
-                      <span className="text-gray-500 text-xs">({roleTalent.length})</span>
+            <div className="text-blue-400 font-bold text-sm mb-3">Free Agents ({displayFree.length})</div>
+            {displayFree.length === 0 ? (
+              <div className="text-gray-500 text-sm">No free agents matching your filters.</div>
+            ) : (
+              <div className="space-y-4 max-h-[600px] overflow-y-auto">
+                {roleConfig.map(role => {
+                  const roleTalent = displayFree.filter(t => t.type === role.type);
+                  if (roleTalent.length === 0) return null;
+                  return (
+                    <div key={role.type}>
+                      <div className="flex items-center gap-2 mb-2 px-1">
+                        <span className="text-lg">{role.icon}</span>
+                        <span className="text-white font-bold text-sm">{role.label}</span>
+                        <span className="text-gray-500 text-xs">({roleTalent.length})</span>
+                      </div>
+                      <div className="space-y-1.5">
+                        {roleTalent.map(t => {
+                          const sp = calcStarPower(t);
+                          return (
+                            <div key={t.id} className="relative">
+                              <TalentCard talent={t} action={() => dispatch({ type: 'NEGOTIATE_TALENT', talentId: t.id })} actionLabel="Negotiate" actionColor="bg-amber-600" />
+                              {sp > 40 && <div className="absolute top-1 right-20 text-xs text-amber-400 font-bold">Star:{sp}</div>}
+                            </div>
+                          );
+                        })}
+                      </div>
                     </div>
-                    <div className="space-y-1.5">
-                      {roleTalent.map(t => {
-                        const sp = calcStarPower(t);
-                        return (
-                          <div key={t.id} className="relative">
-                            <TalentCard talent={t} action={() => dispatch({ type: 'NEGOTIATE_TALENT', talentId: t.id })} actionLabel="Negotiate" actionColor="bg-amber-600" />
-                            {sp > 40 && <div className="absolute top-1 right-20 text-xs text-amber-400 font-bold">Star:{sp}</div>}
-                          </div>
-                        );
-                      })}
-                    </div>
-                  </div>
-                );
-              })}
-            </div>
+                  );
+                })}
+              </div>
+            )}
           </div>
-        </div>
+        )}
+
+        {/* ALL TALENT VIEW */}
+        {state.talentView === 'allTalent' && (
+          <div>
+            <div className="text-purple-400 font-bold text-sm mb-3">All Industry Talent ({displayAll.length})</div>
+            {displayAll.length === 0 ? (
+              <div className="text-gray-500 text-sm">No talent matching your filters.</div>
+            ) : (
+              <div className="space-y-4 max-h-[600px] overflow-y-auto">
+                {displayAll.slice(0, 50).map(t => {
+                  const statusColor = t.status === 'player' ? 'bg-green-900 border-green-600' : t.status === 'free' ? 'bg-blue-900 border-blue-600' : 'bg-red-900 border-red-600';
+                  const statusLabel = t.status === 'player' ? 'Your Roster' : t.status === 'free' ? 'Free Agent' : `Signed: ${t.signedTo}`;
+                  return (
+                    <div key={t.id} className={`bg-gray-700 border ${statusColor} rounded p-2 text-xs`}>
+                      <div className="flex justify-between items-start">
+                        <div>
+                          <div className="text-white font-bold">{t.name} {t.gender === 'female' ? '♀' : '♂'}</div>
+                          <div className="text-gray-300">{t.type.charAt(0).toUpperCase() + t.type.slice(1)} | Age {t.age} | Skill {t.skill}</div>
+                          {t.personality && <div className="text-amber-400">{t.personality.name}</div>}
+                          {t.genreSpecialties && t.genreSpecialties.length > 0 && <div className="text-teal-400">Specialties: {t.genreSpecialties.join(', ')}</div>}
+                        </div>
+                        <div className="text-right">
+                          <div className={`text-xs font-bold px-2 py-1 rounded ${statusColor}`}>{statusLabel}</div>
+                          {t.status === 'free' && (
+                            <button onClick={() => dispatch({ type: 'NEGOTIATE_TALENT', talentId: t.id })}
+                              className="mt-1 bg-amber-600 hover:bg-amber-500 text-white text-xs px-2 py-1 rounded transition">
+                              Sign
+                            </button>
+                          )}
+                        </div>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            )}
+          </div>
+        )}
 
         {/* Labor Relations Panel (SYSTEM 4) */}
         <div className="bg-gray-800 border border-gray-700 rounded-lg p-4 mt-4">
