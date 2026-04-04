@@ -2794,13 +2794,13 @@ function reducer(state, action) {
         t.signedTo = 'player';
       });
 
-      // Create initial world talent pool (90-120 talent with realistic type distribution)
+      // Create initial world talent pool (190-220 talent with realistic type distribution)
       const worldTalent = [];
       let nextId = 100;
-      // Actors: 40-50 (the largest pool — many compete for roles)
-      const actorCount = randInt(40, 50);
+      // Actors: 140-150 (the largest pool — Hollywood has hundreds of working actors competing for roles)
+      const actorCount = randInt(140, 150);
       for (let i = 0; i < actorCount; i++) {
-        const talent = makeTalent(nextId++, 'actor', [15, 90], i < 5 ? [35, 55] : i < 15 ? [28, 45] : [18, 35]);
+        const talent = makeTalent(nextId++, 'actor', [15, 90], i < 10 ? [45, 65] : i < 25 ? [35, 55] : i < 60 ? [28, 45] : i < 100 ? [22, 38] : [18, 30]);
         talent.status = 'free';
         talent.signedTo = null;
         worldTalent.push(talent);
@@ -8672,7 +8672,7 @@ export default function MovieMogul() {
                   None
                 </button>
                 {GENRES.filter(g => g !== state.customScriptGenre).map(g => (
-                  <button key={g} onClick={() => dispatch({ type: 'SET_CUSTOM_SCRIPT', key: 'customScriptGenre2', value: g })}
+                  <button key={g} onClick={() => dispatch({ type: 'SET_SCREENPLAY_FIELD', key: 'customScriptGenre2', value: g })}
                     className={`px-2.5 py-1 rounded text-xs font-bold transition ${state.customScriptGenre2 === g ? 'bg-purple-600 text-white' : 'bg-gray-800 text-gray-400 hover:bg-gray-700'}`}>
                     {g}
                   </button>
@@ -10594,6 +10594,48 @@ export default function MovieMogul() {
           <div className="bg-gray-800 border border-gray-700 rounded-lg p-3 text-center">
             <div className="text-xs text-gray-400">Active Loans</div>
             <div className="text-white font-bold">{state.loans.length} / {creditRating.maxLoans}</div>
+          </div>
+        </div>
+
+        {/* Loans — Apply & Manage */}
+        <div className="bg-gray-800 border border-gray-700 rounded-lg p-4">
+          <div className="flex justify-between items-center mb-3">
+            <div className="text-white font-bold text-sm">Loans</div>
+            <div className="text-xs text-gray-400">Max {creditRating.maxLoans} loans ({creditRating.name} rating)</div>
+          </div>
+          {state.loans.length > 0 && (
+            <div className="space-y-2 mb-3 pb-3 border-b border-gray-700">
+              <div className="text-xs font-bold text-red-400 mb-1">Active Loans:</div>
+              {state.loans.map(l => (
+                <div key={l.id} className="bg-gray-900 border border-red-800 rounded-lg p-3 flex justify-between items-center">
+                  <div>
+                    <div className="text-white font-bold text-sm">{l.name}</div>
+                    <div className="text-xs text-gray-400">Principal: {fmt(l.principal)} | Interest: {(l.interestRate * 100).toFixed(1)}%/mo | {l.remainingMonths} months left</div>
+                    <div className="text-xs text-red-400 mt-0.5">Monthly payment: ~{fmt(Math.round(l.principal * l.interestRate + l.principal / l.remainingMonths))}</div>
+                  </div>
+                  <button onClick={() => dispatch({ type: 'REPAY_LOAN', id: l.id })} disabled={state.cash < l.principal}
+                    className="bg-red-600 hover:bg-red-500 disabled:opacity-40 text-white text-xs px-3 py-1.5 rounded font-bold transition ml-3">
+                    Repay ({fmt(l.principal)})
+                  </button>
+                </div>
+              ))}
+            </div>
+          )}
+          <div className="text-xs text-gray-400 mb-2">Take out a loan to fund ambitious projects. Interest rates adjusted by your credit rating and era.</div>
+          <div className="grid grid-cols-2 gap-2">
+            {LOAN_OPTIONS.map((loan, i) => {
+              const adjustedRate = loan.interestRate * getEraLoanRates(state.year) * (creditRating.interestMod || 1);
+              const atMax = state.loans.length >= creditRating.maxLoans;
+              return (
+                <button key={i} onClick={() => dispatch({ type: 'TAKE_LOAN', idx: i })} disabled={atMax}
+                  className={`p-3 rounded-lg text-left transition border ${atMax ? 'bg-gray-900 border-gray-800 text-gray-600 cursor-not-allowed' : 'bg-gray-700 border-gray-600 hover:border-green-400 text-white'}`}>
+                  <div className="font-bold text-sm">{loan.name}</div>
+                  <div className="text-green-400 text-sm">{fmt(loan.amount)}</div>
+                  <div className="text-xs text-gray-400">{(adjustedRate * 100).toFixed(1)}%/mo | {loan.termMonths} months</div>
+                  <div className="text-xs text-gray-500 mt-0.5">Monthly: ~{fmt(Math.round(loan.amount * adjustedRate + loan.amount / loan.termMonths))}</div>
+                </button>
+              );
+            })}
           </div>
         </div>
 
