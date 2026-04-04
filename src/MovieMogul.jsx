@@ -1983,15 +1983,34 @@ const MERCHANDISING_CATEGORIES = [
 const TV_GENRES = ['Drama Series', 'Comedy Series', 'Sci-Fi Series', 'Thriller Series', 'Documentary Series', 'Animation Series', 'Reality Show'];
 
 const TV_FORMATS = [
-  { id: 'drama', name: 'Drama Series', episodesRange: [8, 13], baseCostPerEp: 3e6, qualityWeight: 0.9, audienceBase: 1.0 },
-  { id: 'comedy', name: 'Comedy Series', episodesRange: [10, 22], baseCostPerEp: 1.5e6, qualityWeight: 0.7, audienceBase: 1.2 },
-  { id: 'scifi', name: 'Sci-Fi Series', episodesRange: [8, 10], baseCostPerEp: 5e6, qualityWeight: 0.85, audienceBase: 0.8 },
-  { id: 'thriller', name: 'Thriller Series', episodesRange: [8, 10], baseCostPerEp: 3.5e6, qualityWeight: 0.85, audienceBase: 0.9 },
-  { id: 'docuseries', name: 'Documentary Series', episodesRange: [6, 8], baseCostPerEp: 1e6, qualityWeight: 0.8, audienceBase: 0.6 },
-  { id: 'animation', name: 'Animation Series', episodesRange: [10, 13], baseCostPerEp: 2e6, qualityWeight: 0.75, audienceBase: 1.1 },
-  { id: 'reality', name: 'Reality Show', episodesRange: [10, 16], baseCostPerEp: 500000, qualityWeight: 0.4, audienceBase: 1.5 },
-  { id: 'limited', name: 'Limited Series', episodesRange: [6, 8], baseCostPerEp: 4e6, qualityWeight: 0.95, audienceBase: 0.7, maxSeasons: 1 },
+  // episodesRange = modern/cable/streaming era; broadcastEpRange = broadcast network era (pre-2000)
+  { id: 'drama', name: 'Drama Series', episodesRange: [8, 13], broadcastEpRange: [22, 26], baseCostPerEp: 3e6, qualityWeight: 0.9, audienceBase: 1.0 },
+  { id: 'comedy', name: 'Comedy Series', episodesRange: [10, 13], broadcastEpRange: [22, 26], baseCostPerEp: 1.5e6, qualityWeight: 0.7, audienceBase: 1.2 },
+  { id: 'scifi', name: 'Sci-Fi Series', episodesRange: [8, 10], broadcastEpRange: [22, 26], baseCostPerEp: 5e6, qualityWeight: 0.85, audienceBase: 0.8 },
+  { id: 'thriller', name: 'Thriller Series', episodesRange: [8, 10], broadcastEpRange: [22, 24], baseCostPerEp: 3.5e6, qualityWeight: 0.85, audienceBase: 0.9 },
+  { id: 'docuseries', name: 'Documentary Series', episodesRange: [6, 8], broadcastEpRange: [6, 13], baseCostPerEp: 1e6, qualityWeight: 0.8, audienceBase: 0.6 },
+  { id: 'animation', name: 'Animation Series', episodesRange: [10, 13], broadcastEpRange: [13, 26], baseCostPerEp: 2e6, qualityWeight: 0.75, audienceBase: 1.1 },
+  { id: 'reality', name: 'Reality Show', episodesRange: [10, 16], broadcastEpRange: [12, 24], baseCostPerEp: 500000, qualityWeight: 0.4, audienceBase: 1.5 },
+  { id: 'limited', name: 'Limited Series', episodesRange: [6, 8], broadcastEpRange: [6, 8], baseCostPerEp: 4e6, qualityWeight: 0.95, audienceBase: 0.7, maxSeasons: 1 },
 ];
+
+// Helper: get era-appropriate episode range for a format
+const getEpRange = (format, year, networkType) => {
+  // Cable networks pioneered shorter seasons even in the broadcast era
+  if (networkType === 'cable' || year >= 2005) return format.episodesRange;
+  // Broadcast networks: transition period 2000-2005 (mix of both)
+  if (year >= 2000) {
+    const shortMin = format.episodesRange[0];
+    const shortMax = format.episodesRange[1];
+    const longMin = format.broadcastEpRange[0];
+    const longMax = format.broadcastEpRange[1];
+    // Blend: skew toward shorter as we approach 2005
+    const blend = (year - 2000) / 5; // 0.0 at 2000, 1.0 at 2005
+    return [Math.round(longMin + (shortMin - longMin) * blend), Math.round(longMax + (shortMax - longMax) * blend)];
+  }
+  // Pre-2000: full broadcast-era seasons
+  return format.broadcastEpRange;
+};
 
 const STREAMING_TIERS = [
   { id: 'basic', name: 'Ad-Supported', monthlyPrice: 5.99, adRevPerSub: 3, churnRate: 0.08, desc: 'Free with ads — high volume, high churn' },
@@ -4584,7 +4603,9 @@ case 'REMASTER_FILM': {
       if (!format) return { ...state, errorMsg: 'Select a TV format first.' };
       const showrunner = state.contracts.find(t => t.id === state.tvDevShowrunnerId && (t.type === 'showrunner' || ['writer','producer','director'].includes(t.type)));
       if (!showrunner) return { ...state, errorMsg: 'Assign a showrunner first.' };
-      const episodes = state.tvDevEpisodes || format.episodesRange[0];
+      // Use era-appropriate episode count
+      const epRange = getEpRange(format, state.year, null); // network type not known yet at greenlight
+      const episodes = state.tvDevEpisodes || epRange[0];
       const costPerEp = (state.tvDevBudgetPerEp || 3) * 1e6;
       const totalCost = episodes * costPerEp;
       // Pilot costs ~25% of a full season upfront
@@ -4757,7 +4778,7 @@ case 'REMASTER_FILM': {
       if (state.cash < renewCost) return { ...state, errorMsg: `Need ${fmt(renewCost)} to renew.` };
       return {
         ...state,
-        tvShows: state.tvShows.map(s => s.id === action.showId ? { ...s, status: 'production', currentSeason: s.currentSeason + 1, turnsInStatus: 0, turnsNeeded: Math.ceil(s.episodes / 3), totalCost: s.totalCost + renewCost, events: [...(s.events || []), `Renewed for Season ${s.currentSeason + 1}`] } : s),
+        tvShows: state.tvShows.map(s => s.id === action.showId ? { ...s, status: 'production', currentSeason: s.currentSeason + 1, turnsInStatus: 0, turnsNeeded: Math.ceil(s.episodes / 3), totalCost: s.totalCost + renewCost, seasonFinished: false, events: [...(s.events || []), `Renewed for Season ${s.currentSeason + 1}`] } : s),
         cash: state.cash - renewCost,
         gameLog: [...state.gameLog, { text: `Renewed "${show.title}" for Season ${show.currentSeason + 1}! Cost: ${fmt(renewCost)}`, type: 'success' }],
         errorMsg: '',
@@ -5324,6 +5345,22 @@ case 'REMASTER_FILM': {
 
     case 'DISMISS_TURN_SUMMARY':
       return { ...state, showTurnSummary: false, turnSummary: null };
+
+    case 'SKIP_ALL_POPUPS': {
+      // Dismiss all blocking modals at once — ceremony, newspapers, turn summary, celebration, achievements
+      const allNews = [...(state.newspaperArchive || []), ...(state.newspaperQueue || [])];
+      return {
+        ...state,
+        showCeremony: false,
+        newspaperQueue: [],
+        newspaperArchive: allNews.slice(-50),
+        showTurnSummary: false,
+        turnSummary: null,
+        celebration: null,
+        achievementPopups: [],
+        activeBidding: null,
+      };
+    }
 
     case 'TOGGLE_SUMMARY_SECTION':
       return { ...state, turnSummaryExpanded: { ...state.turnSummaryExpanded, [action.section]: !state.turnSummaryExpanded[action.section] } };
@@ -6823,15 +6860,20 @@ case 'REMASTER_FILM': {
           turnSummaryData.streaming.push({ text: `"${s.title}" S${s.currentSeason} premieres — Quality: ${s.quality}, Viewers: ${(s.viewership/1e6).toFixed(1)}M` });
           s.events.push(`S${s.currentSeason} premiered (Q:${s.quality})`);
         } else if (s.status === 'airing') {
-          revenue += s.monthlyRevenue;
-
-          if (streaming && s.subscriberImpact > 0) {
-            const monthlySubGain = Math.round(s.subscriberImpact / Math.max(s.turnsNeeded, 1));
-            streaming.subscribers = (streaming.subscribers || 0) + monthlySubGain;
+          // Only generate revenue while episodes are still airing (not after season ends)
+          if (s.turnsInStatus <= s.turnsNeeded) {
+            revenue += s.monthlyRevenue;
+            if (streaming && s.subscriberImpact > 0) {
+              const monthlySubGain = Math.round(s.subscriberImpact / Math.max(s.turnsNeeded, 1));
+              streaming.subscribers = (streaming.subscribers || 0) + monthlySubGain;
+            }
           }
 
-          if (s.turnsInStatus >= s.turnsNeeded) {
-            s.status = s.currentSeason >= (TV_FORMATS.find(f => f.id === s.format)?.maxSeasons || 99) ? 'ended' : 'airing';
+          if (s.turnsInStatus >= s.turnsNeeded && !s.seasonFinished) {
+            s.seasonFinished = true; // prevent re-triggering every turn
+            if (s.currentSeason >= (TV_FORMATS.find(f => f.id === s.format)?.maxSeasons || 99)) {
+              s.status = 'ended';
+            }
             s.events.push(`S${s.currentSeason} finished airing`);
             if (s.quality < 35 && Math.random() < 0.4) {
               log.push({ text: `"${s.title}" S${s.currentSeason} had poor ratings. Consider cancellation.`, type: 'warning', category: 'streaming' });
@@ -14032,14 +14074,17 @@ export default function MovieMogul() {
           {/* Format Selection */}
           <div className="text-gray-400 text-xs mb-1">Show Format:</div>
           <div className="grid grid-cols-2 md:grid-cols-4 gap-2">
-            {TV_FORMATS.map(f => (
-              <button key={f.id} onClick={() => dispatch({ type: 'SET_DEV', key: 'tvDevFormat', value: f.id })}
-                className={'p-2 rounded text-xs text-left transition border ' + (state.tvDevFormat === f.id ? 'bg-teal-800 border-teal-500 text-white' : 'bg-gray-700 border-gray-600 text-gray-300 hover:bg-gray-600')}>
-                <div className="font-bold">{f.name}</div>
-                <div className="text-gray-400">{f.episodesRange[0]}-{f.episodesRange[1]} eps</div>
-                <div className="text-gray-500">{fmt(f.baseCostPerEp)}/ep</div>
-              </button>
-            ))}
+            {TV_FORMATS.map(f => {
+              const eRange = getEpRange(f, state.year, null);
+              return (
+                <button key={f.id} onClick={() => dispatch({ type: 'SET_DEV', key: 'tvDevFormat', value: f.id })}
+                  className={'p-2 rounded text-xs text-left transition border ' + (state.tvDevFormat === f.id ? 'bg-teal-800 border-teal-500 text-white' : 'bg-gray-700 border-gray-600 text-gray-300 hover:bg-gray-600')}>
+                  <div className="font-bold">{f.name}</div>
+                  <div className="text-gray-400">{eRange[0]}-{eRange[1]} eps</div>
+                  <div className="text-gray-500">{fmt(f.baseCostPerEp)}/ep</div>
+                </button>
+              );
+            })}
           </div>
           {state.tvDevFormat && (
             <div className="mt-3 space-y-2">
@@ -14058,7 +14103,8 @@ export default function MovieMogul() {
               {(() => {
                 const fmt2 = TV_FORMATS.find(f => f.id === state.tvDevFormat);
                 if (!fmt2) return null;
-                const eps = state.tvDevEpisodes || fmt2.episodesRange[0];
+                const eRange2 = getEpRange(fmt2, state.year, null);
+                const eps = state.tvDevEpisodes || eRange2[0];
                 const costPerEp2 = (state.tvDevBudgetPerEp || 3) * 1e6;
                 const totalBudget = eps * costPerEp2;
                 const pilotCost2 = Math.round(totalBudget * 0.25);
@@ -15863,6 +15909,19 @@ export default function MovieMogul() {
         .anim-flash-green { animation: flashGreen 0.6s ease-out; }
         .anim-flash-red { animation: flashRed 0.6s ease-out; }
       `}</style>
+      {/* Floating action buttons — always accessible above modals */}
+      {(state.showCeremony || (state.newspaperQueue?.length > 0) || state.showTurnSummary || state.celebration) && (
+        <div className="fixed bottom-6 right-6 z-[60] flex gap-2">
+          <button onClick={() => dispatch({ type: 'SKIP_ALL_POPUPS' })}
+            className="bg-gray-700 hover:bg-gray-600 text-gray-200 font-bold px-4 py-3 rounded-lg text-sm transition shadow-lg shadow-black/50 border border-gray-500">
+            Skip All
+          </button>
+          <button onClick={() => { dispatch({ type: 'SKIP_ALL_POPUPS' }); setTimeout(() => dispatch({ type: 'END_TURN' }), 50); }}
+            className="bg-green-600 hover:bg-green-500 text-white font-bold px-6 py-3 rounded-lg text-sm transition shadow-lg shadow-green-900/50 border border-green-400">
+            END TURN →
+          </button>
+        </div>
+      )}
       {renderCeremony()}
       {state.celebration && (
         <ConfettiOverlay celebration={state.celebration} onDone={() => dispatch({ type: 'CLEAR_CELEBRATION' })} />
