@@ -3301,6 +3301,9 @@ function reducer(state, action) {
       let streaming = state.streamingPlatform ? { ...state.streamingPlatform } : null;
       let franchises = state.franchises.map(f => ({ ...f, filmIds: [...f.filmIds] }));
       let genreFanbase = { ...(state.genreFanbase || {}) };
+      let theaterChains = (state.theaterChains || []).map(c => ({ ...c }));
+      let stockPrice = state.stockPrice;
+      let talentRelationships = { ...(state.talentRelationships || {}) };
 
       let revenue = 0;
       let expenses = 0;
@@ -3840,7 +3843,6 @@ function reducer(state, action) {
 
       // 5b. Theme park revenue
       let themeParks = (state.themeParks || []).map(p => ({ ...p }));
-      let theaterChains = (state.theaterChains || []).map(c => ({ ...c }));
       themeParks.forEach(park => {
         if (park.turnsLeft > 0) {
           park.turnsLeft -= 1;
@@ -4045,6 +4047,9 @@ function reducer(state, action) {
       // 5f. Soundtrack revenue (small passive from all released films)
       const soundtrackRev = Math.round(films.filter(f => f.status === 'released').length * 15000);
       revenue += soundtrackRev;
+
+      // Talent contracts (declared early so academy graduates can push to it)
+      let contracts = state.contracts.map(t => ({ ...t }));
 
       // 5g. Talent academy progress
       let academy = state.academy.map(a => ({ ...a }));
@@ -4270,7 +4275,6 @@ function reducer(state, action) {
       }
 
       // 10. Talent aging & drama (every December = end of year)
-      let contracts = state.contracts.map(t => ({ ...t }));
       if (state.month === 12) {
         contracts = contracts.map(t => {
           const updated = { ...t, age: t.age + 1, contractYears: t.contractYears - 1 };
@@ -4693,7 +4697,7 @@ function reducer(state, action) {
 
       // 11b. Stock price update (if public) - ENHANCED
       let isPublic = state.isPublic;
-      let stockPrice = state.stockPrice;
+      // stockPrice already declared at top of END_TURN
       let stockHistory = [...state.stockHistory];
       let shareholderDemand = state.shareholderDemand;
       if (isPublic) {
@@ -4721,6 +4725,11 @@ function reducer(state, action) {
           if (shareholderDemand > 50) log.push({ text: 'Quarterly pressure: Shareholders expect returns.', type: 'info' });
         }
       }
+
+      // 12. Advance time (moved up so newMonth/newYear are available for systems below)
+      let newMonth = state.month + 1;
+      let newYear = state.year;
+      if (newMonth > 12) { newMonth = 1; newYear += 1; }
 
       // SYSTEM 1: Filmmaking Era transition
       const newEra = getCurrentFilmEra(newYear);
@@ -4807,8 +4816,7 @@ function reducer(state, action) {
         rep -= 5;
       }
 
-      // SYSTEM 4: Talent relationships update
-      let talentRelationships = { ...(state.talentRelationships || {}) };
+      // SYSTEM 4: Talent relationships update (talentRelationships declared at top of END_TURN)
       films.filter(f => f.status === 'released' && f.releasedYear === state.year && f.releasedMonth === state.month).forEach(film => {
         [film.director, film.actor, film.writer].forEach(t => {
           if (t && t.id) {
@@ -4870,11 +4878,6 @@ function reducer(state, action) {
 
       // Deactivate used co-productions
       let coProductions = state.coProductions.map(cp => ({ ...cp, active: false }));
-
-      // 12. Advance time
-      let newMonth = state.month + 1;
-      let newYear = state.year;
-      if (newMonth > 12) { newMonth = 1; newYear += 1; }
 
       // 12a. Spawn new studios that should exist by this year
       const newStudios = RIVAL_STUDIOS.filter(s => {
