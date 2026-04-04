@@ -553,16 +553,42 @@ const getEra = (year) => {
 };
 
 const getEraBudgetRange = (year) => {
-  if (year < 1980) return [1, 25];
-  if (year < 2000) return [5, 80];
-  if (year < 2015) return [10, 150];
-  if (year < 2035) return [15, 250];
-  if (year < 2060) return [20, 400];
-  if (year < 2090) return [30, 600];
-  if (year < 2130) return [50, 1000];
-  if (year < 2170) return [100, 2000];
-  return [200, 5000];
+  if (year < 1927) return [1, 1];       // Silent Era
+  if (year < 1948) return [1, 5];       // Golden Age
+  if (year < 1960) return [1, 10];      // Post-War
+  if (year < 1980) return [1, 40];      // New Hollywood
+  if (year < 1995) return [2, 100];     // Blockbuster Era
+  if (year < 2005) return [3, 200];     // Digital Revolution
+  if (year < 2015) return [5, 250];     // Franchise Dominance
+  if (year < 2025) return [5, 300];     // Streaming Disruption
+  if (year < 2045) return [5, 350];     // AI & Virtual Production
+  if (year < 2080) return [10, 400];    // Immersive Cinema
+  return [10, 400];                      // Neural Cinema
 };
+
+const getEraMarketingMax = (year) => {
+  if (year < 1927) return 0.5;    // Silent Era
+  if (year < 1948) return 3;      // Golden Age
+  if (year < 1960) return 6;      // Post-War
+  if (year < 1980) return 25;     // New Hollywood
+  if (year < 1995) return 65;     // Blockbuster Era
+  if (year < 2005) return 130;    // Digital Revolution
+  if (year < 2015) return 165;    // Franchise Dominance
+  if (year < 2025) return 200;    // Streaming Disruption
+  if (year < 2045) return 230;    // AI & Virtual Production
+  if (year < 2080) return 260;    // Immersive Cinema
+  return 260;                      // Neural Cinema
+};
+
+const BUDGET_TIERS = [
+  { name: 'Micro-budget', maxM: 5, color: 'text-gray-400' },
+  { name: 'Low Budget', maxM: 25, color: 'text-green-400' },
+  { name: 'Mid-budget', maxM: 75, color: 'text-blue-400' },
+  { name: 'Big Budget', maxM: 150, color: 'text-purple-400' },
+  { name: 'Blockbuster', maxM: 250, color: 'text-amber-400' },
+  { name: 'Mega-blockbuster', maxM: Infinity, color: 'text-red-400' },
+];
+const getBudgetTier = (budgetM) => BUDGET_TIERS.find(t => budgetM <= t.maxM) || BUDGET_TIERS[BUDGET_TIERS.length - 1];
 
 const getEraIntlMult = (year) => {
   if (year < 1980) return 0.3;
@@ -995,17 +1021,17 @@ const TECH_TREE = [
 
 // ==================== SYSTEM 1: FILMMAKING ERAS ====================
 const FILMMAKING_ERAS = [
-  { id: 'silent', name: 'Silent Era', startYear: 0, endYear: 1927, qualityMod: -10, budgetMult: 0.3, genreLimit: ['Drama','Comedy','Horror','Romance','Western'], techDesc: 'No sound — visual storytelling only.', announcement: 'The dawn of cinema.' },
-  { id: 'golden', name: 'Golden Age of Hollywood', startYear: 1927, endYear: 1948, qualityMod: -5, budgetMult: 0.5, genreLimit: ['Drama','Comedy','Horror','Romance','Western','Musical','War','Mystery'], techDesc: 'Talkies arrive. Studio system dominance.', announcement: 'Sound revolutionizes cinema!' },
-  { id: 'postwar', name: 'Post-War Cinema', startYear: 1948, endYear: 1960, qualityMod: -3, budgetMult: 0.6, genreLimit: null, techDesc: 'TV competition. Widescreen and color.', announcement: 'Television threatens — Hollywood adapts with spectacle.' },
-  { id: 'newHollywood', name: 'New Hollywood', startYear: 1960, endYear: 1980, qualityMod: 0, budgetMult: 0.8, genreLimit: null, techDesc: 'Auteur directors. Gritty realism.', announcement: 'A new generation of filmmakers takes control.' },
-  { id: 'blockbuster', name: 'Blockbuster Era', startYear: 1980, endYear: 1995, qualityMod: 2, budgetMult: 1.0, genreLimit: null, techDesc: 'Tentpoles, VHS, and merchandise.', announcement: 'The age of the blockbuster begins!' },
-  { id: 'digital', name: 'Digital Revolution', startYear: 1995, endYear: 2005, qualityMod: 3, budgetMult: 1.1, genreLimit: null, techDesc: 'CGI transforms filmmaking. DVD sales boom.', announcement: 'Digital filmmaking changes everything.' },
-  { id: 'franchise', name: 'Franchise Dominance', startYear: 2005, endYear: 2015, qualityMod: 3, budgetMult: 1.3, genreLimit: null, techDesc: 'IP is king. Shared universes. 3D.', announcement: 'Franchises and shared universes dominate.' },
-  { id: 'streaming', name: 'Streaming Disruption', startYear: 2015, endYear: 2025, qualityMod: 4, budgetMult: 1.4, genreLimit: null, techDesc: 'Theaters vs streaming. Peak TV.', announcement: 'Streaming reshapes the industry!' },
-  { id: 'aiAge', name: 'AI & Virtual Production', startYear: 2025, endYear: 2045, qualityMod: 5, budgetMult: 1.5, genreLimit: null, techDesc: 'AI tools and LED volumes.', announcement: 'AI and virtual production emerge.' },
-  { id: 'immersive', name: 'Immersive Cinema', startYear: 2045, endYear: 2080, qualityMod: 7, budgetMult: 1.8, genreLimit: null, techDesc: 'Holographic and VR experiences.', announcement: 'Cinema becomes immersive experience.' },
-  { id: 'neural', name: 'Neural Cinema', startYear: 2080, endYear: 9999, qualityMod: 10, budgetMult: 2.0, genreLimit: null, techDesc: 'Direct neural storytelling.', announcement: 'Neural cinema: audiences live the story.' },
+  { id: 'silent', name: 'Silent Era', startYear: 0, endYear: 1927, qualityMod: -10, budgetMult: 0.3, maxBudget: 1, maxMarketing: 0.5, genreLimit: ['Drama','Comedy','Horror','Romance','Western'], techDesc: 'No sound — visual storytelling only.', announcement: 'The dawn of cinema.' },
+  { id: 'golden', name: 'Golden Age of Hollywood', startYear: 1927, endYear: 1948, qualityMod: -5, budgetMult: 0.5, maxBudget: 5, maxMarketing: 3, genreLimit: ['Drama','Comedy','Horror','Romance','Western','Musical','War','Mystery'], techDesc: 'Talkies arrive. Studio system dominance.', announcement: 'Sound revolutionizes cinema!' },
+  { id: 'postwar', name: 'Post-War Cinema', startYear: 1948, endYear: 1960, qualityMod: -3, budgetMult: 0.6, maxBudget: 10, maxMarketing: 6, genreLimit: null, techDesc: 'TV competition. Widescreen and color.', announcement: 'Television threatens — Hollywood adapts with spectacle.' },
+  { id: 'newHollywood', name: 'New Hollywood', startYear: 1960, endYear: 1980, qualityMod: 0, budgetMult: 0.8, maxBudget: 40, maxMarketing: 25, genreLimit: null, techDesc: 'Auteur directors. Gritty realism.', announcement: 'A new generation of filmmakers takes control.' },
+  { id: 'blockbuster', name: 'Blockbuster Era', startYear: 1980, endYear: 1995, qualityMod: 2, budgetMult: 1.0, maxBudget: 100, maxMarketing: 65, genreLimit: null, techDesc: 'Tentpoles, VHS, and merchandise.', announcement: 'The age of the blockbuster begins!' },
+  { id: 'digital', name: 'Digital Revolution', startYear: 1995, endYear: 2005, qualityMod: 3, budgetMult: 1.1, maxBudget: 200, maxMarketing: 130, genreLimit: null, techDesc: 'CGI transforms filmmaking. DVD sales boom.', announcement: 'Digital filmmaking changes everything.' },
+  { id: 'franchise', name: 'Franchise Dominance', startYear: 2005, endYear: 2015, qualityMod: 3, budgetMult: 1.3, maxBudget: 250, maxMarketing: 165, genreLimit: null, techDesc: 'IP is king. Shared universes. 3D.', announcement: 'Franchises and shared universes dominate.' },
+  { id: 'streaming', name: 'Streaming Disruption', startYear: 2015, endYear: 2025, qualityMod: 4, budgetMult: 1.4, maxBudget: 300, maxMarketing: 200, genreLimit: null, techDesc: 'Theaters vs streaming. Peak TV.', announcement: 'Streaming reshapes the industry!' },
+  { id: 'aiAge', name: 'AI & Virtual Production', startYear: 2025, endYear: 2045, qualityMod: 5, budgetMult: 1.5, maxBudget: 350, maxMarketing: 230, genreLimit: null, techDesc: 'AI tools and LED volumes.', announcement: 'AI and virtual production emerge.' },
+  { id: 'immersive', name: 'Immersive Cinema', startYear: 2045, endYear: 2080, qualityMod: 7, budgetMult: 1.8, maxBudget: 400, maxMarketing: 260, genreLimit: null, techDesc: 'Holographic and VR experiences.', announcement: 'Cinema becomes immersive experience.' },
+  { id: 'neural', name: 'Neural Cinema', startYear: 2080, endYear: 9999, qualityMod: 10, budgetMult: 2.0, maxBudget: 400, maxMarketing: 260, genreLimit: null, techDesc: 'Direct neural storytelling.', announcement: 'Neural cinema: audiences live the story.' },
 ];
 
 const getCurrentFilmEra = (year) => FILMMAKING_ERAS.slice().reverse().find(e => year >= e.startYear) || FILMMAKING_ERAS[0];
@@ -1739,8 +1765,16 @@ const calcBoxOffice = (quality, budget, marketing, year, genre, film) => {
 
   const marketRatio = Math.min(marketing / Math.max(budget, 1), 1.5);
   const marketMult = 1 + marketRatio * 0.8 + (marketRatio > 1 ? 0.15 : 0);
-  // Low-budget films can punch above their weight (indie breakout potential)
-  const effectiveBudgetM = budgetM < 5 ? Math.max(budgetM, 2) + Math.random() * 2 : budgetM;
+  // Budget scaling with diminishing returns for mega-budgets
+  let effectiveBudgetM;
+  if (budgetM < 5) {
+    effectiveBudgetM = Math.max(budgetM, 2) + Math.random() * 2; // indie breakout potential
+  } else if (budgetM <= 100) {
+    effectiveBudgetM = budgetM; // linear up to $100M
+  } else {
+    // Diminishing returns above $100M: each dollar above $100M contributes ~60% as much
+    effectiveBudgetM = 100 + (budgetM - 100) * 0.6;
+  }
   let domestic = effectiveBudgetM * grossMult * marketMult * 1e6;
   const intlMult = getEraIntlMult(year) + (['Action', 'Sci-Fi', 'Animation'].includes(genre) ? 0.3 : 0);
   let international = 0;
@@ -2006,6 +2040,11 @@ const INIT = {
   // M&A
   acquiredStudios: [],      // names of acquired rival studios
   hostileTakeoverOffer: null,
+  takeoverCooldown: 0,        // months until another takeover can be attempted
+  takeoverWarningLevel: 0,    // 0=none, 1=rumors, 2=activist investors, 3=full bid
+  stockPricePeak: 0,          // highest stock price ever reached
+  consecutiveFlops: 0,        // streak of consecutive money-losing films
+  startYear: 1970,            // year the game started (for gating mechanics)
   // IPO / Stock market
   isPublic: false,
   stockPrice: 0,
@@ -2127,6 +2166,7 @@ function reducer(state, action) {
         specialization: action.specialization || 0,
         studioMotto: action.motto || '',
         year: startYear, month: 1, turn: 0,
+        startYear,
         cash: startCash,
         reputation: startRep,
         prestige: startPres,
@@ -3231,7 +3271,7 @@ function reducer(state, action) {
     }
 
     case 'REJECT_TAKEOVER':
-      return { ...state, hostileTakeoverOffer: null, gameLog: [...state.gameLog, { text: 'Hostile takeover offer rejected!', type: 'info' }] };
+      return { ...state, hostileTakeoverOffer: null, takeoverCooldown: 12, takeoverWarningLevel: 0, gameLog: [...state.gameLog, { text: 'Hostile takeover offer rejected! Rivals will regroup. (12-month cooldown.)', type: 'info' }] };
 
     case 'ACCEPT_TAKEOVER':
       return { ...state, phase: 'legacy', hostileTakeoverOffer: null, gameLog: [...state.gameLog, { text: `${state.studioName} was acquired. The era ends.`, type: 'warning' }] };
@@ -3303,7 +3343,11 @@ function reducer(state, action) {
       let genreFanbase = { ...(state.genreFanbase || {}) };
       let theaterChains = (state.theaterChains || []).map(c => ({ ...c }));
       let stockPrice = state.stockPrice;
+      let stockPricePeak = state.stockPricePeak || 0;
       let talentRelationships = { ...(state.talentRelationships || {}) };
+      let consecutiveFlops = state.consecutiveFlops || 0;
+      let takeoverCooldown = Math.max(0, (state.takeoverCooldown || 0) - 1);
+      let takeoverWarningLevel = state.takeoverWarningLevel || 0;
 
       let revenue = 0;
       let expenses = 0;
@@ -3759,6 +3803,13 @@ function reducer(state, action) {
         const multLabel = multPct >= 0 ? `+${multPct}%` : `${multPct}%`;
         const emoji = box.profit >= 0 ? '🎉' : '📉';
         log.push({ text: `${emoji} "${f.title}" released (${windowName}, ${multLabel})! Quality: ${f.quality} | Gross: ${fmt(box.totalGross)} | Profit: ${fmt(box.profit)}`, type: box.profit >= 0 ? 'success' : 'warning' });
+
+        // Track consecutive flops for takeover vulnerability
+        if (box.profit < 0) {
+          consecutiveFlops += 1;
+        } else {
+          consecutiveFlops = 0;
+        }
 
         // Reputation & prestige
         if (box.totalGross > 100000000) rep += 3;
@@ -4660,22 +4711,74 @@ function reducer(state, action) {
         }
       }
 
-      // ENHANCED: Hostile takeover - more aggressive when player is weak
+      // REBALANCED: Hostile takeover system with gating, warnings, cooldowns, and difficulty scaling
       let hostileTakeoverOffer = state.hostileTakeoverOffer;
-      if (!hostileTakeoverOffer) {
-        const playerWeakness = (cash < 0 ? 2 : 0) + (rep < 30 ? 1 : 0) + (state.loans?.length >= 3 ? 1 : 0) + (stockPrice > 0 && stockPrice < 20 ? 1 : 0);
-        const takeoverChance = playerWeakness * 0.05 * difficultyScale;
-        if (Math.random() < takeoverChance) {
-          const buyer = competitors.filter(c => c.cash > 200e6).sort((a, b) => b.cash - a.cash)[0];
-          if (buyer) {
-            const studioValue = Math.max(50e6, tGross * 0.1 + (streaming?.subscribers || 0) * 5 + films.length * 2e6);
-            const offer = Math.round(studioValue * (0.8 + Math.random() * 0.4));
-            const defenseCost = Math.round(offer * 0.3);
-            hostileTakeoverOffer = { buyer: buyer.name, offer, defenseCost, deadline: 3 };
-            log.push({ text: `HOSTILE TAKEOVER: ${buyer.name} launches a ${fmt(offer)} bid for ${state.studioName}! You need ${fmt(defenseCost)} to defend. You have 3 months.`, type: 'warning' });
+      const gameAge = state.year - (state.startYear || 1970);
+      const takeoverMinYears = 15; // No takeovers before 15 years in
+
+      if (!hostileTakeoverOffer && gameAge >= takeoverMinYears && takeoverCooldown <= 0) {
+        // Calculate weakness signals — multiple must be present simultaneously
+        const hasNegativeCash = cash < 0;
+        const hasLowRep = rep < 25;
+        const hasHeavyDebt = (state.loans || []).length >= 3;
+        const stockDroppedHard = stockPricePeak > 0 && stockPrice > 0 && stockPrice < stockPricePeak * 0.6; // 40%+ drop from peak
+        const hasConsecutiveFlops = consecutiveFlops >= 3;
+        const hasCriticallyLowCash = cash < -(state.loans || []).reduce((s, l) => s + (l.amount || 0), 0) * 0.5;
+
+        // Count weakness signals
+        const weaknessSignals = (hasNegativeCash ? 1 : 0) + (hasLowRep ? 1 : 0) + (hasHeavyDebt ? 1 : 0)
+          + (stockDroppedHard ? 1 : 0) + (hasConsecutiveFlops ? 1 : 0) + (hasCriticallyLowCash ? 1 : 0);
+
+        // Need at least 2 weakness signals to even consider a takeover
+        if (weaknessSignals >= 2) {
+          // Difficulty scaling: lower difficulty = much rarer takeovers
+          const diffMult = difficultyScale < 1.0 ? 0.3 : difficultyScale < 1.2 ? 0.6 : difficultyScale < 1.5 ? 1.0 : 1.5;
+
+          // Warning escalation system: rumors → activist investors → full bid
+          if (takeoverWarningLevel === 0) {
+            // 8% base chance to start rumors (scaled by difficulty)
+            const rumorChance = 0.08 * diffMult;
+            if (Math.random() < rumorChance) {
+              takeoverWarningLevel = 1;
+              log.push({ text: 'RUMOR: Industry insiders are speculating about potential acquisition interest in your studio.', type: 'info' });
+            }
+          } else if (takeoverWarningLevel === 1) {
+            // 10% chance to escalate to activist investors
+            const activistChance = 0.10 * diffMult;
+            if (weaknessSignals >= 2 && Math.random() < activistChance) {
+              takeoverWarningLevel = 2;
+              log.push({ text: 'WARNING: Activist investors are circling your studio, pushing for a change in leadership or a sale.', type: 'warning' });
+            } else if (weaknessSignals < 2) {
+              // Studio recovered — drop back to no warnings
+              takeoverWarningLevel = 0;
+              log.push({ text: 'Acquisition rumors have subsided as your studio shows signs of recovery.', type: 'success' });
+            }
+          } else if (takeoverWarningLevel === 2) {
+            // 7% chance to escalate to actual takeover bid — requires 3+ weakness signals now
+            const bidChance = 0.07 * diffMult;
+            if (weaknessSignals >= 3 && Math.random() < bidChance) {
+              const buyer = competitors.filter(c => c.cash > 200e6).sort((a, b) => b.cash - a.cash)[0];
+              if (buyer) {
+                const studioValue = Math.max(50e6, tGross * 0.1 + (streaming?.subscribers || 0) * 5 + films.length * 2e6);
+                const offer = Math.round(studioValue * (0.8 + Math.random() * 0.4));
+                const defenseCost = Math.round(offer * 0.3);
+                hostileTakeoverOffer = { buyer: buyer.name, offer, defenseCost, deadline: 3 };
+                takeoverWarningLevel = 3;
+                log.push({ text: `HOSTILE TAKEOVER: ${buyer.name} launches a ${fmt(offer)} bid for ${state.studioName}! You need ${fmt(defenseCost)} to defend. You have 3 months.`, type: 'warning' });
+              }
+            } else if (weaknessSignals < 2) {
+              // Studio recovered — drop back
+              takeoverWarningLevel = 0;
+              log.push({ text: 'Activist investors have backed off as your studio\'s position improved.', type: 'success' });
+            }
           }
+        } else if (takeoverWarningLevel > 0 && takeoverWarningLevel < 3) {
+          // Studio is doing fine now — clear warnings
+          takeoverWarningLevel = 0;
         }
       }
+
+      // Handle active takeover deadline countdown
       if (hostileTakeoverOffer && hostileTakeoverOffer.deadline) {
         hostileTakeoverOffer = { ...hostileTakeoverOffer, deadline: hostileTakeoverOffer.deadline - 1 };
         if (hostileTakeoverOffer.deadline <= 0) {
@@ -4724,6 +4827,8 @@ function reducer(state, action) {
           shareholderDemand += 5;
           if (shareholderDemand > 50) log.push({ text: 'Quarterly pressure: Shareholders expect returns.', type: 'info' });
         }
+        // Track peak stock price for takeover vulnerability
+        if (stockPrice > stockPricePeak) stockPricePeak = stockPrice;
       }
 
       // 12. Advance time (moved up so newMonth/newYear are available for systems below)
@@ -4838,7 +4943,7 @@ function reducer(state, action) {
         else if (val < 45) talentRelationships[tid] = val + 1;
       });
 
-      // 11c. Hostile takeover chance (replaced by enhanced version above at line ~4552)
+      // 11c. Hostile takeover (rebalanced — see REBALANCED section above with warning system, gating, cooldowns)
 
       // 11d. Update rival competition with personality-driven behavior
       competitors.forEach(comp => {
@@ -5317,6 +5422,10 @@ function reducer(state, action) {
         stockHistory,
         shareholderDemand,
         hostileTakeoverOffer,
+        takeoverCooldown,
+        takeoverWarningLevel,
+        stockPricePeak,
+        consecutiveFlops,
         activeMovements,
         activeCrises,
         coProductions,
@@ -5762,8 +5871,10 @@ function reducer(state, action) {
         ...state,
         cash: state.cash - cost,
         hostileTakeoverOffer: null,
+        takeoverCooldown: 18, // 18-month cooldown after successful defense
+        takeoverWarningLevel: 0,
         reputation: clamp(state.reputation + 5, 0, 100),
-        gameLog: [...state.gameLog, { text: `Successfully defended against hostile takeover! Cost: ${fmt(cost)}. Your defiance boosted reputation.`, type: 'success' }],
+        gameLog: [...state.gameLog, { text: `Successfully defended against hostile takeover! Cost: ${fmt(cost)}. Your defiance boosted reputation. (Rivals won't attempt another for 18 months.)`, type: 'success' }],
         errorMsg: '',
       };
     }
@@ -6805,8 +6916,11 @@ export default function MovieMogul() {
         </div>
 
         <div className="bg-gray-800 border border-gray-700 rounded-lg p-4">
-          <div className="text-white font-bold text-sm mb-2">Production Budget: {fmt(state.devBudgetM * 1e6)}</div>
-          <input type="range" min={script.budgetMin} max={script.budgetMax} value={state.devBudgetM}
+          <div className="flex justify-between items-center mb-2">
+            <div className="text-white font-bold text-sm">Production Budget: {fmt(state.devBudgetM * 1e6)}</div>
+            <span className={`text-xs font-bold ${getBudgetTier(state.devBudgetM).color}`}>{getBudgetTier(state.devBudgetM).name}</span>
+          </div>
+          <input type="range" min={script.budgetMin} max={script.budgetMax} step={script.budgetMax > 100 ? 5 : 1} value={state.devBudgetM}
             onChange={e => dispatch({ type: 'SET_DEV', key: 'devBudgetM', value: parseInt(e.target.value) })}
             className="w-full accent-amber-400" />
           <div className="flex justify-between text-xs text-gray-500 mt-1">
@@ -6816,11 +6930,11 @@ export default function MovieMogul() {
 
         <div className="bg-gray-800 border border-gray-700 rounded-lg p-4">
           <div className="text-white font-bold text-sm mb-2">Marketing Budget: {fmt(state.devMarketingM * 1e6)}</div>
-          <input type="range" min={0} max={state.devBudgetM} value={state.devMarketingM}
+          <input type="range" min={0} max={Math.min(state.devBudgetM, getEraMarketingMax(state.year))} step={getEraMarketingMax(state.year) > 50 ? 5 : 1} value={state.devMarketingM}
             onChange={e => dispatch({ type: 'SET_DEV', key: 'devMarketingM', value: parseInt(e.target.value) })}
             className="w-full accent-amber-400" />
           <div className="flex justify-between text-xs text-gray-500 mt-1">
-            <span>$0</span><span>{fmt(state.devBudgetM * 1e6)}</span>
+            <span>$0</span><span>{fmt(Math.min(state.devBudgetM, getEraMarketingMax(state.year)) * 1e6)}</span>
           </div>
         </div>
 
@@ -7930,6 +8044,19 @@ export default function MovieMogul() {
         </div>
       </div>
 
+      {/* TAKEOVER WARNING INDICATORS */}
+      {!state.hostileTakeoverOffer && state.takeoverWarningLevel === 1 && (
+        <div className="bg-yellow-900/30 border border-yellow-700 rounded-lg p-3">
+          <div className="text-yellow-400 font-bold text-sm">Acquisition Rumors</div>
+          <div className="text-gray-300 text-xs">Industry insiders are speculating about potential acquisition interest. Shore up your finances to discourage further interest.</div>
+        </div>
+      )}
+      {!state.hostileTakeoverOffer && state.takeoverWarningLevel === 2 && (
+        <div className="bg-orange-900/40 border border-orange-500 rounded-lg p-4">
+          <div className="text-orange-400 font-bold">Activist Investors Circling</div>
+          <div className="text-gray-300 text-sm">Activist investors are pushing for a sale or leadership change. A formal takeover bid may follow if your studio continues to struggle.</div>
+        </div>
+      )}
       {/* HOSTILE TAKEOVER */}
       {state.hostileTakeoverOffer && (
         <div className="bg-red-900 border border-red-500 rounded-lg p-5">
