@@ -1006,6 +1006,18 @@ const TRAITS = {
     { name: 'Legendary Producer', desc: '+5 quality, +3 prestige per film', effect: { qualityFlat: 5, prestigeBonus: 3 } },
     { name: 'Development Expert', desc: '-1 development month', effect: { devSpeed: 1 } },
   ],
+  composer: [
+    { name: 'Orchestral Master', desc: '+8 quality on Drama/Romance', effect: { qualityBonus: 8, genres: ['Drama', 'Romance'] } },
+    { name: 'Synth Pioneer', desc: '+10 quality on Sci-Fi/Horror', effect: { qualityBonus: 10, genres: ['Sci-Fi', 'Horror'] } },
+    { name: 'Action Scorer', desc: '+8 quality on Action/Thriller', effect: { qualityBonus: 8, genres: ['Action', 'Thriller'] } },
+    { name: 'Minimalist', desc: 'Lower salary, subtle but effective scores', effect: { salaryDiscount: 0.3 } },
+    { name: 'Award Favorite', desc: '+6 prestige per film, critics adore the scores', effect: { prestigeBonus: 6 } },
+    { name: 'Leitmotif Genius', desc: '+10 quality on franchise/sequel films', effect: { franchiseLore: 10 } },
+    { name: 'Versatile Composer', desc: 'No genre penalty for any film type', effect: { versatile: true } },
+    { name: 'Chart Topper', desc: 'Soundtracks generate +5% gross from album sales', effect: { grossBonus: 0.05 } },
+    { name: 'Prolific', desc: 'Can score multiple films per year without quality loss', effect: { noOverwork: true } },
+    { name: 'Experimental', desc: '+15 quality on art films, -5 on blockbusters', effect: { qualityBonus: 15, genres: ['Drama'], blockbusterPenalty: -5 } },
+  ],
   showrunner: [
     { name: 'Prestige Showrunner', desc: '+10 quality on Drama/Thriller', effect: { qualityBonus: 10, genres: ['Drama Series', 'Thriller Series'] } },
     { name: 'Comedy Architect', desc: '+12 quality on Comedy series', effect: { qualityBonus: 12, genres: ['Comedy Series'] } },
@@ -1991,8 +2003,7 @@ const calcMerchandiseRevenue = (franchises, films) => {
 // ==================== LICENSING WINDOWS ====================
 // Time decay: revenue drops 3% per year after release as content ages
 const LICENSING_WINDOWS = [
-  { id: 'homeVideo
-', name: 'Home Video / VOD', monthsAfterRelease: 4, revenuePct: 0.04, duration: 12, desc: 'Physical & digital sales' },
+  { id: 'homeVideo', name: 'Home Video / VOD', monthsAfterRelease: 4, revenuePct: 0.04, duration: 12, desc: 'Physical & digital sales' },
   { id: 'streaming', name: 'Streaming Rights', monthsAfterRelease: 12, revenuePct: 0.03, duration: 24, desc: 'Platform licensing deals' },
   { id: 'tvSyndication', name: 'TV Syndication', monthsAfterRelease: 24, revenuePct: 0.02, duration: 36, desc: 'Network & cable reruns' },
   { id: 'library', name: 'Library Licensing', monthsAfterRelease: 48, revenuePct: 0.008, duration: 999, desc: 'Perpetual catalog value' },
@@ -2883,6 +2894,7 @@ const INIT = {
   devEnsembleId: null,       // ensemble actor
   devWriterId: null,
   devProducerId: null,
+  devComposerId: null,
   devFilmType: 'original',  // 'original' | 'sequel' | 'reboot' | 'adaptation'
   devAdaptation: null,      // index into ADAPTATIONS
   devFranchiseId: null,     // for sequels/reboots
@@ -3160,6 +3172,14 @@ function reducer(state, action) {
         talent.signedTo = null;
         worldTalent.push(talent);
       }
+      // Composers: 10-15 (film score composers — John Williams, Ennio Morricone, etc.)
+      const composerCount = randInt(10, 15);
+      for (let i = 0; i < composerCount; i++) {
+        const talent = makeTalent(nextId++, 'composer', [20, 85], i < 3 ? [40, 60] : i < 7 ? [30, 50] : [22, 40]);
+        talent.status = 'free';
+        talent.signedTo = null;
+        worldTalent.push(talent);
+      }
 
       // Assign 3-5 talent to each active rival studio
       const rivals = makeCompetitors(scenario.startYear || 1970);
@@ -3255,6 +3275,7 @@ function reducer(state, action) {
           devSupporting1Id: null, devSupporting2Id: null, devEnsembleId: null,
           devWriterId: state.contracts.find(t => t.type === 'writer')?.id ?? null,
           devProducerId: state.contracts.find(t => t.type === 'producer')?.id ?? null,
+          devComposerId: state.contracts.find(t => t.type === 'composer')?.id ?? null,
           devFilmType: 'original', devGenre2: script.genre2 || null, devTone: 'serious', devThemes: [],
           devPostProdChoice: 'standard_edit',
           gameLog: [...state.gameLog, { text: `Acquired "${script.title}" for ${fmt(bidAmount)} — no competition!`, type: 'success' }], errorMsg: '' };
@@ -3280,6 +3301,7 @@ function reducer(state, action) {
         devEnsembleId: null,
         devWriterId: state.contracts.find(t => t.type === 'writer')?.id ?? null,
         devProducerId: state.contracts.find(t => t.type === 'producer')?.id ?? null,
+          devComposerId: state.contracts.find(t => t.type === 'composer')?.id ?? null,
         devFilmType: 'original',
         devAdaptation: null,
         devFranchiseId: null,
@@ -3379,6 +3401,7 @@ function reducer(state, action) {
         devSupporting1Id: null, devSupporting2Id: null, devEnsembleId: null,
         devWriterId: state.contracts.find(t => t.type === 'writer')?.id ?? null,
         devProducerId: state.contracts.find(t => t.type === 'producer')?.id ?? null,
+          devComposerId: state.contracts.find(t => t.type === 'composer')?.id ?? null,
         devFilmType: ip.category === 'remake' ? 'reboot' : 'adaptation',
         devAdaptation: null,
         devFranchiseId: null,
@@ -3653,10 +3676,11 @@ case 'REMASTER_FILM': {
       const dir = state.contracts.find(t => t.id === state.devDirectorId);
       const act = state.contracts.find(t => t.id === state.devActorId);
       const wri = state.contracts.find(t => t.id === state.devWriterId);
+      const comp = state.contracts.find(t => t.id === state.devComposerId);
       if (!dir || !act || !wri) return { ...state, errorMsg: 'Assign a director, actor, and writer.' };
 
       // Validate talent demands
-      const allTalent = [dir, act, wri];
+      const allTalent = [dir, act, wri, comp].filter(Boolean);
       for (const t of allTalent) {
         if (!t.demands) continue;
         for (const d of t.demands) {
@@ -3819,6 +3843,7 @@ case 'REMASTER_FILM': {
         castMembers, // NEW: full cast with roles
         writer: { id: wri.id, name: wri.name, skill: wri.skill, genreBonus: wri.genreBonus, trait: wri.trait, traitDesc: wri.traitDesc, traitEffect: wri.traitEffect, profitParticipation: wri.profitParticipation || 0 },
         producer: prod ? { id: prod.id, name: prod.name, skill: prod.skill, trait: prod.trait, traitDesc: prod.traitDesc, traitEffect: prod.traitEffect, profitParticipation: prod.profitParticipation || 0 } : null,
+        composer: comp ? { id: comp.id, name: comp.name, skill: comp.skill, genreBonus: comp.genreBonus, trait: comp.trait, traitDesc: comp.traitDesc, traitEffect: comp.traitEffect } : null,
         // Production pipeline
         status: 'script_dev',
         productionPhase: 'script_dev',
@@ -4681,6 +4706,7 @@ case 'REMASTER_FILM': {
             devSupporting1Id: null, devSupporting2Id: null, devEnsembleId: null,
             devWriterId: state.contracts.find(t => t.type === 'writer')?.id ?? null,
             devProducerId: state.contracts.find(t => t.type === 'producer')?.id ?? null,
+          devComposerId: state.contracts.find(t => t.type === 'composer')?.id ?? null,
             devFilmType: 'original', devGenre2: script.genre2 || null, devTone: 'serious', devThemes: [],
             devPostProdChoice: 'standard_edit',
             gameLog: [...state.gameLog, { text: `Won bidding war for "${script.title}" at ${fmt(cost)}.${msg}`, type: ratio > 1.5 ? 'warning' : 'success' }], errorMsg: '' };
@@ -5263,6 +5289,13 @@ case 'REMASTER_FILM': {
               if (actTr.streak === 'cold') quality = clamp(quality - 3, 5, 98);
             }
 
+            // Composer contribution — great scores elevate films
+            if (f.composer) {
+              const composerBonus = Math.round((f.composer.skill - 50) * 0.08); // -4 to +4 from skill
+              quality = clamp(quality + composerBonus, 5, 98);
+              if (f.composer.genreBonus === f.genre) quality = clamp(quality + 2, 5, 98); // genre match
+            }
+
             // Multi-cast quality contribution
             if (f.castMembers && f.castMembers.length > 1) {
               let castBonus = 0;
@@ -5319,6 +5352,7 @@ case 'REMASTER_FILM': {
             if (f.actor?.id) filmTalentIds.add(f.actor.id);
             if (f.writer?.id) filmTalentIds.add(f.writer.id);
             if (f.producer?.id) filmTalentIds.add(f.producer.id);
+            if (f.composer?.id) filmTalentIds.add(f.composer.id);
             if (f.castMembers) f.castMembers.forEach(cm => { if (cm.id) filmTalentIds.add(cm.id); });
             contracts = contracts.map(t => {
               if (filmTalentIds.has(t.id)) {
@@ -5635,6 +5669,7 @@ case 'REMASTER_FILM': {
         if (f.actor) recordFilmography(f.actor, 'lead');
         if (f.writer) recordFilmography(f.writer, 'writer');
         if (f.producer) recordFilmography(f.producer, 'producer');
+        if (f.composer) recordFilmography(f.composer, 'composer');
         if (f.castMembers) f.castMembers.forEach(cm => recordFilmography(cm, 'supporting'));
 
         Object.values(talentToUpdate).forEach(item => {
@@ -7857,7 +7892,7 @@ case 'REMASTER_FILM': {
           // Add new talent to world pool each turn (3-5 per year = ~30% chance of 1, plus occasional batch)
           const newTalentRoll = Math.random();
           const newTalentCount = newTalentRoll < 0.35 ? 0 : newTalentRoll < 0.75 ? 1 : 2; // avg ~0.7/turn = ~8/yr
-          const typeWeights = [['actor', 0.5], ['director', 0.22], ['writer', 0.18], ['producer', 0.1]];
+          const typeWeights = [['actor', 0.45], ['director', 0.20], ['writer', 0.16], ['producer', 0.09], ['composer', 0.10]];
           let newNextId = state.nextId;
           for (let i = 0; i < newTalentCount; i++) {
             const roll = Math.random();
@@ -8451,6 +8486,7 @@ function FilmCard({ film, dispatch }) {
         <div>Director: <span className="cursor-pointer hover:text-yellow-300 underline decoration-dotted text-white" onClick={() => film.director?.id && dispatch({ type: 'SELECT_TALENT', talentId: film.director.id })}>{film.director?.name}</span> ({film.director?.skill}) {film.director?.genreBonus === film.genre ? <span className="text-green-400">★</span> : ''} {film.director?.trait && <span className="text-purple-300">— {film.director.trait}</span>}</div>
         <div>Lead: <span className="cursor-pointer hover:text-yellow-300 underline decoration-dotted text-white" onClick={() => film.actor?.id && dispatch({ type: 'SELECT_TALENT', talentId: film.actor.id })}>{film.actor?.name}</span> ({film.actor?.skill}) {film.castMembers && film.castMembers.length > 1 ? <span className="text-blue-400">+{film.castMembers.length - 1} cast</span> : ''} {film.actor?.trait && <span className="text-purple-300">— {film.actor.trait}</span>}</div>
         <div>Writer: <span className="cursor-pointer hover:text-yellow-300 underline decoration-dotted text-white" onClick={() => film.writer?.id && dispatch({ type: 'SELECT_TALENT', talentId: film.writer.id })}>{film.writer?.name}</span> ({film.writer?.skill}) {film.writer?.trait && <span className="text-purple-300">— {film.writer.trait}</span>}</div>
+        {film.composer && <div>Composer: <span className="cursor-pointer hover:text-yellow-300 underline decoration-dotted text-white" onClick={() => film.composer?.id && dispatch({ type: 'SELECT_TALENT', talentId: film.composer.id })}>{film.composer.name}</span> ({film.composer.skill}) {film.composer.genreBonus === film.genre ? <span className="text-green-400">★</span> : ''}</div>}
         <div>Budget: {fmt(film.budget)} | Marketing: {fmt(film.marketing)}</div>
         {/* Production events from filming */}
         {film.productionEvents && film.productionEvents.length > 0 && (
@@ -9901,7 +9937,7 @@ export default function MovieMogul() {
 
         <div className="grid grid-cols-4 gap-3">
           {/* Director & Writer */}
-          {[['devDirectorId', 'Director', 'director'], ['devWriterId', 'Writer', 'writer'], ['devProducerId', 'Producer', 'producer']].map(([key, label, type]) => (
+          {[['devDirectorId', 'Director', 'director'], ['devWriterId', 'Writer', 'writer'], ['devProducerId', 'Producer', 'producer'], ['devComposerId', 'Composer', 'composer']].map(([key, label, type]) => (
             <div key={key} className="bg-gray-800 border border-gray-700 rounded-lg p-3">
               <div className="text-white font-bold text-xs mb-2">{label}</div>
               <select value={state[key] ?? ''} onChange={e => dispatch({ type: 'SET_DEV', key, value: e.target.value ? parseInt(e.target.value) : null })}
@@ -10557,6 +10593,90 @@ export default function MovieMogul() {
           </div>
         )}
 
+        {/* CATALOG LICENSING */}
+        {state.films.filter(f => f.status === 'released' && !f.soldRights).length > 0 && (
+          <div>
+            <div className="text-white font-bold text-lg mb-1">Catalog Licensing</div>
+            <div className="text-gray-400 text-sm mb-4">License your film catalog to TV networks, rental chains, and streaming platforms. Deals generate recurring revenue.</div>
+
+            {/* Active Deals */}
+            {(state.catalogDeals || []).filter(d => d.turnsLeft > 0).length > 0 && (
+              <div className="mb-4">
+                <div className="text-amber-400 font-bold text-sm mb-2">Active Deals</div>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                  {(state.catalogDeals || []).filter(d => d.turnsLeft > 0).map(d => (
+                    <div key={d.id} className={`bg-gray-800 border ${d.turnsLeft <= 6 ? 'border-red-600' : 'border-green-600'} rounded-lg p-3`}>
+                      <div className="flex justify-between items-start mb-1">
+                        <div className="text-white font-bold text-sm">{d.licenseeName}</div>
+                        <span className={`text-xs px-2 py-0.5 rounded ${d.exclusive ? 'bg-purple-700 text-purple-200' : 'bg-gray-600 text-gray-300'}`}>{d.exclusive ? 'EXCLUSIVE' : 'Non-Exclusive'}</span>
+                      </div>
+                      <div className="text-gray-400 text-xs mb-1">{d.licenseeType} | {d.filmTitles.length} films</div>
+                      <div className="text-green-400 text-sm font-bold">{fmt(d.totalAnnual)}/year ({fmt(d.feePerFilm)}/film)</div>
+                      <div className="flex justify-between mt-1 text-xs">
+                        <span className="text-gray-500">Films: {d.filmTitles.slice(0, 3).join(', ')}{d.filmTitles.length > 3 ? ` +${d.filmTitles.length - 3} more` : ''}</span>
+                        <span className={d.turnsLeft <= 6 ? 'text-red-400 font-bold' : 'text-gray-400'}>{Math.ceil(d.turnsLeft / 12)}y {d.turnsLeft % 12}m left</span>
+                      </div>
+                      <div className="w-full bg-gray-700 rounded-full h-1.5 mt-2">
+                        <div className={`h-1.5 rounded-full ${d.turnsLeft <= 6 ? 'bg-red-500' : 'bg-green-500'}`} style={{ width: `${(d.turnsLeft / d.turnsTotal) * 100}%` }}></div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {/* Pending Bids */}
+            {(state.catalogBids || []).length > 0 ? (
+              <div className="mb-4">
+                <div className="text-green-400 font-bold text-sm mb-2">Incoming Offers</div>
+                <div className="grid grid-cols-1 gap-3">
+                  {state.catalogBids.map((bid, idx) => (
+                    <div key={idx} className="bg-gray-800 border border-amber-600 rounded-lg p-4">
+                      <div className="flex justify-between items-start mb-2">
+                        <div>
+                          <div className="text-white font-bold">{bid.licenseeName}</div>
+                          <div className="text-gray-400 text-xs">{bid.licenseeType} | {bid.licenseeDesc}</div>
+                        </div>
+                        {bid.exclusive && <span className="bg-purple-700 text-purple-200 text-xs px-2 py-1 rounded font-bold">EXCLUSIVE</span>}
+                      </div>
+                      <div className="grid grid-cols-3 gap-3 mb-3 text-center">
+                        <div>
+                          <div className="text-gray-400 text-xs">Per Film/Year</div>
+                          <div className="text-green-400 font-bold">{fmt(bid.feePerFilm)}</div>
+                        </div>
+                        <div>
+                          <div className="text-gray-400 text-xs">Total Annual</div>
+                          <div className="text-green-400 font-bold">{fmt(bid.totalAnnual)}</div>
+                        </div>
+                        <div>
+                          <div className="text-gray-400 text-xs">Term</div>
+                          <div className="text-white font-bold">{Math.round(bid.turnsOffered / 12)} years</div>
+                        </div>
+                      </div>
+                      <div className="text-xs text-gray-400 mb-3">
+                        Films wanted ({bid.filmTitles.length}): {bid.filmTitles.join(', ')}
+                      </div>
+                      <button onClick={() => dispatch({ type: 'ACCEPT_CATALOG_BID', bidIdx: idx })}
+                        className="w-full bg-green-600 hover:bg-green-500 text-white font-bold py-2 rounded transition-colors">
+                        Accept Deal — {fmt(bid.totalAnnual)}/year for {Math.round(bid.turnsOffered / 12)} years
+                      </button>
+                    </div>
+                  ))}
+                </div>
+                <button onClick={() => dispatch({ type: 'DISMISS_CATALOG_BIDS' })}
+                  className="mt-2 text-gray-400 hover:text-white text-sm underline">
+                  Decline all offers
+                </button>
+              </div>
+            ) : (
+              <button onClick={() => dispatch({ type: 'GENERATE_CATALOG_BIDS' })}
+                className="bg-amber-600 hover:bg-amber-500 text-white font-bold py-3 px-6 rounded-lg transition-colors mb-4">
+                Solicit Catalog Licensing Offers
+              </button>
+            )}
+          </div>
+        )}
+
         {/* RELEASED FILMS */}
         <div>
           <div className="text-white font-bold text-lg mb-1">Released Films</div>
@@ -10647,11 +10767,11 @@ export default function MovieMogul() {
           if (!t) return null;
           // Build filmography from released films
           const filmography = (state.allFilmHistory || []).filter(f => !f.isRival && (
-            f.director?.id === t.id || f.actor?.id === t.id || f.writer?.id === t.id || f.producer?.id === t.id ||
+            f.director?.id === t.id || f.actor?.id === t.id || f.writer?.id === t.id || f.producer?.id === t.id || f.composer?.id === t.id ||
             (f.castMembers || []).some(cm => cm.id === t.id)
           )).sort((a, b) => (b.releasedYear || 0) - (a.releasedYear || 0));
           const filmsInProd = state.films.filter(f => f.status !== 'released' && f.status !== 'completed' && (
-            f.director?.id === t.id || f.actor?.id === t.id || f.writer?.id === t.id || f.producer?.id === t.id ||
+            f.director?.id === t.id || f.actor?.id === t.id || f.writer?.id === t.id || f.producer?.id === t.id || f.composer?.id === t.id ||
             (f.castMembers || []).some(cm => cm.id === t.id)
           ));
           const totalGross = filmography.reduce((s, f) => s + (f.totalGross || 0), 0);
@@ -10671,7 +10791,7 @@ export default function MovieMogul() {
               {/* Header */}
               <div className="flex items-start gap-4 mb-4">
                 <div className="w-16 h-16 rounded-full bg-gray-700 border-2 border-amber-500 flex items-center justify-center text-2xl">
-                  {t.type === 'actor' ? '⭐' : t.type === 'director' ? '🎬' : t.type === 'writer' ? '📝' : '🎯'}
+                  {t.type === 'actor' ? '⭐' : t.type === 'director' ? '🎬' : t.type === 'writer' ? '📝' : t.type === 'composer' ? '🎵' : '🎯'}
                 </div>
                 <div className="flex-1">
                   <div className="flex items-center gap-2">
@@ -10765,7 +10885,7 @@ export default function MovieMogul() {
                   <div className="text-white font-bold text-sm mb-2">Filmography</div>
                   <div className="space-y-1.5 max-h-60 overflow-y-auto">
                     {filmography.map((f, i) => {
-                      const role = f.director?.id === t.id ? 'Director' : f.writer?.id === t.id ? 'Writer' : f.producer?.id === t.id ? 'Producer' : (f.castMembers || []).find(cm => cm.id === t.id)?.role === 'lead' ? 'Lead Actor' : (f.castMembers || []).find(cm => cm.id === t.id)?.role === 'supporting1' ? 'Supporting' : f.actor?.id === t.id ? 'Actor' : 'Cast';
+                      const role = f.director?.id === t.id ? 'Director' : f.writer?.id === t.id ? 'Writer' : f.producer?.id === t.id ? 'Producer' : f.composer?.id === t.id ? 'Composer' : (f.castMembers || []).find(cm => cm.id === t.id)?.role === 'lead' ? 'Lead Actor' : (f.castMembers || []).find(cm => cm.id === t.id)?.role === 'supporting1' ? 'Supporting' : f.actor?.id === t.id ? 'Actor' : 'Cast';
                       const qColor = (f.quality || 0) >= 75 ? 'text-green-400' : (f.quality || 0) >= 50 ? 'text-yellow-400' : 'text-red-400';
                       return (
                         <div key={i} className="bg-gray-800 rounded-lg p-2 flex justify-between items-center text-xs">
@@ -11014,7 +11134,7 @@ export default function MovieMogul() {
                             <div className="flex items-center gap-2">
                               <span className="text-white font-bold text-sm cursor-pointer hover:text-yellow-300 underline decoration-dotted" onClick={() => dispatch({ type: 'SELECT_TALENT', talentId: t.id })}>{t.name}</span>
                               <span className="text-gray-400">{t.gender === 'female' ? '♀' : '♂'}</span>
-                              <span className={`px-1.5 py-0.5 rounded text-xs font-bold ${t.type === 'actor' ? 'bg-blue-800 text-blue-300' : t.type === 'director' ? 'bg-amber-800 text-amber-300' : t.type === 'writer' ? 'bg-green-800 text-green-300' : 'bg-purple-800 text-purple-300'}`}>{t.type}</span>
+                              <span className={`px-1.5 py-0.5 rounded text-xs font-bold ${t.type === 'actor' ? 'bg-blue-800 text-blue-300' : t.type === 'director' ? 'bg-amber-800 text-amber-300' : t.type === 'writer' ? 'bg-green-800 text-green-300' : t.type === 'composer' ? 'bg-pink-800 text-pink-300' : 'bg-purple-800 text-purple-300'}`}>{t.type}</span>
                               {t.personality && <span className="text-gray-500 text-xs">{t.personality.name}</span>}
                             </div>
                             <div className="flex gap-3 mt-1 text-gray-400">
@@ -13550,7 +13670,7 @@ export default function MovieMogul() {
         <div className="text-gray-400 text-xs mb-3">Eligible talent: 5+ films and 3+ awards with your studio.</div>
         <div className="flex flex-wrap gap-2">
           {state.contracts.filter(t => {
-            const filmCount = state.films.filter(f => f.status === 'released' && (f.director?.id === t.id || f.actor?.id === t.id || f.writer?.id === t.id)).length;
+            const filmCount = state.films.filter(f => f.status === 'released' && (f.director?.id === t.id || f.actor?.id === t.id || f.writer?.id === t.id || f.composer?.id === t.id)).length;
             const awardCount = (state.awards || []).filter(a => a.talentId === t.id).length;
             const alreadyInducted = (state.hallOfFame || []).some(h => h.talentId === t.id);
             return filmCount >= 5 && awardCount >= 3 && !alreadyInducted;
@@ -13562,7 +13682,7 @@ export default function MovieMogul() {
             </button>
           ))}
           {state.contracts.filter(t => {
-            const filmCount = state.films.filter(f => f.status === 'released' && (f.director?.id === t.id || f.actor?.id === t.id || f.writer?.id === t.id)).length;
+            const filmCount = state.films.filter(f => f.status === 'released' && (f.director?.id === t.id || f.actor?.id === t.id || f.writer?.id === t.id || f.composer?.id === t.id)).length;
             const awardCount = (state.awards || []).filter(a => a.talentId === t.id).length;
             return filmCount >= 5 && awardCount >= 3 && !(state.hallOfFame || []).some(h => h.talentId === t.id);
           }).length === 0 && <div className="text-gray-500 text-xs">No talent eligible yet.</div>}
