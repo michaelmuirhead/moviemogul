@@ -523,8 +523,9 @@ const RANDOM_EVENTS = [
   { text: 'New filmmaking technology reduces production costs by 15% this month.', type: 'techBreakthrough' },
 
   // Cultural moments
-  { text: 'A viral social media trend boosts audience interest in movies. +15% gross.', type: 'viralMoment' },
-  { text: 'A competing entertainment format (video games/streaming series) draws audiences away. -10% gross.', type: 'competitionDrain' },
+  { text: 'A viral social media trend boosts audience interest in movies. +15% gross.', type: 'viralMoment', minYear: 2005 },
+  { text: 'A competing entertainment format (video games) draws audiences away. -10% gross.', type: 'competitionDrain', minYear: 1985 },
+  { text: 'A competing entertainment format (streaming series) draws audiences away. -10% gross.', type: 'competitionDrain', minYear: 2010 },
   { text: 'Nostalgia wave! Sequels and reboots get +25% gross this month.', type: 'nostalgiaWave' },
   { text: 'Audiences are craving originality. Original screenplays get +20% gross.', type: 'originalityWave' },
 
@@ -1726,18 +1727,27 @@ const getStudioQualityBonus = (facilities, genre) => facilities.reduce((sum, f) 
 
 // ==================== ZEITGEIST EVENTS (SYSTEM 8) ====================
 const ZEITGEIST_EVENTS = [
+  // minYear/maxYear restrict when events can fire. Omit for any era.
   { id: 'economic_boom', name: 'Economic Boom', duration: [12, 36], grossMult: 1.25, budgetInflation: 1.1, genreBoost: { Comedy: 0.1, Action: 0.15, Musical: 0.1 }, desc: 'Audiences spending freely' },
   { id: 'recession', name: 'Recession', duration: [12, 24], grossMult: 0.75, budgetInflation: 0.9, genreBoost: { Drama: 0.15, Comedy: 0.1, Documentary: 0.1 }, desc: 'Escapism and cheaper thrills' },
-  { id: 'tech_revolution', name: 'Tech Revolution', duration: [24, 48], grossMult: 1.1, budgetInflation: 1.0, genreBoost: { 'Sci-Fi': 0.25, Thriller: 0.1, Documentary: 0.1 }, desc: 'New tech captivates imaginations' },
+  { id: 'tech_revolution', name: 'Tech Revolution', minYear: 1990, duration: [24, 48], grossMult: 1.1, budgetInflation: 1.0, genreBoost: { 'Sci-Fi': 0.25, Thriller: 0.1, Documentary: 0.1 }, desc: 'New tech captivates imaginations' },
   { id: 'war_abroad', name: 'Major Conflict Abroad', duration: [12, 48], grossMult: 0.9, budgetInflation: 1.05, genreBoost: { War: 0.3, Thriller: 0.15, Drama: 0.1 }, desc: 'Audiences crave meaning and heroism' },
   { id: 'social_movement', name: 'Social Justice Movement', duration: [12, 36], grossMult: 1.05, budgetInflation: 1.0, genreBoost: { Drama: 0.2, Documentary: 0.25, Comedy: -0.1 }, desc: 'Stories of change resonate deeply' },
-  { id: 'pandemic', name: 'Global Pandemic', duration: [6, 18], grossMult: 0.4, budgetInflation: 1.2, genreBoost: { Horror: 0.2, 'Sci-Fi': 0.15, Drama: 0.1, Animation: 0.15 }, desc: 'Theaters suffer — streaming surges' },
+  { id: 'pandemic', name: 'Global Pandemic', minYear: 1980, duration: [6, 18], grossMult: 0.4, budgetInflation: 1.2, genreBoost: { Horror: 0.2, 'Sci-Fi': 0.15, Drama: 0.1, Animation: 0.15 }, desc: 'Theaters suffer — streaming surges' },
   { id: 'space_race', name: 'Space Exploration Milestone', duration: [6, 24], grossMult: 1.1, budgetInflation: 1.0, genreBoost: { 'Sci-Fi': 0.3, Documentary: 0.2, Action: 0.1 }, desc: 'The cosmos capture public imagination' },
-  { id: 'nostalgia_wave', name: 'Nostalgia Wave', duration: [12, 36], grossMult: 1.15, budgetInflation: 1.0, genreBoost: { Musical: 0.2, Comedy: 0.15, Romance: 0.15, Western: 0.1 }, desc: 'Audiences crave the familiar' },
-  { id: 'true_crime_craze', name: 'True Crime Craze', duration: [12, 24], grossMult: 1.1, budgetInflation: 1.0, genreBoost: { Mystery: 0.25, Thriller: 0.2, Documentary: 0.15 }, desc: 'The public is obsessed with real cases' },
-  { id: 'superhero_fatigue', name: 'Superhero Fatigue', duration: [12, 36], grossMult: 0.95, budgetInflation: 1.0, genreBoost: { Action: -0.2, 'Sci-Fi': -0.1, Drama: 0.1, Horror: 0.1 }, desc: 'Audiences tired of capes and tights' },
-  { id: 'ai_anxiety', name: 'AI Anxiety', duration: [12, 48], grossMult: 1.05, budgetInflation: 1.0, genreBoost: { 'Sci-Fi': 0.25, Thriller: 0.15, Horror: 0.1, Documentary: 0.15 }, desc: 'Fear and fascination with artificial intelligence' },
-  { id: 'streaming_wars', name: 'Streaming Wars', duration: [12, 36], grossMult: 0.85, budgetInflation: 1.15, genreBoost: {}, desc: 'Theatrical suffers as platforms spend billions on content' },
+  { id: 'nostalgia_wave', name: 'Nostalgia Wave', minYear: 1985, duration: [12, 36], grossMult: 1.15, budgetInflation: 1.0, genreBoost: { Musical: 0.2, Comedy: 0.15, Romance: 0.15, Western: 0.1 }, desc: 'Audiences crave the familiar' },
+  { id: 'true_crime_craze', name: 'True Crime Craze', minYear: 1990, duration: [12, 24], grossMult: 1.1, budgetInflation: 1.0, genreBoost: { Mystery: 0.25, Thriller: 0.2, Documentary: 0.15 }, desc: 'The public is obsessed with real cases' },
+  { id: 'superhero_fatigue', name: 'Superhero Fatigue', minYear: 2005, duration: [12, 36], grossMult: 0.95, budgetInflation: 1.0, genreBoost: { Action: -0.2, 'Sci-Fi': -0.1, Drama: 0.1, Horror: 0.1 }, desc: 'Audiences tired of capes and tights' },
+  { id: 'ai_anxiety', name: 'AI Anxiety', minYear: 2020, duration: [12, 48], grossMult: 1.05, budgetInflation: 1.0, genreBoost: { 'Sci-Fi': 0.25, Thriller: 0.15, Horror: 0.1, Documentary: 0.15 }, desc: 'Fear and fascination with artificial intelligence' },
+  { id: 'streaming_wars', name: 'Streaming Wars', minYear: 2015, duration: [12, 36], grossMult: 0.85, budgetInflation: 1.15, genreBoost: {}, desc: 'Theatrical suffers as platforms spend billions on content' },
+  // Classic era events
+  { id: 'cold_war_tension', name: 'Cold War Tension', minYear: 1950, maxYear: 1991, duration: [12, 48], grossMult: 1.0, budgetInflation: 1.0, genreBoost: { War: 0.2, Thriller: 0.2, 'Sci-Fi': 0.15, Drama: 0.1 }, desc: 'Spy thrillers and nuclear paranoia grip the public' },
+  { id: 'counterculture', name: 'Counterculture Movement', minYear: 1965, maxYear: 1980, duration: [12, 36], grossMult: 1.05, budgetInflation: 1.0, genreBoost: { Drama: 0.2, Comedy: 0.1, Musical: 0.15, Documentary: 0.15 }, desc: 'Youth rebellion reshapes culture and cinema' },
+  { id: 'disco_era', name: 'Disco Fever', minYear: 1975, maxYear: 1985, duration: [12, 24], grossMult: 1.1, budgetInflation: 1.0, genreBoost: { Musical: 0.3, Comedy: 0.15, Romance: 0.1 }, desc: 'Dance and glitz dominate pop culture' },
+  { id: 'vhs_boom', name: 'Home Video Boom', minYear: 1982, maxYear: 1998, duration: [12, 36], grossMult: 0.95, budgetInflation: 1.0, genreBoost: { Horror: 0.2, Action: 0.15, Comedy: 0.1 }, desc: 'VHS rentals change how audiences watch films' },
+  { id: 'new_hollywood', name: 'New Hollywood Wave', minYear: 1967, maxYear: 1982, duration: [12, 36], grossMult: 1.1, budgetInflation: 1.0, genreBoost: { Drama: 0.25, Crime: 0.2, War: 0.15, Western: 0.1 }, desc: 'Auteur filmmakers push boundaries of cinema' },
+  { id: 'blockbuster_era', name: 'Blockbuster Mania', minYear: 1975, maxYear: 2000, duration: [12, 36], grossMult: 1.2, budgetInflation: 1.15, genreBoost: { Action: 0.25, 'Sci-Fi': 0.2, Adventure: 0.15 }, desc: 'Summer tentpoles and merchandise rule Hollywood' },
+  { id: 'indie_renaissance', name: 'Independent Film Renaissance', minYear: 1989, maxYear: 2010, duration: [12, 24], grossMult: 1.05, budgetInflation: 0.9, genreBoost: { Drama: 0.2, Comedy: 0.15, Documentary: 0.15, Mystery: 0.1 }, desc: 'Sundance darlings break into mainstream' },
 ];
 
 // ==================== DISTRIBUTION DEALS ENHANCED (SYSTEM 9) ====================
@@ -2319,42 +2329,34 @@ const LOBBY_REGULATIONS = [
 
 // ==================== STUDIO LOT BUILDINGS ====================
 const STUDIO_LOT_BUILDINGS = [
-  { id: 'office', name: 'Studio Office', emoji: '🏢', desc: 'Where deals are made.', bonus: 'Base of operations', unlock: { type: 'start' }, passive: null, gridPos: [1, 1] },
-  { id: 'soundstage1', name: 'Soundstage A', emoji: '🎬', desc: 'Your first filming stage.', bonus: '+1 quality', unlock: { type: 'start' }, passive: { qualityBonus: 1 }, gridPos: [2, 1] },
-  { id: 'parking', name: 'Parking Structure', emoji: '🅿️', desc: 'Gotta park somewhere.', bonus: 'Unlocks lot expansion', unlock: { type: 'films', count: 3 }, passive: null, gridPos: [0, 0] },
-  { id: 'commissary', name: 'Commissary', emoji: '🍽️', desc: 'Cast & crew dining.', bonus: '-5% production costs', unlock: { type: 'films', count: 5 }, passive: { costReduction: 0.05 }, gridPos: [0, 1] },
-  { id: 'soundstage2', name: 'Soundstage B', emoji: '🎥', desc: 'Double your capacity.', bonus: '+2 quality', unlock: { type: 'revenue', amount: 50e6 }, passive: { qualityBonus: 2 }, gridPos: [3, 1] },
-  { id: 'postprod', name: 'Post-Production', emoji: '🖥️', desc: 'Editing & color grading.', bonus: '+3 quality, faster post', unlock: { type: 'revenue', amount: 100e6 }, passive: { qualityBonus: 3 }, gridPos: [2, 2] },
-  { id: 'vfxlab', name: 'VFX Laboratory', emoji: '✨', desc: 'In-house visual effects.', bonus: '-10% VFX costs, +4 Sci-Fi/Fantasy quality', unlock: { type: 'revenue', amount: 200e6 }, passive: { qualityBonus: 4, vfxDiscount: 0.10, genres: ['Sci-Fi', 'Fantasy', 'Action'] }, gridPos: [3, 2] },
-  { id: 'screening', name: 'Screening Room', emoji: '🎞️', desc: 'Private test screenings.', bonus: '+2 quality (better feedback)', unlock: { type: 'films', count: 15 }, passive: { qualityBonus: 2 }, gridPos: [1, 2] },
-  { id: 'backlot', name: 'Backlot Sets', emoji: '🏘️', desc: 'Outdoor sets & streets.', bonus: '+3 quality Drama/Western/War', unlock: { type: 'revenue', amount: 300e6 }, passive: { qualityBonus: 3, genres: ['Drama', 'Western', 'War'] }, gridPos: [0, 2] },
-  { id: 'executive', name: 'Executive Tower', emoji: '🏛️', desc: 'Impressive headquarters.', bonus: '+5 reputation', unlock: { type: 'rep', amount: 60 }, passive: { repBonus: 5 }, gridPos: [1, 0] },
-  { id: 'soundstage3', name: 'Mega Soundstage', emoji: '🎭', desc: 'The biggest stage in town.', bonus: '+5 quality', unlock: { type: 'revenue', amount: 500e6 }, passive: { qualityBonus: 5 }, gridPos: [2, 0] },
-  { id: 'recording', name: 'Recording Studio', emoji: '🎵', desc: 'Score & soundtrack.', bonus: '+2 quality Musical/Animation', unlock: { type: 'awards', count: 5 }, passive: { qualityBonus: 2, genres: ['Musical', 'Animation'] }, gridPos: [3, 0] },
-  { id: 'archive', name: 'Film Archive', emoji: '🗄️', desc: 'Preserving your legacy.', bonus: '+10% catalog revenue', unlock: { type: 'films', count: 30 }, passive: { catalogBonus: 0.10 }, gridPos: [0, 3] },
-  { id: 'academy_bldg', name: 'Training Academy', emoji: '🎓', desc: 'Develop new talent.', bonus: '+10% talent growth', unlock: { type: 'awards', count: 10 }, passive: { talentGrowth: 0.10 }, gridPos: [1, 3] },
-  { id: 'theme_gate', name: 'Theme Park Gate', emoji: '🎢', desc: 'The ultimate expansion.', bonus: 'Theme park revenue', unlock: { type: 'revenue', amount: 1e9 }, passive: { themeParkBonus: true }, gridPos: [2, 3] },
-  { id: 'helipad', name: 'VIP Helipad', emoji: '🚁', desc: 'For the biggest stars.', bonus: '+5% talent negotiation', unlock: { type: 'acquisitions', count: 2 }, passive: { talentDiscount: 0.05 }, gridPos: [3, 3] },
+  { id: 'office', name: 'Studio Office', emoji: '🏢', desc: 'Where deals are made.', bonus: 'Base of operations', cost: 500000, minYear: 1970, passive: null, gridPos: [1, 1] },
+  { id: 'soundstage1', name: 'Soundstage A', emoji: '🎬', desc: 'Your first filming stage.', bonus: '+1 quality', cost: 2000000, minYear: 1970, passive: { qualityBonus: 1 }, gridPos: [2, 1] },
+  { id: 'parking', name: 'Parking Structure', emoji: '🅿️', desc: 'Gotta park somewhere.', bonus: 'Supports lot expansion', cost: 1000000, minYear: 1970, passive: null, gridPos: [0, 0] },
+  { id: 'commissary', name: 'Commissary', emoji: '🍽️', desc: 'Cast & crew dining.', bonus: '-5% production costs', cost: 3000000, minYear: 1970, passive: { costReduction: 0.05 }, gridPos: [0, 1] },
+  { id: 'soundstage2', name: 'Soundstage B', emoji: '🎥', desc: 'Double your capacity.', bonus: '+2 quality', cost: 5000000, minYear: 1970, passive: { qualityBonus: 2 }, gridPos: [3, 1] },
+  { id: 'postprod', name: 'Post-Production Suite', emoji: '🖥️', desc: 'Editing & color grading.', bonus: '+3 quality, faster post', cost: 8000000, minYear: 1975, passive: { qualityBonus: 3 }, gridPos: [2, 2] },
+  { id: 'vfxlab', name: 'VFX Laboratory', emoji: '✨', desc: 'In-house visual effects.', bonus: '-10% VFX costs, +4 Sci-Fi/Fantasy quality', cost: 25000000, minYear: 1990, passive: { qualityBonus: 4, vfxDiscount: 0.10, genres: ['Sci-Fi', 'Fantasy', 'Action'] }, gridPos: [3, 2] },
+  { id: 'screening', name: 'Screening Room', emoji: '🎞️', desc: 'Private test screenings.', bonus: '+2 quality (better feedback)', cost: 4000000, minYear: 1970, passive: { qualityBonus: 2 }, gridPos: [1, 2] },
+  { id: 'backlot', name: 'Backlot Sets', emoji: '🏘️', desc: 'Outdoor sets & streets.', bonus: '+3 quality Drama/Western/War', cost: 10000000, minYear: 1970, passive: { qualityBonus: 3, genres: ['Drama', 'Western', 'War'] }, gridPos: [0, 2] },
+  { id: 'executive', name: 'Executive Tower', emoji: '🏛️', desc: 'Impressive headquarters.', bonus: '+5 reputation', cost: 15000000, minYear: 1975, passive: { repBonus: 5 }, gridPos: [1, 0] },
+  { id: 'soundstage3', name: 'Mega Soundstage', emoji: '🎭', desc: 'The biggest stage in town.', bonus: '+5 quality', cost: 30000000, minYear: 1985, passive: { qualityBonus: 5 }, gridPos: [2, 0] },
+  { id: 'recording', name: 'Recording Studio', emoji: '🎵', desc: 'Score & soundtrack.', bonus: '+2 quality Musical/Animation', cost: 8000000, minYear: 1970, passive: { qualityBonus: 2, genres: ['Musical', 'Animation'] }, gridPos: [3, 0] },
+  { id: 'archive', name: 'Film Archive', emoji: '🗄️', desc: 'Preserving your legacy.', bonus: '+10% catalog revenue', cost: 12000000, minYear: 1980, passive: { catalogBonus: 0.10 }, gridPos: [0, 3] },
+  { id: 'academy_bldg', name: 'Training Academy', emoji: '🎓', desc: 'Develop new talent.', bonus: '+10% talent growth', cost: 20000000, minYear: 1985, passive: { talentGrowth: 0.10 }, gridPos: [1, 3] },
+  { id: 'theme_gate', name: 'Theme Park Gate', emoji: '🎢', desc: 'The ultimate expansion.', bonus: 'Theme park revenue', cost: 100000000, minYear: 1990, passive: { themeParkBonus: true }, gridPos: [2, 3] },
+  { id: 'helipad', name: 'VIP Helipad', emoji: '🚁', desc: 'For the biggest stars.', bonus: '+5% talent negotiation', cost: 50000000, minYear: 2000, passive: { talentDiscount: 0.05 }, gridPos: [3, 3] },
 ];
 
 const getUnlockedBuildings = (state) => {
-  return STUDIO_LOT_BUILDINGS.filter(b => {
-    const u = b.unlock;
-    if (u.type === 'start') return true;
-    if (u.type === 'films') return (state.totalFilmsReleased || 0) >= u.count;
-    if (u.type === 'revenue') return (state.totalGross || 0) >= u.amount;
-    if (u.type === 'rep') return (state.reputation || 0) >= u.amount;
-    if (u.type === 'awards') return (state.totalAwards || 0) >= u.count;
-    if (u.type === 'acquisitions') return (state.acquiredStudios || []).length >= u.count;
-    return false;
-  });
+  const purchased = new Set((state.purchasedLotBuildings || []).map(b => b.buildingId));
+  return STUDIO_LOT_BUILDINGS.filter(b => purchased.has(b.id));
 };
 
 const getLotPassiveBonuses = (state) => {
-  const unlocked = getUnlockedBuildings(state);
+  const purchased = getUnlockedBuildings(state);
   let totalQuality = 0, costReduction = 0;
   const genreBonuses = {};
-  unlocked.forEach(b => {
+  purchased.forEach(b => {
     if (!b.passive) return;
     totalQuality += b.passive.qualityBonus || 0;
     costReduction += b.passive.costReduction || 0;
@@ -2692,7 +2694,7 @@ const simulateTheatricalRun = (totalGross, quality, genre, rating, budget) => {
 
 // ==================== GAME LOGIC ====================
 
-const calcQuality = (film, facilitiesLevel, genreTrend, specialization) => {
+const calcQuality = (film, facilitiesLevel, genreTrend, specialization, filmsReleased = 0) => {
   const d = film.director, a = film.actor, w = film.writer;
   const budgetM = film.budget / 1e6;
 
@@ -2809,6 +2811,19 @@ const calcQuality = (film, facilitiesLevel, genreTrend, specialization) => {
     });
     if (film.themes.length === 2) base += 2; // thematic depth bonus
   }
+
+  // === STUDIO EXPERIENCE MODIFIER ===
+  // New studios lack institutional knowledge, post-production pipelines, industry relationships,
+  // and the thousand small efficiencies that veteran studios have internalized.
+  // 0 films: -15, 1 film: -10, 2 films: -7, 3 films: -5, 5 films: -3, 8 films: -1, 12+: 0
+  const expPenalty = filmsReleased >= 12 ? 0
+    : filmsReleased >= 8 ? -1
+    : filmsReleased >= 5 ? -3
+    : filmsReleased >= 3 ? -5
+    : filmsReleased >= 2 ? -7
+    : filmsReleased >= 1 ? -10
+    : -15;
+  base += expPenalty;
 
   if (!film._preview) base += (Math.random() - 0.5) * 14; // randomness only at greenlight, not during preview
 
@@ -3332,7 +3347,7 @@ const INIT = {
   shelvedFilms: [],           // [{...film, shelvedYear, shelvedMonth, reason}]
   // Studio Lot Expansion
   lotBuildings: [],           // [{buildingId, level, builtTurn}]
-  lotCapacity: 5,             // max buildings, increases with facilities
+  purchasedLotBuildings: [],  // [{buildingId, purchasedTurn}] — from STUDIO_LOT_BUILDINGS
   // Festival Expansion
   festivalAwards: [],         // [{festivalId, awardId, filmId, year}]
   // Home Video
@@ -3491,7 +3506,7 @@ function reducer(state, action) {
 
       const spec = SPECIALIZATIONS[action.specialization || 0];
       const startYear = scenario.startYear || 1970;
-      const startCash = scenario.startCash || 2000000;
+      const startCash = action.startCashOverride || scenario.startCash || 2000000;
       const startRep = scenario.startRep || 20;
       const startPres = scenario.startPres || 10;
       const scenarioGoal = scenario.goal || null;
@@ -3531,7 +3546,7 @@ function reducer(state, action) {
         screeningFeedback: {},
         shelvedFilms: [],
         lotBuildings: [],
-        lotCapacity: 5,
+        purchasedLotBuildings: [],
         festivalAwards: [],
         homeVideoRevenue: {},
         totalHomeVideoRevenue: 0,
@@ -4790,8 +4805,8 @@ case 'REMASTER_FILM': {
       if (!show) return state;
       return {
         ...state,
-        tvShows: state.tvShows.map(s => s.id === action.showId ? { ...s, status: 'cancelled' } : s),
-        gameLog: [...state.gameLog, { text: `Cancelled "${show.title}" after ${show.seasons} season(s).`, type: 'warning' }],
+        tvShows: state.tvShows.map(s => s.id === action.showId ? { ...s, status: 'cancelled', _endedYear: state.year } : s),
+        gameLog: [...state.gameLog, { text: `Cancelled "${show.title}" after ${show.currentSeason} season(s).`, type: 'warning' }],
       };
     }
 
@@ -5540,7 +5555,6 @@ case 'REMASTER_FILM': {
       const bldg = LOT_BUILDINGS.find(b => b.id === action.buildingId);
       if (!bldg || state.cash < bldg.cost) return state;
       const currentLot = state.lotBuildings || [];
-      if (currentLot.length >= (state.lotCapacity || 5)) return { ...state, errorMsg: 'Studio lot is at capacity. Upgrade facilities or demolish a building.' };
       if (currentLot.find(b => b.buildingId === action.buildingId)) return { ...state, errorMsg: 'Already built.' };
       return {
         ...state,
@@ -5571,6 +5585,31 @@ case 'REMASTER_FILM': {
         lotBuildings: (state.lotBuildings || []).filter(b => b.buildingId !== action.buildingId),
         cash: state.cash + Math.round((bldgDef?.cost || 0) * 0.3),
         gameLog: [...state.gameLog, { text: `Demolished ${bldgDef?.name || 'building'}. Recovered ${fmt(Math.round((bldgDef?.cost || 0) * 0.3))}`, type: 'info' }],
+      };
+    }
+
+    case 'PURCHASE_LOT_BUILDING': {
+      const bldg = STUDIO_LOT_BUILDINGS.find(b => b.id === action.buildingId);
+      if (!bldg || state.cash < bldg.cost) return { ...state, errorMsg: 'Not enough cash.' };
+      const currentPurchased = state.purchasedLotBuildings || [];
+      if (currentPurchased.find(b => b.buildingId === action.buildingId)) return { ...state, errorMsg: 'Already purchased.' };
+      if (bldg.minYear && (state.year || 1970) < bldg.minYear) return { ...state, errorMsg: `Not available until ${bldg.minYear}.` };
+      return {
+        ...state,
+        cash: state.cash - bldg.cost,
+        purchasedLotBuildings: [...currentPurchased, { buildingId: bldg.id, purchasedTurn: state.turn }],
+        gameLog: [...state.gameLog, { text: `Built ${bldg.name} on the studio lot (${fmt(bldg.cost)})`, type: 'success' }],
+      };
+    }
+
+    case 'SELL_LOT_BUILDING': {
+      const bldg = STUDIO_LOT_BUILDINGS.find(b => b.id === action.buildingId);
+      const refund = Math.round((bldg?.cost || 0) * 0.3);
+      return {
+        ...state,
+        purchasedLotBuildings: (state.purchasedLotBuildings || []).filter(b => b.buildingId !== action.buildingId),
+        cash: state.cash + refund,
+        gameLog: [...state.gameLog, { text: `Sold ${bldg?.name || 'building'}. Recovered ${fmt(refund)}`, type: 'info' }],
       };
     }
 
@@ -5876,8 +5915,9 @@ case 'REMASTER_FILM': {
       let expenses = 0;
       let totalFilmsReleased = state.totalFilmsReleased;
 
-      // 1. Pick a random event
-      const eventTemplate = pick(RANDOM_EVENTS);
+      // 1. Pick a random event (filtered by era)
+      const eraEligibleEvents = RANDOM_EVENTS.filter(e => !e.minYear || state.year >= e.minYear);
+      const eventTemplate = pick(eraEligibleEvents);
       let eventText = eventTemplate.text;
       let eventGenre = pick(GENRES);
       eventText = eventText.replace('{genre}', eventGenre);
@@ -6047,7 +6087,7 @@ case 'REMASTER_FILM': {
             f.turnsNeeded = 999;
 
             // CALCULATE FINAL QUALITY with all pipeline bonuses
-            let quality = calcQuality(f, state.facilitiesLevel, state.genreTrends[f.genre] || 0, state.specialization);
+            let quality = calcQuality(f, state.facilitiesLevel, state.genreTrends[f.genre] || 0, state.specialization, state.totalFilmsReleased);
 
             // Director genre expertise
             if (f.director?.genreBonus === f.genre) quality = clamp(quality + DIRECTOR_GENRE_EXPERTISE_BONUS, 5, 98);
@@ -6813,32 +6853,39 @@ case 'REMASTER_FILM': {
           const isStreamingExclusive = s.releaseStrategy === 'streaming_exclusive' || s.releaseStrategy === 'hybrid';
           const isNetworkShow = s.releaseStrategy === 'network' && s.networkId;
 
+          // Hit show escalation: later seasons of successful shows earn more
+          const seasonBonus = s.currentSeason > 1 && s.quality >= 55 ? 1 + (s.currentSeason - 1) * 0.12 : 1; // +12% per season for good shows
+          // International sales based on quality and viewership
+          const intlSalesMult = s.quality >= 75 ? 0.35 : s.quality >= 55 ? 0.20 : 0.08;
+          const intlSalesBase = Math.round(s.viewership * intlSalesMult * 0.15);
+          s.internationalRevenue = Math.round(intlSalesBase * seasonBonus);
+
           if (isStreamingExclusive && streaming) {
             let subBoost = Math.round(s.viewership * 0.1 * (s.quality / 50));
             if (showrunner?.traitEffect?.subscriberBonus) subBoost = Math.round(subBoost * (1 + showrunner.traitEffect.subscriberBonus));
             s.subscriberImpact = subBoost;
-            s.monthlyRevenue = 0;
+            s.monthlyRevenue = s.internationalRevenue; // streaming shows still earn international sales
           } else if (isNetworkShow) {
             // Network shows earn license fees + ad revenue share
             const netData = TV_NETWORKS.find(n => n.id === s.networkId);
             const deal = (state.tvNetworkDeals || []).find(d => d.networkId === s.networkId && d.active);
             const baseLicenseFee = deal ? deal.licenseFeePerEp : (netData ? netData.licenseFeePerEp : 1e6);
-            // Per-episode license fee paid monthly across the season
-            const monthlyLicense = Math.round(baseLicenseFee * s.episodes / Math.max(s.turnsNeeded, 1));
-            // Ad revenue share based on viewership
+            // Per-episode license fee paid monthly across the season — escalates for hit shows
+            const monthlyLicense = Math.round(baseLicenseFee * s.episodes * seasonBonus / Math.max(s.turnsNeeded, 1));
+            // Ad revenue share based on viewership — grows as audience builds
             const adShare = netData ? netData.adRevShare : 0.1;
-            const monthlyAdRev = Math.round(s.viewership * adShare * 0.3);
+            const monthlyAdRev = Math.round(s.viewership * adShare * 0.3 * seasonBonus);
             // Network audience reach amplifies viewership
             const reachMult = netData ? netData.audienceReach : 0.5;
             s.viewership = Math.round(s.viewership * (0.7 + reachMult * 0.5));
-            s.monthlyRevenue = monthlyLicense + monthlyAdRev;
+            s.monthlyRevenue = monthlyLicense + monthlyAdRev + s.internationalRevenue;
             s.subscriberImpact = 0;
             // Prestige bonus from cable networks
             if (netData && netData.prestigeMod > 1.0 && s.quality >= 70) {
               s.networkPrestigeBonus = Math.round((netData.prestigeMod - 1.0) * s.quality * 0.5);
             }
           } else {
-            s.monthlyRevenue = Math.round(s.viewership * 0.5 + s.quality * 5000);
+            s.monthlyRevenue = Math.round((s.viewership * 0.5 + s.quality * 5000) * seasonBonus) + s.internationalRevenue;
           }
 
           s.criticReviews = (FILM_CRITICS || []).slice(0, 5).map(critic => {
@@ -6863,6 +6910,7 @@ case 'REMASTER_FILM': {
           // Only generate revenue while episodes are still airing (not after season ends)
           if (s.turnsInStatus <= s.turnsNeeded) {
             revenue += s.monthlyRevenue;
+            s.totalRevenue = (s.totalRevenue || 0) + s.monthlyRevenue;
             if (streaming && s.subscriberImpact > 0) {
               const monthlySubGain = Math.round(s.subscriberImpact / Math.max(s.turnsNeeded, 1));
               streaming.subscribers = (streaming.subscribers || 0) + monthlySubGain;
@@ -6873,6 +6921,7 @@ case 'REMASTER_FILM': {
             s.seasonFinished = true; // prevent re-triggering every turn
             if (s.currentSeason >= (TV_FORMATS.find(f => f.id === s.format)?.maxSeasons || 99)) {
               s.status = 'ended';
+              s._endedYear = newYear;
             }
             s.events.push(`S${s.currentSeason} finished airing`);
             if (s.quality < 35 && Math.random() < 0.4) {
@@ -6897,6 +6946,50 @@ case 'REMASTER_FILM': {
             }
           }
         }
+
+        // === SYNDICATION & POST-AIRING REVENUE ===
+        // Shows that have ended or been cancelled (with enough episodes) earn passive syndication income
+        if ((s.status === 'ended' || s.status === 'cancelled') && s.currentSeason >= 2 && s.quality >= 40) {
+          // Syndication: networks buy reruns. More episodes = more valuable. Quality drives price.
+          const totalEpisodes = s.episodes * s.currentSeason;
+          const syndicationEligible = totalEpisodes >= 20; // need ~20 eps for syndication packages
+          if (syndicationEligible) {
+            // Base syndication: $10K-$100K per month depending on quality and episode count
+            const synBase = Math.round(totalEpisodes * (s.quality / 100) * 3000);
+            // Decays over time — older shows earn less (but never zero for true hits)
+            const yearsSinceEnd = (s._endedYear ? newYear - s._endedYear : 0);
+            const decayMult = Math.max(0.25, 1 - yearsSinceEnd * 0.08); // lose 8% per year, floor at 25%
+            const syndicationRev = Math.round(synBase * decayMult);
+            if (!s.syndicationRevenue) s.syndicationRevenue = 0;
+            s.syndicationRevenue += syndicationRev;
+            revenue += syndicationRev;
+          }
+          // International syndication for high-quality shows
+          if (s.quality >= 60 && totalEpisodes >= 10) {
+            const intlSyndBase = Math.round(totalEpisodes * (s.quality / 100) * 1500);
+            const yearsSinceEnd = (s._endedYear ? newYear - s._endedYear : 0);
+            const intlDecay = Math.max(0.15, 1 - yearsSinceEnd * 0.1);
+            const intlSyndRev = Math.round(intlSyndBase * intlDecay);
+            if (!s.intlSyndicationRevenue) s.intlSyndicationRevenue = 0;
+            s.intlSyndicationRevenue += intlSyndRev;
+            revenue += intlSyndRev;
+          }
+          // Home media (DVD/Blu-ray/digital) for popular shows
+          if (s.quality >= 50 && s.currentSeason >= 1) {
+            const homeMediaBase = Math.round(s.quality * s.currentSeason * 800);
+            const yearsSinceEnd = (s._endedYear ? newYear - s._endedYear : 0);
+            const homeDecay = Math.max(0.1, 1 - yearsSinceEnd * 0.12);
+            const homeMediaRev = Math.round(homeMediaBase * homeDecay);
+            if (!s.homeMediaRevenue) s.homeMediaRevenue = 0;
+            s.homeMediaRevenue += homeMediaRev;
+            revenue += homeMediaRev;
+          }
+        }
+
+        // Track cumulative revenue for financial breakdown
+        if (!s.totalRevenue) s.totalRevenue = 0;
+        if (!s.totalPlayerCost) s.totalPlayerCost = s.pilotCost || 0;
+
         return s;
       });
 
@@ -8389,18 +8482,22 @@ case 'REMASTER_FILM': {
       activeZeitgeist = activeZeitgeist.map(z => ({ ...z, monthsLeft: z.monthsLeft - 1 }));
       activeZeitgeist = activeZeitgeist.filter(z => z.monthsLeft > 0);
       if (activeZeitgeist.length < 2 && Math.random() < 0.02) {
-        const event = pick(ZEITGEIST_EVENTS);
-        const duration = randInt(event.duration[0], event.duration[1]);
-        activeZeitgeist.push({
-          id: state.nextId + 300 + activeZeitgeist.length,
-          name: event.name,
-          monthsLeft: duration,
-          grossMult: event.grossMult,
-          budgetInflation: event.budgetInflation,
-          genreBoost: event.genreBoost,
-          desc: event.desc,
-        });
-        log.push({ text: `ZEITGEIST: ${event.name} begins! ${event.desc}`, type: 'info' });
+        const eraFiltered = ZEITGEIST_EVENTS.filter(e => (!e.minYear || newYear >= e.minYear) && (!e.maxYear || newYear <= e.maxYear));
+        if (eraFiltered.length === 0) { /* no eligible events for this era */ }
+        const event = eraFiltered.length > 0 ? pick(eraFiltered) : null;
+        if (event) {
+          const duration = randInt(event.duration[0], event.duration[1]);
+          activeZeitgeist.push({
+            id: state.nextId + 300 + activeZeitgeist.length,
+            name: event.name,
+            monthsLeft: duration,
+            grossMult: event.grossMult,
+            budgetInflation: event.budgetInflation,
+            genreBoost: event.genreBoost,
+            desc: event.desc,
+          });
+          log.push({ text: `ZEITGEIST: ${event.name} begins! ${event.desc}`, type: 'info' });
+        }
       }
       // Apply zeitgeist bonuses to released films this month
       activeZeitgeist.forEach(z => {
@@ -9537,6 +9634,39 @@ function ReleasedCard({ film, onCreateFranchise, onRemaster, currentYear, curren
         </div>
       </div>
 
+      {/* Financial Breakdown */}
+      {(() => {
+        const domesticCut = Math.round((film.domestic || 0) * 0.50);
+        const intlCut = Math.round((film.international || 0) * 0.25);
+        const studioRevenue = domesticCut + intlCut;
+        const licensing = film.licensingRevenue || 0;
+        const totalRevenue = studioRevenue + licensing;
+        const totalCosts = (film.budget || 0) + (film.marketing || 0);
+        const netProfit = totalRevenue - totalCosts;
+        const roi = totalCosts > 0 ? ((netProfit / totalCosts) * 100).toFixed(0) : 0;
+        return (
+          <div className="bg-gray-900 border border-gray-700 rounded-lg p-3 mb-3">
+            <div className="text-xs text-gray-400 font-bold mb-2">Financial Breakdown</div>
+            <div className="space-y-1 text-xs">
+              <div className="text-gray-500 font-bold uppercase tracking-wide mb-1">Revenue</div>
+              <div className="flex justify-between"><span className="text-gray-400">Domestic (50% studio cut)</span><span className="text-green-400">{fmt(domesticCut)}</span></div>
+              <div className="flex justify-between"><span className="text-gray-400">International (25% studio cut)</span><span className="text-green-400">{fmt(intlCut)}</span></div>
+              {licensing > 0 && <div className="flex justify-between"><span className="text-gray-400">Licensing & Ancillary</span><span className="text-blue-400">{fmt(licensing)}</span></div>}
+              <div className="flex justify-between border-t border-gray-700 pt-1 font-bold"><span className="text-gray-300">Total Revenue</span><span className="text-green-400">{fmt(totalRevenue)}</span></div>
+              <div className="text-gray-500 font-bold uppercase tracking-wide mt-2 mb-1">Costs</div>
+              <div className="flex justify-between"><span className="text-gray-400">Production Budget</span><span className="text-red-400">-{fmt(film.budget)}</span></div>
+              <div className="flex justify-between"><span className="text-gray-400">Marketing</span><span className="text-red-400">-{fmt(film.marketing)}</span></div>
+              <div className="flex justify-between border-t border-gray-700 pt-1 font-bold"><span className="text-gray-300">Total Costs</span><span className="text-red-400">-{fmt(totalCosts)}</span></div>
+              <div className={`flex justify-between border-t border-gray-600 pt-1.5 mt-1.5 font-bold text-sm`}>
+                <span className="text-white">Net Profit</span>
+                <span className={netProfit >= 0 ? 'text-green-400' : 'text-red-400'}>{netProfit >= 0 ? '' : '-'}{fmt(Math.abs(netProfit))}</span>
+              </div>
+              <div className="flex justify-between text-gray-500"><span>ROI</span><span className={Number(roi) >= 0 ? 'text-green-500' : 'text-red-500'}>{roi}%</span></div>
+            </div>
+          </div>
+        );
+      })()}
+
       {film.theatricalRun && film.theatricalRun.length > 0 && (
         <div className="mb-3">
           <div className="text-xs text-gray-400 mb-1 font-bold">Theatrical Run</div>
@@ -9900,42 +10030,46 @@ function NewspaperArchive({ archive, onClose }) {
 
 // ==================== STUDIO LOT VISUAL ====================
 function StudioLotVisual({ state }) {
-  const unlocked = getUnlockedBuildings(state);
-  const unlockedIds = new Set(unlocked.map(b => b.id));
+  const purchased = getUnlockedBuildings(state);
+  const purchasedIds = new Set(purchased.map(b => b.id));
   const bonuses = getLotPassiveBonuses(state);
+  const currentYear = state.year || 1970;
   return (
     <div className="bg-gray-800 border border-gray-700 rounded-lg p-4">
       <div className="flex justify-between items-center mb-3">
         <div className="text-white font-bold text-lg">Studio Lot</div>
-        <div className="text-gray-400 text-xs">{unlocked.length}/{STUDIO_LOT_BUILDINGS.length} buildings</div>
+        <div className="text-gray-400 text-xs">{purchased.length}/{STUDIO_LOT_BUILDINGS.length} buildings</div>
       </div>
       <div className="grid grid-cols-4 gap-1.5 mb-3">
         {Array.from({ length: 4 }, (_, row) =>
           Array.from({ length: 4 }, (_, col) => {
             const building = STUDIO_LOT_BUILDINGS.find(b => b.gridPos[0] === col && b.gridPos[1] === row);
-            const isUnlocked = building && unlockedIds.has(building.id);
-            const isLocked = building && !isUnlocked;
+            const isOwned = building && purchasedIds.has(building.id);
+            const isAvailable = building && !isOwned && (!building.minYear || currentYear >= building.minYear);
+            const isLocked = building && !isOwned && building.minYear && currentYear < building.minYear;
             return (
               <div key={`${col}-${row}`}
                 className={`rounded flex flex-col items-center justify-center p-1.5 text-center transition-all min-h-[70px] ${
-                  isUnlocked ? 'bg-amber-900/50 border border-amber-600' :
-                  isLocked ? 'bg-gray-700/50 border border-gray-600 border-dashed' :
+                  isOwned ? 'bg-amber-900/50 border border-amber-600' :
+                  isAvailable ? 'bg-gray-700/50 border border-gray-600 border-dashed' :
+                  isLocked ? 'bg-gray-800/30 border border-gray-700 border-dashed opacity-40' :
                   'bg-gray-900/30 border border-gray-800'
                 }`}
-                title={building ? `${building.name}: ${building.desc}\n${isUnlocked ? 'ACTIVE: ' + building.bonus : 'Locked'}` : ''}>
+                title={building ? `${building.name}: ${building.desc}\n${isOwned ? 'OWNED: ' + building.bonus : isAvailable ? 'Available: ' + fmt(building.cost) : isLocked ? 'Available in ' + building.minYear : ''}` : ''}>
                 {building ? (
                   <>
-                    <span className={`text-xl ${isUnlocked ? '' : 'opacity-30 grayscale'}`}>{building.emoji}</span>
-                    <span className={`text-xs leading-tight mt-0.5 ${isUnlocked ? 'text-amber-300' : 'text-gray-600'}`} style={{ fontSize: '0.65rem' }}>
+                    <span className={`text-xl ${isOwned ? '' : 'opacity-30 grayscale'}`}>{building.emoji}</span>
+                    <span className={`text-xs leading-tight mt-0.5 ${isOwned ? 'text-amber-300' : 'text-gray-600'}`} style={{ fontSize: '0.65rem' }}>
                       {building.name.length > 14 ? building.name.slice(0, 13) + '…' : building.name}
                     </span>
+                    {isAvailable && (
+                      <span className="text-green-500 mt-0.5" style={{ fontSize: '0.55rem' }}>
+                        {fmt(building.cost)}
+                      </span>
+                    )}
                     {isLocked && (
                       <span className="text-gray-500 mt-0.5" style={{ fontSize: '0.55rem' }}>
-                        {building.unlock.type === 'films' ? `${building.unlock.count} films` :
-                         building.unlock.type === 'revenue' ? `${(building.unlock.amount / 1e6).toFixed(0)}M rev` :
-                         building.unlock.type === 'rep' ? `${building.unlock.amount} rep` :
-                         building.unlock.type === 'awards' ? `${building.unlock.count} awards` :
-                         building.unlock.type === 'acquisitions' ? `${building.unlock.count} acq` : ''}
+                        {building.minYear}+
                       </span>
                     )}
                   </>
@@ -10136,6 +10270,7 @@ export default function MovieMogul() {
   const [specIdx, setSpecIdx] = useState(0);
   const [mottoInput, setMottoInput] = useState('');
   const [scenarioIdx, setScenarioIdx] = useState(0);
+  const [startCashOverride, setStartCashOverride] = useState(5000000);
   const [screeningSortBy, setScreeningSortBy] = useState('year');
   const [musicSubTab, setMusicSubTab] = useState('artists');
   const [collabSelect, setCollabSelect] = useState(null);
@@ -10147,7 +10282,7 @@ export default function MovieMogul() {
     const selSpec = SPECIALIZATIONS[specIdx];
     const selScenario = SCENARIOS[scenarioIdx];
     const startGame = () => {
-      if (nameInput.trim()) dispatch({ type: 'START_GAME', name: nameInput.trim(), color: colorIdx, specialization: specIdx, motto: mottoInput.trim(), scenario: selScenario.id });
+      if (nameInput.trim()) dispatch({ type: 'START_GAME', name: nameInput.trim(), color: colorIdx, specialization: specIdx, motto: mottoInput.trim(), scenario: selScenario.id, startCashOverride });
     };
     return (
       <div className="w-full min-h-screen bg-gray-950 flex items-center justify-center p-4">
@@ -10200,6 +10335,31 @@ export default function MovieMogul() {
                 ))}
               </div>
             </div>
+            <div>
+              <div className="text-gray-300 text-sm mb-2">Starting Cash: <span className={`font-bold ${selColor.accent}`}>{fmt(startCashOverride)}</span></div>
+              <div className="flex items-center gap-3">
+                <span className="text-gray-500 text-xs whitespace-nowrap">$1M</span>
+                <div className="flex-1 relative">
+                  <input type="range" min={1000000} max={50000000} step={500000} value={startCashOverride}
+                    onChange={e => setStartCashOverride(Number(e.target.value))}
+                    className="w-full h-2 bg-gray-700 rounded-lg appearance-none cursor-pointer accent-amber-500" />
+                  <div className="flex justify-between text-gray-600 text-[10px] mt-1 px-0.5">
+                    <span>|</span><span>|</span><span>|</span><span>|</span><span>|</span>
+                  </div>
+                  <div className="flex justify-between text-gray-600 text-[10px] px-0.5">
+                    <span>$1M</span><span>$12M</span><span>$25M</span><span>$37M</span><span>$50M</span>
+                  </div>
+                </div>
+                <span className="text-gray-500 text-xs whitespace-nowrap">$50M</span>
+              </div>
+              <div className="text-gray-500 text-xs mt-1 text-center">
+                {startCashOverride <= 2000000 ? 'Scrappy Indie — every dollar counts' :
+                 startCashOverride <= 5000000 ? 'Classic Start — the Hollywood dream' :
+                 startCashOverride <= 15000000 ? 'Well-Funded — room to experiment' :
+                 startCashOverride <= 30000000 ? 'Studio Mogul — serious backing' :
+                 'Mega Studio — money is no object'}
+              </div>
+            </div>
             <button onClick={startGame} disabled={!nameInput.trim()}
               className={`w-full ${selColor.bg} hover:opacity-90 disabled:opacity-40 text-gray-900 font-bold py-3 rounded-lg text-lg transition`}>
               START GAME
@@ -10220,7 +10380,7 @@ export default function MovieMogul() {
               </button>
             </div>
           </div>
-          <div className="text-gray-600 text-xs mt-6">Start in 1970 with $5M. Build your way to a Hollywood legend.</div>
+          <div className="text-gray-600 text-xs mt-6">Start in {selScenario.startYear || 1970} with {fmt(startCashOverride)}. Build your way to a Hollywood legend.</div>
         </div>
       </div>
     );
@@ -10331,8 +10491,8 @@ export default function MovieMogul() {
   const inPipeline = state.films.filter(f => ['development', 'production', 'postproduction', 'script_dev', 'pre_production', 'principal_photography', 'post_production', 'marketing_campaign'].includes(f.status));
   const released = state.films.filter(f => f.status === 'released').slice().reverse();
   const awaitingRelease = state.films.filter(f => f.status === 'completed' || f.status === 'scheduled');
-  const tabs = ['dashboard', 'develop', 'ip', 'production', 'release', 'talent', 'studio', 'lot', 'music', 'merch', 'finance', 'market', 'streaming', 'tv', 'catalog', 'press', 'academy', 'partners', 'screening'];
-  const tabIcons = { dashboard: '📊', develop: '🎬', ip: '🏷', production: '🎥', release: '🎞', talent: '⭐', studio: '🏢', lot: '🏗️', music: '🎵', merch: '🛍️', finance: '💰', market: '📈', streaming: '📺', tv: '📺', catalog: '📀', press: '📰', academy: '🎓', partners: '🌍', screening: '🎬' };
+  const tabs = ['dashboard', 'develop', 'ip', 'production', 'release', 'talent', 'studio', 'music', 'merch', 'finance', 'market', 'streaming', 'tv', 'catalog', 'press', 'academy', 'partners', 'screening'];
+  const tabIcons = { dashboard: '📊', develop: '🎬', ip: '🏷', production: '🎥', release: '🎞', talent: '⭐', studio: '🏢', music: '🎵', merch: '🛍️', finance: '💰', market: '📈', streaming: '📺', tv: '📺', catalog: '📀', press: '📰', academy: '🎓', partners: '🌍', screening: '🎬' };
 
   const facilityCosts = [0, 500000, 2000000, 5000000, 15000000, 50000000];
   const facilityNames = ['Garage Studio', 'Small Lot', 'Soundstages', 'VFX Lab', 'Backlot Complex', 'Premier Facilities'];
@@ -10398,6 +10558,80 @@ export default function MovieMogul() {
           </ResponsiveContainer>
         </div>
       )}
+
+      {/* === STUDIO ISSUES & ALERTS === */}
+      {(() => {
+        const issues = [];
+        // Pending talent drama
+        if (state.pendingDrama) {
+          const t1 = state.contracts.find(t => t.id === state.pendingDrama.talent1Id);
+          const evtDef = (typeof TALENT_DRAMA_EVENTS !== 'undefined' ? TALENT_DRAMA_EVENTS : []).find(e => e.id === state.pendingDrama.eventId);
+          issues.push({ type: 'drama', icon: '🎭', severity: 'high', text: evtDef ? evtDef.name : 'Talent Drama', detail: `${t1?.name || 'Someone'} needs your attention`, color: 'red' });
+        }
+        // Active strike
+        if (state.activeStrike) {
+          issues.push({ type: 'strike', icon: '⚠️', severity: 'high', text: 'Union Strike Active', detail: `${state.activeStrike.monthsLeft} month(s) remaining`, color: 'orange' });
+        }
+        // Low morale talent
+        state.contracts.filter(t => (t.morale || 75) < 40).forEach(t => {
+          issues.push({ type: 'morale', icon: '😤', severity: 'medium', text: `${t.name} has low morale`, detail: `Morale: ${t.morale || 0}/100 — risk of leaving`, color: 'yellow' });
+        });
+        // Expiring contracts (within 2 months)
+        state.contracts.filter(t => (t.contractMonths || 0) <= 2 && (t.contractMonths || 0) > 0).forEach(t => {
+          issues.push({ type: 'contract', icon: '📋', severity: 'medium', text: `${t.name}'s contract expiring`, detail: `${t.contractMonths} month(s) left — renew or lose them`, color: 'amber' });
+        });
+        // Poor labor relations
+        if (state.laborRelations === 'poor' || state.laborRelations === 'hostile') {
+          issues.push({ type: 'labor', icon: '🔧', severity: state.laborRelations === 'hostile' ? 'high' : 'medium', text: `Labor relations: ${state.laborRelations}`, detail: state.laborRelations === 'hostile' ? 'Strike risk is very high!' : 'Workers are unhappy — strike possible', color: state.laborRelations === 'hostile' ? 'red' : 'yellow' });
+        }
+        // Low cash warning
+        if (state.cash < 1000000 && state.cash >= 0) {
+          issues.push({ type: 'cash', icon: '💰', severity: 'medium', text: 'Cash reserves critically low', detail: `Only ${fmt(state.cash)} remaining`, color: 'yellow' });
+        }
+        if (state.cash < 0) {
+          issues.push({ type: 'cash', icon: '🚨', severity: 'high', text: 'Studio is in debt!', detail: `${fmt(state.cash)} — secure funding immediately`, color: 'red' });
+        }
+        // TV shows needing renewal decision
+        state.tvShows.filter(s => s.status === 'airing' && s.seasonFinished).forEach(s => {
+          issues.push({ type: 'tv_renew', icon: '📺', severity: 'low', text: `"${s.title}" S${s.currentSeason} finished`, detail: 'Renew or cancel in TV Deep Dive', color: 'teal' });
+        });
+        // Pilot ready to pitch
+        state.tvShows.filter(s => s.status === 'pilot_complete').forEach(s => {
+          issues.push({ type: 'tv_pitch', icon: '📺', severity: 'low', text: `"${s.title}" pilot ready`, detail: 'Pitch to networks in TV Deep Dive', color: 'teal' });
+        });
+
+        if (issues.length === 0) return null;
+        const severityOrder = { high: 0, medium: 1, low: 2 };
+        issues.sort((a, b) => severityOrder[a.severity] - severityOrder[b.severity]);
+        return (
+          <div className="bg-gray-800 border border-gray-700 rounded-lg p-4">
+            <div className="text-white font-bold text-sm mb-2">⚡ Studio Alerts ({issues.length})</div>
+            <div className="space-y-1.5">
+              {issues.map((issue, i) => (
+                <div key={i} className={`flex items-start gap-2 p-2 rounded border ${
+                  issue.color === 'red' ? 'bg-red-900/30 border-red-800' :
+                  issue.color === 'orange' ? 'bg-orange-900/30 border-orange-800' :
+                  issue.color === 'yellow' ? 'bg-yellow-900/20 border-yellow-800' :
+                  issue.color === 'amber' ? 'bg-amber-900/20 border-amber-800' :
+                  'bg-teal-900/20 border-teal-800'
+                }`}>
+                  <span className="text-lg">{issue.icon}</span>
+                  <div className="flex-1 min-w-0">
+                    <div className={`text-sm font-bold ${
+                      issue.color === 'red' ? 'text-red-400' :
+                      issue.color === 'orange' ? 'text-orange-400' :
+                      issue.color === 'yellow' ? 'text-yellow-400' :
+                      issue.color === 'amber' ? 'text-amber-400' :
+                      'text-teal-400'
+                    }`}>{issue.text}</div>
+                    <div className="text-xs text-gray-400">{issue.detail}</div>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        );
+      })()}
 
       {awaitingRelease.length > 0 && (
         <div className="bg-green-900/30 border border-green-600 rounded-lg p-4">
@@ -10769,7 +11003,7 @@ export default function MovieMogul() {
     let projectedQuality = null;
     if (hasTeam) {
       const fakeFilm = { _preview: true, director: dir, actor: act, writer: wri, producer: prod || null, budget: state.devBudgetM * 1e6, genre: script.genre, genre2: state.devGenre2 };
-      projectedQuality = calcQuality(fakeFilm, state.facilitiesLevel, state.genreTrends[script.genre] || 0, state.specialization);
+      projectedQuality = calcQuality(fakeFilm, state.facilitiesLevel, state.genreTrends[script.genre] || 0, state.specialization, state.totalFilmsReleased);
     }
 
     return (
@@ -11212,6 +11446,16 @@ export default function MovieMogul() {
               <div className="bg-amber-400 h-3 rounded-full transition-all" style={{ width: `${projectedQuality}%` }}></div>
             </div>
             <div className="text-xs text-gray-500 mt-1">(Actual quality may vary ±6 from projection)</div>
+            {state.totalFilmsReleased < 12 && (
+              <div className="text-xs mt-1 text-yellow-500">
+                {state.totalFilmsReleased === 0 ? '⚠ Brand new studio — inexperience penalty is significant'
+                  : state.totalFilmsReleased < 3 ? '⚠ Young studio — still learning the ropes'
+                  : state.totalFilmsReleased < 5 ? 'Studio gaining experience — small penalty remains'
+                  : state.totalFilmsReleased < 8 ? 'Experienced studio — minimal penalty'
+                  : 'Nearly veteran studio — negligible penalty'}
+                {' '}({state.totalFilmsReleased}/12 films toward full experience)
+              </div>
+            )}
           </div>
         )}
 
@@ -11786,7 +12030,19 @@ export default function MovieMogul() {
 
         {/* Talent Profile Modal */}
         {state.selectedTalentId && (() => {
-          const t = state.contracts.find(c => c.id === state.selectedTalentId) || state.worldTalent.find(w => w.id === state.selectedTalentId);
+          let t = state.contracts.find(c => c.id === state.selectedTalentId) || state.worldTalent.find(w => w.id === state.selectedTalentId);
+          // Also search film history for talent snapshots (covers retired/departed talent)
+          if (!t) {
+            for (const f of [...state.films, ...(state.allFilmHistory || [])]) {
+              if (f.director?.id === state.selectedTalentId) { t = f.director; break; }
+              if (f.actor?.id === state.selectedTalentId) { t = f.actor; break; }
+              if (f.writer?.id === state.selectedTalentId) { t = f.writer; break; }
+              if (f.producer?.id === state.selectedTalentId) { t = f.producer; break; }
+              if (f.composer?.id === state.selectedTalentId) { t = f.composer; break; }
+              const cm = (f.castMembers || []).find(c => c.id === state.selectedTalentId);
+              if (cm) { t = cm; break; }
+            }
+          }
           if (!t) return null;
           // Build filmography from released films
           const filmography = (state.allFilmHistory || []).filter(f => !f.isRival && (
@@ -12367,32 +12623,101 @@ export default function MovieMogul() {
         )}
       </div>
       <StudioLotVisual state={state} />
+
+      {/* Lot Buildings — purchasable from STUDIO_LOT_BUILDINGS */}
       <div>
-        {/* Studio Lot */}
-        <div className="text-white font-bold text-lg mb-3">Studio Lot</div>
-        <div className="text-gray-400 text-sm mb-3">Build and upgrade facilities on your lot to boost production.</div>
-        <div className="text-xs text-gray-400 mb-3">Buildings: {(state.lotBuildings || []).length} / {state.lotCapacity || 5}</div>
+        <div className="text-white font-bold text-lg mb-3">Studio Lot Buildings</div>
+        <div className="text-gray-400 text-sm mb-3">Purchase buildings for your lot. Newer technology costs more.</div>
+        {(() => {
+          const purchasedIds = new Set((state.purchasedLotBuildings || []).map(b => b.buildingId));
+          const owned = STUDIO_LOT_BUILDINGS.filter(b => purchasedIds.has(b.id));
+          const available = STUDIO_LOT_BUILDINGS.filter(b => !purchasedIds.has(b.id) && (!b.minYear || state.year >= b.minYear));
+          const locked = STUDIO_LOT_BUILDINGS.filter(b => !purchasedIds.has(b.id) && b.minYear && state.year < b.minYear);
+          return (<>
+            {owned.length > 0 && (
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3 mb-4">
+                {owned.map(b => (
+                  <div key={b.id} className="bg-gray-800 border border-amber-600 rounded-lg p-3">
+                    <div className="flex justify-between items-start">
+                      <div className="flex items-center gap-2">
+                        <span className="text-xl">{b.emoji}</span>
+                        <div>
+                          <div className="text-amber-300 font-bold text-sm">{b.name}</div>
+                          <div className="text-gray-400 text-xs">{b.desc}</div>
+                        </div>
+                      </div>
+                      <button onClick={() => dispatch({ type: 'SELL_LOT_BUILDING', buildingId: b.id })}
+                        className="bg-red-800 hover:bg-red-700 text-white text-xs px-2 py-1 rounded transition" title="Sell (30% refund)">✕</button>
+                    </div>
+                    <div className="text-green-400 text-xs mt-1">{b.bonus}</div>
+                  </div>
+                ))}
+              </div>
+            )}
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3 mb-4">
+              {available.map(b => (
+                <div key={b.id} className="bg-gray-800 border border-gray-600 rounded-lg p-3">
+                  <div className="flex items-center gap-2 mb-1">
+                    <span className="text-xl opacity-50">{b.emoji}</span>
+                    <div className="text-white font-bold text-sm">{b.name}</div>
+                  </div>
+                  <div className="text-gray-400 text-xs mb-1">{b.desc}</div>
+                  <div className="text-xs text-gray-500 mb-2">{b.bonus}</div>
+                  <button onClick={() => dispatch({ type: 'PURCHASE_LOT_BUILDING', buildingId: b.id })}
+                    disabled={state.cash < b.cost}
+                    className="w-full bg-green-700 hover:bg-green-600 disabled:bg-gray-600 disabled:opacity-40 text-white text-xs px-3 py-1.5 rounded font-bold transition">
+                    Build ({fmt(b.cost)})
+                  </button>
+                </div>
+              ))}
+            </div>
+            {locked.length > 0 && (
+              <div className="mb-4">
+                <div className="text-gray-500 text-xs mb-2">Future Technology ({locked.length})</div>
+                <div className="grid grid-cols-2 md:grid-cols-4 gap-2">
+                  {locked.map(b => (
+                    <div key={b.id} className="bg-gray-900 border border-gray-700 border-dashed rounded-lg p-2 opacity-50">
+                      <div className="text-center">
+                        <span className="text-lg grayscale">{b.emoji}</span>
+                        <div className="text-gray-500 text-xs">{b.name}</div>
+                        <div className="text-gray-600 text-[10px]">{b.minYear}+ | {fmt(b.cost)}</div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+          </>);
+        })()}
+      </div>
+
+      {/* Production Facilities — from LOT_BUILDINGS */}
+      <div>
+        <div className="text-white font-bold text-lg mb-3">Production Facilities</div>
+        <div className="text-gray-400 text-sm mb-3">Build and upgrade specialized production facilities.</div>
         {(state.lotBuildings || []).length > 0 && (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3 mb-4">
             {(state.lotBuildings || []).map((b, i) => {
               const def = LOT_BUILDINGS.find(lb => lb.id === b.buildingId);
               return (
-                <div key={i} className="bg-gray-800 border border-gray-700 rounded-lg p-3">
+                <div key={i} className="bg-gray-800 border border-green-600 rounded-lg p-3">
                   <div className="flex justify-between items-start">
                     <div>
                       <div className="text-white font-bold text-sm">{def?.name || b.buildingId} (Lv{b.level})</div>
                       <div className="text-gray-400 text-xs">{def?.desc}</div>
+                      {def?.qualityBonus?.[b.level-1] > 0 && <div className="text-green-400 text-xs">+{def.qualityBonus[b.level-1]} quality</div>}
+                      {def?.genres && <div className="text-purple-400 text-xs">{def.genres.join(', ')}</div>}
                     </div>
                     <div className="flex gap-1">
                       {b.level < (def?.maxLevel || 3) && (
                         <button onClick={() => dispatch({ type: 'UPGRADE_LOT_BUILDING', buildingId: b.buildingId })}
-                          className="bg-blue-700 hover:bg-blue-600 text-white text-xs px-2 py-1 rounded transition">↑</button>
+                          className="bg-blue-700 hover:bg-blue-600 text-white text-xs px-2 py-1 rounded transition" title={`Upgrade (${fmt(Math.round((def?.cost || 0) * 0.6 * b.level))})`}>↑</button>
                       )}
                       <button onClick={() => dispatch({ type: 'DEMOLISH_LOT_BUILDING', buildingId: b.buildingId })}
-                        className="bg-red-700 hover:bg-red-600 text-white text-xs px-2 py-1 rounded transition">✕</button>
+                        className="bg-red-800 hover:bg-red-700 text-white text-xs px-2 py-1 rounded transition">✕</button>
                     </div>
                   </div>
-                  <div className="text-xs text-gray-500 mt-1">Upkeep: {fmt((def?.upkeep || 0) * b.level)}/mo</div>
+                  <div className="text-xs text-gray-500 mt-1">Upkeep: {fmt((def?.maintenanceCost || 0) * b.level)}/mo</div>
                 </div>
               );
             })}
@@ -12402,17 +12727,20 @@ export default function MovieMogul() {
           {LOT_BUILDINGS.filter(lb => !(state.lotBuildings || []).some(b => b.buildingId === lb.id)).map((lb, i) => (
             <div key={i} className="bg-gray-800 border border-gray-700 rounded-lg p-3">
               <div className="text-white font-bold text-sm mb-1">{lb.name}</div>
-              <div className="text-gray-400 text-xs mb-2">{lb.desc}</div>
-              <div className="text-xs text-gray-500 mb-2">Cost: {fmt(lb.cost)} | Upkeep: {fmt(lb.upkeep)}/mo</div>
+              <div className="text-gray-400 text-xs mb-1">{lb.desc}</div>
+              {lb.genres && <div className="text-purple-400 text-xs mb-1">{lb.genres.join(', ')}</div>}
+              <div className="text-xs text-gray-500 mb-2">Cost: {fmt(lb.cost)} | Upkeep: {fmt(lb.maintenanceCost)}/mo</div>
               <button onClick={() => dispatch({ type: 'BUILD_LOT_BUILDING', buildingId: lb.id })}
-                disabled={state.cash < lb.cost || (state.lotBuildings || []).length >= (state.lotCapacity || 5)}
-                className="w-full bg-green-700 hover:bg-green-600 disabled:bg-gray-600 text-white text-xs px-3 py-1 rounded transition">
-                Build
+                disabled={state.cash < lb.cost}
+                className="w-full bg-green-700 hover:bg-green-600 disabled:bg-gray-600 disabled:opacity-40 text-white text-xs px-3 py-1 rounded transition">
+                Build ({fmt(lb.cost)})
               </button>
             </div>
           ))}
         </div>
+      </div>
 
+      <div>
         {/* Labor & Unions */}
         <div className="text-white font-bold text-lg mb-3">Labor Relations</div>
         <div className="text-gray-400 text-sm mb-3">Keep unions happy to avoid costly strikes.</div>
@@ -14010,7 +14338,11 @@ export default function MovieMogul() {
                           className="bg-red-700 hover:bg-red-600 text-white text-xs px-3 py-1 rounded">Cancel</button>
                       </>
                     )}
-                    {tvs.monthlyRevenue > 0 && <div className="text-green-400 text-xs ml-auto">{fmt(tvs.monthlyRevenue)}/mo</div>}
+                    <div className="text-xs ml-auto text-right">
+                      {tvs.monthlyRevenue > 0 && <div className="text-green-400">{fmt(tvs.monthlyRevenue)}/mo</div>}
+                      {tvs.totalRevenue > 0 && <div className="text-gray-500">Total earned: {fmt(tvs.totalRevenue)}</div>}
+                      {tvs.internationalRevenue > 0 && <div className="text-blue-400">Intl: {fmt(tvs.internationalRevenue)}/mo</div>}
+                    </div>
                   </div>
                 </div>
               );
@@ -14052,16 +14384,45 @@ export default function MovieMogul() {
         {pastShows.length > 0 && (
           <div>
             <div className="text-white font-bold text-lg mb-2">Past Shows</div>
-            <div className="space-y-1">
-              {pastShows.map(tvs => (
-                <div key={tvs.id} className={'bg-gray-800 border rounded p-2 flex justify-between ' + (tvs.status === 'ended' ? 'border-gray-600' : 'border-red-800')}>
-                  <div>
-                    <div className="text-white text-sm">{tvs.title}</div>
-                    <div className="text-xs text-gray-400">{tvs.seasons}S | Q:{tvs.quality}{tvs.networkName ? ` · ${tvs.networkName}` : ''}</div>
+            <div className="space-y-2">
+              {pastShows.map(tvs => {
+                const totalRev = (tvs.totalRevenue || 0) + (tvs.syndicationRevenue || 0) + (tvs.intlSyndicationRevenue || 0) + (tvs.homeMediaRevenue || 0);
+                const totalCost = (tvs.pilotCost || 0) + (tvs.playerCost || 0);
+                const netProfit = totalRev - totalCost;
+                const hasSyndication = (tvs.syndicationRevenue || 0) + (tvs.intlSyndicationRevenue || 0) + (tvs.homeMediaRevenue || 0) > 0;
+                return (
+                  <div key={tvs.id} className={'bg-gray-800 border rounded-lg p-3 ' + (tvs.status === 'ended' ? 'border-gray-600' : 'border-red-800')}>
+                    <div className="flex justify-between items-start mb-1">
+                      <div>
+                        <div className="text-white text-sm font-bold">{tvs.title}</div>
+                        <div className="text-xs text-gray-400">{tvs.currentSeason}S · {tvs.episodes} eps/season · Q:{tvs.quality}{tvs.networkName ? ` · ${tvs.networkName}` : ''}</div>
+                      </div>
+                      <div className={'text-xs px-2 py-0.5 rounded ' + (tvs.status === 'ended' ? 'bg-gray-700 text-gray-400' : 'bg-red-900 text-red-400')}>{tvs.status}</div>
+                    </div>
+                    <div className="grid grid-cols-3 gap-1 mt-2">
+                      <div className="bg-gray-900 rounded p-1.5">
+                        <div className="text-xs text-gray-500">Airing Rev</div>
+                        <div className="text-xs text-green-400 font-bold">{fmt(tvs.totalRevenue || 0)}</div>
+                      </div>
+                      <div className="bg-gray-900 rounded p-1.5">
+                        <div className="text-xs text-gray-500">Your Cost</div>
+                        <div className="text-xs text-red-400 font-bold">{fmt(totalCost)}</div>
+                      </div>
+                      <div className="bg-gray-900 rounded p-1.5">
+                        <div className="text-xs text-gray-500">Net</div>
+                        <div className={'text-xs font-bold ' + (netProfit >= 0 ? 'text-green-400' : 'text-red-400')}>{fmt(netProfit)}</div>
+                      </div>
+                    </div>
+                    {hasSyndication && (
+                      <div className="mt-1.5 text-xs text-blue-400">
+                        Syndication: {fmt((tvs.syndicationRevenue || 0) + (tvs.intlSyndicationRevenue || 0))}
+                        {(tvs.homeMediaRevenue || 0) > 0 && ` · Home Media: ${fmt(tvs.homeMediaRevenue)}`}
+                        <span className="text-gray-500 ml-1">(ongoing)</span>
+                      </div>
+                    )}
                   </div>
-                  <div className={'text-xs ' + (tvs.status === 'ended' ? 'text-gray-400' : 'text-red-400')}>{tvs.status}</div>
-                </div>
-              ))}
+                );
+              })}
             </div>
           </div>
         )}
@@ -16054,7 +16415,6 @@ export default function MovieMogul() {
           {tab === 'catalog' && renderCatalog()}
           {tab === 'partners' && renderPartners()}
           {tab === 'screening' && renderScreening()}
-          {tab === 'lot' && renderLot()}
           {tab === 'music' && renderMusic()}
               {tab === 'merch' && renderMerchandise()}
           {tab === 'tv' && renderTVDeepDive()}
