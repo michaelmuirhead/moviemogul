@@ -174,18 +174,18 @@ const getBudgetTier = (budget) => {
 
 // ==================== RELEASE COMPETITION ====================
 const SEASONAL_COMPETITION = {
-  1: { name: 'January Dump', baseCompetitors: 2, audienceMult: 0.6, desc: 'Low competition, low audiences' },
-  2: { name: 'February Lull', baseCompetitors: 2, audienceMult: 0.65, desc: 'Quiet month, Valentine\'s weekend bump' },
-  3: { name: 'Spring Warmup', baseCompetitors: 3, audienceMult: 0.75, desc: 'Audiences start returning' },
-  4: { name: 'Easter Season', baseCompetitors: 3, audienceMult: 0.8, desc: 'Family films perform well' },
-  5: { name: 'Summer Kickoff', baseCompetitors: 5, audienceMult: 1.15, holiday: 'Memorial Day', desc: 'Blockbuster season begins' },
-  6: { name: 'Summer Peak', baseCompetitors: 6, audienceMult: 1.25, desc: 'Peak moviegoing season' },
-  7: { name: 'July 4th Season', baseCompetitors: 6, audienceMult: 1.3, holiday: 'July 4th', desc: 'Action blockbusters dominate' },
-  8: { name: 'Late Summer', baseCompetitors: 4, audienceMult: 1.05, desc: 'Summer winds down' },
-  9: { name: 'Fall Transition', baseCompetitors: 3, audienceMult: 0.8, desc: 'Back to school season' },
-  10: { name: 'Awards Season Opens', baseCompetitors: 4, audienceMult: 0.9, desc: 'Prestige films begin arriving' },
-  11: { name: 'Thanksgiving Season', baseCompetitors: 5, audienceMult: 1.1, holiday: 'Thanksgiving', desc: 'Family tentpoles and prestige picks' },
-  12: { name: 'Holiday Season', baseCompetitors: 5, audienceMult: 1.2, holiday: 'Christmas', desc: 'Big releases and awards contenders' },
+  1: { name: 'New Year Window', baseCompetitors: 2, audienceMult: 0.85, desc: 'Low competition — counter-programming gold. Awards expansions thrive.' },
+  2: { name: 'Valentine\'s Season', baseCompetitors: 2, audienceMult: 0.90, holiday: 'Valentine\'s Day', desc: 'Date-night crowds. Romance and thrillers own the weekend.' },
+  3: { name: 'Spring Break', baseCompetitors: 3, audienceMult: 0.95, desc: 'Families and teens fill theaters. Sleeper hits find audiences.' },
+  4: { name: 'Easter Weekend', baseCompetitors: 3, audienceMult: 0.90, desc: 'Family films surge. Lower competition leaves room for surprises.' },
+  5: { name: 'Summer Kickoff', baseCompetitors: 5, audienceMult: 1.10, holiday: 'Memorial Day', desc: 'Blockbuster season begins. Big tentpoles dominate but competition is fierce.' },
+  6: { name: 'Summer Peak', baseCompetitors: 6, audienceMult: 1.15, desc: 'Peak moviegoing — massive audiences, brutal competition.' },
+  7: { name: 'July 4th Season', baseCompetitors: 6, audienceMult: 1.15, holiday: 'July 4th', desc: 'Patriotic action and franchise sequels. Huge crowds, huge competition.' },
+  8: { name: 'Late Summer', baseCompetitors: 4, audienceMult: 1.00, desc: 'Summer winds down. Less competition than June/July but solid audiences.' },
+  9: { name: 'Fall Festival Season', baseCompetitors: 3, audienceMult: 0.90, desc: 'Festival buzz launches prestige contenders. Quality dramas thrive.' },
+  10: { name: 'Halloween Season', baseCompetitors: 4, audienceMult: 0.95, desc: 'Horror dominates. Thrillers and mysteries ride the spooky wave.' },
+  11: { name: 'Thanksgiving Season', baseCompetitors: 5, audienceMult: 1.05, holiday: 'Thanksgiving', desc: 'Family tentpoles and early awards contenders. Packed holiday weekends.' },
+  12: { name: 'Holiday Season', baseCompetitors: 5, audienceMult: 1.10, holiday: 'Christmas', desc: 'Awards push and family blockbusters. Crowded but lucrative.' },
 };
 
 const RIVAL_FILM_NAMES = [
@@ -868,18 +868,18 @@ const MONTH_NAMES = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Se
 const MONTH_FULL = ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December'];
 
 const RELEASE_WINDOWS = {
-  1: [{ id: 'jan', name: 'January', desc: 'Awards season expansions. Prestige dramas thrive, blockbusters struggle.', base: 0.70, genreBonus: { Drama: 0.45, Documentary: 0.35, Thriller: 0.15 }, genrePenalty: { Action: -0.25, Animation: -0.20, 'Sci-Fi': -0.15 }, prestigeBonus: 5 }],
-  2: [{ id: 'feb', name: 'February', desc: "Valentine's month. Romance and comedies are date-night favorites.", base: 0.80, genreBonus: { Romance: 0.50, Comedy: 0.35, Drama: 0.15 }, genrePenalty: { Horror: -0.20, Documentary: -0.15 }, prestigeBonus: 0 }],
-  3: [{ id: 'mar', name: 'March', desc: 'Spring Break. Families and teens flock to theaters.', base: 0.90, genreBonus: { Animation: 0.30, Comedy: 0.20, Action: 0.15 }, genrePenalty: { Documentary: -0.15 }, prestigeBonus: 0 }],
-  4: [{ id: 'apr', name: 'April', desc: 'Pre-summer lull. Lower competition, moderate audiences.', base: 0.85, genreBonus: { Comedy: 0.15, Thriller: 0.15, Horror: 0.10 }, genrePenalty: { Documentary: -0.10 }, prestigeBonus: 0 }],
-  5: [{ id: 'may', name: 'May', desc: 'Summer blockbuster season opens. Big tentpoles dominate.', base: 1.15, genreBonus: { Action: 0.40, 'Sci-Fi': 0.35, Animation: 0.25 }, genrePenalty: { Documentary: -0.25, Drama: -0.15 }, prestigeBonus: 0 }],
-  6: [{ id: 'jun', name: 'June', desc: 'Peak summer. Massive audiences, fierce competition.', base: 1.25, genreBonus: { Action: 0.35, Comedy: 0.25, Animation: 0.30, 'Sci-Fi': 0.30 }, genrePenalty: { Drama: -0.20, Documentary: -0.30 }, prestigeBonus: 0 }],
-  7: [{ id: 'jul', name: 'July', desc: 'Summer continues. Sequels and franchise films peak.', base: 1.20, genreBonus: { Action: 0.30, 'Sci-Fi': 0.25, Animation: 0.25, Comedy: 0.20 }, genrePenalty: { Drama: -0.15, Documentary: -0.20 }, prestigeBonus: 0 }],
-  8: [{ id: 'aug', name: 'August', desc: 'Late summer. Action and comedy holdovers still draw crowds.', base: 1.0, genreBonus: { Action: 0.20, Comedy: 0.20, Horror: 0.15 }, genrePenalty: { Documentary: -0.10 }, prestigeBonus: 0 }],
-  9: [{ id: 'sep', name: 'September', desc: 'Fall prestige season. Festival buzz helps quality dramas.', base: 0.85, genreBonus: { Drama: 0.35, Thriller: 0.20, Documentary: 0.25 }, genrePenalty: { Animation: -0.15, Action: -0.10 }, prestigeBonus: 4 }],
-  10: [{ id: 'oct', name: 'October', desc: "Horror's biggest month. Audiences crave scares for Halloween.", base: 0.90, genreBonus: { Horror: 0.55, Thriller: 0.30, Mystery: 0.15 }, genrePenalty: { Animation: -0.20, Comedy: -0.10 }, prestigeBonus: 1 }],
-  11: [{ id: 'nov', name: 'November', desc: 'Thanksgiving. Family films and tentpoles thrive.', base: 1.10, genreBonus: { Animation: 0.40, Action: 0.25, Comedy: 0.20 }, genrePenalty: { Horror: -0.15, Documentary: -0.10 }, prestigeBonus: 1 }],
-  12: [{ id: 'dec', name: 'December', desc: 'Holiday season. Oscar contenders, family blockbusters, and awards-push releases.', base: 1.20, genreBonus: { Drama: 0.40, Animation: 0.35, Comedy: 0.25, Action: 0.20 }, genrePenalty: { Horror: -0.25 }, prestigeBonus: 6 }],
+  1: [{ id: 'jan', name: 'January', desc: 'Awards expansions go wide. Low competition — a smart prestige play. Counter-programming thrives.', base: 0.95, genreBonus: { Drama: 0.25, Documentary: 0.20, Thriller: 0.15 }, genrePenalty: { Action: -0.10, Animation: -0.10 }, prestigeBonus: 5 }],
+  2: [{ id: 'feb', name: 'February', desc: "Valentine's weekend is date-night gold. Romance and thrillers own this month.", base: 0.95, genreBonus: { Romance: 0.30, Comedy: 0.20, Thriller: 0.15, Horror: 0.10 }, genrePenalty: { Documentary: -0.10 }, prestigeBonus: 0 }],
+  3: [{ id: 'mar', name: 'March', desc: 'Spring Break fills theaters. Animation and comedies lead, but anything fun works.', base: 1.00, genreBonus: { Animation: 0.20, Comedy: 0.15, Action: 0.10 }, genrePenalty: { Documentary: -0.10 }, prestigeBonus: 0 }],
+  4: [{ id: 'apr', name: 'April', desc: 'Pre-summer sweet spot. Lower competition means smaller films can break out.', base: 0.95, genreBonus: { Comedy: 0.15, Thriller: 0.15, Horror: 0.15, Mystery: 0.10 }, genrePenalty: {}, prestigeBonus: 0 }],
+  5: [{ id: 'may', name: 'May', desc: 'Summer blockbuster season opens. Tentpoles launch here but face heavy competition.', base: 1.05, genreBonus: { Action: 0.25, 'Sci-Fi': 0.20, Animation: 0.15 }, genrePenalty: { Documentary: -0.15, Drama: -0.10 }, prestigeBonus: 0 }],
+  6: [{ id: 'jun', name: 'June', desc: 'Peak summer. Huge audiences but the most crowded month. Only the strong survive.', base: 1.10, genreBonus: { Action: 0.20, Comedy: 0.15, Animation: 0.20, 'Sci-Fi': 0.15 }, genrePenalty: { Drama: -0.10, Documentary: -0.15 }, prestigeBonus: 0 }],
+  7: [{ id: 'jul', name: 'July', desc: 'Summer franchise season. Sequels and spectacle peak here.', base: 1.10, genreBonus: { Action: 0.20, 'Sci-Fi': 0.15, Animation: 0.15, Comedy: 0.10 }, genrePenalty: { Drama: -0.10, Documentary: -0.10 }, prestigeBonus: 0 }],
+  8: [{ id: 'aug', name: 'August', desc: 'Late summer sleeper season. Less crowded — the right film can own the month.', base: 1.00, genreBonus: { Action: 0.15, Comedy: 0.15, Horror: 0.15, Thriller: 0.10 }, genrePenalty: {}, prestigeBonus: 0 }],
+  9: [{ id: 'sep', name: 'September', desc: 'Fall prestige launches. Festival darlings go wide. Quality over spectacle.', base: 0.95, genreBonus: { Drama: 0.25, Thriller: 0.15, Documentary: 0.20 }, genrePenalty: { Animation: -0.10 }, prestigeBonus: 4 }],
+  10: [{ id: 'oct', name: 'October', desc: "Horror's crown jewel. Halloween drives massive genre audiences. Thrillers ride the wave.", base: 1.00, genreBonus: { Horror: 0.35, Thriller: 0.20, Mystery: 0.15 }, genrePenalty: { Animation: -0.10 }, prestigeBonus: 2 }],
+  11: [{ id: 'nov', name: 'November', desc: 'Thanksgiving tentpoles and early awards contenders. Family and prestige coexist.', base: 1.05, genreBonus: { Animation: 0.25, Action: 0.15, Comedy: 0.15, Drama: 0.10 }, genrePenalty: { Horror: -0.10 }, prestigeBonus: 2 }],
+  12: [{ id: 'dec', name: 'December', desc: 'Holiday season. Awards contenders, family blockbusters — crowded but rewarding.', base: 1.10, genreBonus: { Drama: 0.20, Animation: 0.20, Comedy: 0.15, Action: 0.10 }, genrePenalty: { Horror: -0.15 }, prestigeBonus: 4 }],
 };
 
 const getWindowMultiplier = (window, genre) => {
