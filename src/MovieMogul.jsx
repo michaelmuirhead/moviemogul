@@ -1991,8 +1991,7 @@ const calcMerchandiseRevenue = (franchises, films) => {
 // ==================== LICENSING WINDOWS ====================
 // Time decay: revenue drops 3% per year after release as content ages
 const LICENSING_WINDOWS = [
-  { id: 'homeVideo
-', name: 'Home Video / VOD', monthsAfterRelease: 4, revenuePct: 0.04, duration: 12, desc: 'Physical & digital sales' },
+  { id: 'homeVideo', name: 'Home Video / VOD', monthsAfterRelease: 4, revenuePct: 0.04, duration: 12, desc: 'Physical & digital sales' },
   { id: 'streaming', name: 'Streaming Rights', monthsAfterRelease: 12, revenuePct: 0.03, duration: 24, desc: 'Platform licensing deals' },
   { id: 'tvSyndication', name: 'TV Syndication', monthsAfterRelease: 24, revenuePct: 0.02, duration: 36, desc: 'Network & cable reruns' },
   { id: 'library', name: 'Library Licensing', monthsAfterRelease: 48, revenuePct: 0.008, duration: 999, desc: 'Perpetual catalog value' },
