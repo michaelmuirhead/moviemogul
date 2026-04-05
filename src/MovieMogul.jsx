@@ -6263,7 +6263,7 @@ case 'REMASTER_FILM': {
           const criticRating = clamp(Math.round(box.criticScore + liking + (Math.random() - 0.5) * 20), 5, 100);
           criticReviews.push({ name: critic.name, outlet: critic.outlet, rating: criticRating, weight: critic.weight });
           // Weighted influence on final critic score
-          box.criticScore = Math.round(box.criticScore * 0.85 + criticRating * critic.weight * 0.15 / NAMED_CRITICS.length * NAMED_CRITICS.length);
+          box.criticScore = clamp(Math.round(box.criticScore * 0.85 + criticRating * critic.weight * 0.15 / NAMED_CRITICS.length * NAMED_CRITICS.length), 5, 100);
         });
         f.criticReviews = criticReviews;
 
@@ -14089,6 +14089,10 @@ export default function MovieMogul() {
           {state.tvDevFormat && (
             <div className="mt-3 space-y-2">
               <div className="flex gap-2 items-center">
+                <input type="text" placeholder="Show Title (optional — random if blank)" value={state.tvDevTitle || ''} onChange={e => dispatch({ type: 'SET_DEV', key: 'tvDevTitle', value: e.target.value })}
+                  className="bg-gray-700 text-white rounded px-2 py-1 text-xs flex-1 border border-gray-600 placeholder-gray-500" maxLength={60} />
+              </div>
+              <div className="flex gap-2 items-center">
                 <select value={state.tvDevShowrunnerId || ''} onChange={e => dispatch({ type: 'SET_DEV', key: 'tvDevShowrunnerId', value: e.target.value ? parseInt(e.target.value) : null })}
                   className="bg-gray-700 text-white rounded px-2 py-1 text-xs flex-1">
                   <option value="">Select Showrunner...</option>
@@ -15290,6 +15294,11 @@ export default function MovieMogul() {
                   const format = TV_FORMATS.find(f => f.id === state.tvDevFormat);
                   return (
                     <>
+                      <div className="mb-3">
+                        <div className="text-xs text-gray-500 mb-1">Show Title</div>
+                        <input type="text" placeholder="Enter a title or leave blank for random" value={state.tvDevTitle || ''} onChange={e => dispatch({ type: 'SET_TV_DEV', field: 'tvDevTitle', value: e.target.value })}
+                          className="w-full bg-gray-700 border border-gray-600 rounded px-2 py-1 text-sm text-white placeholder-gray-500" maxLength={60} />
+                      </div>
                       <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mb-3">
                         <div>
                           <div className="text-xs text-gray-500 mb-1">Showrunner</div>
